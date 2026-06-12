@@ -1,0 +1,7 @@
+state/*
+!state/.gitkeep
+evals/results/*
+!evals/results/.gitkeep
+__pycache__/
+*.pyc
+HUMAN_APPROVED

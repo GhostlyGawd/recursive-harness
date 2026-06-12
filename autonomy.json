@@ -1,0 +1,11 @@
+{
+  "_doc": "Graduated autonomy ledger. A category may flip auto_merge to true only when proposed >= 20 and accepted/proposed >= 0.95, via /meta-retro, via PR. 'enforcement' (hooks, lint, evals, autonomy.json, settings.json, .github) is graduable: false FOREVER — the lint rejects any change to that.",
+  "categories": {
+    "skills":      {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": true},
+    "commands":    {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": true},
+    "agents":      {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": true},
+    "user-model":  {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": true},
+    "memory":      {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": true},
+    "enforcement": {"proposed": 0, "accepted": 0, "auto_merge": false, "graduable": false}
+  }
+}

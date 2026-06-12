@@ -1,0 +1,75 @@
+# Recursive Harness
+
+A self-improving harness for Claude Code, built on one premise taken seriously: **the model's weights are frozen, so the harness is the entire learnable parameter space.** Learning is defined as committing reviewed diffs to this repository — never as accumulating prose memory. Everything below follows from that definition.
+
+This repo installs as your user-scope Claude Code configuration (`~/.claude`). One brain, every project, versioned, shippable to GitHub, and improvable only through a pipeline that lints, audits, and regression-tests its own changes.
+
+## Quick start
+
+```bash
+git clone <your-fork> recursive-harness && cd recursive-harness
+./install.sh                  # symlinks to ~/.claude, inits git, self-lints
+cd ~/code/some-project && ~/.claude/project-init.sh   # thin per-project contract
+```
+
+From then on: work normally. The hooks watch, the kernel routes, `/retro` harvests.
+
+## The architecture in one paragraph
+
+A 60-line kernel (`CLAUDE.md`) is the only always-loaded instruction. Six skills load on trigger and encode the system's procedures: how to route a learning, how to predict-then-score, how to detect being stuck, how to retrospect, how to author harness artifacts, how to capture regression evals. Three fresh-context agents do the jobs that must not share the working context: a critic that grades finished work, a retro-miner that reads transcripts for signal, and a harness-auditor that adversarially reviews every proposed harness diff. Six lifecycle hooks enforce mechanically what prose can only suggest. Six commands give the human and the agent named workflows. Hot telemetry lives in gitignored `state/`; durable knowledge lives in versioned `memory/`; ground truth lives in `evals/corpus/`. A linter holds the whole structure to budgets, and an autonomy ledger meters how much of the loop runs without a human.
+
+## How each requirement is solved
+
+**Self-improvement without weight updates.** The improvement loop is: signal → routed artifact → linted diff → adversarial audit → PR → (optionally automated) merge → regression evals. Every step is inspectable, every change reversible. The unit of learning is a diff with a `provenance:` line naming the session and event that earned it. Rules without receipts get pruned at the next `/meta-retro`.
+
+**Verified self-awareness and judgement.** You cannot verify a feeling; you can verify a ledger. Before any non-trivial task the agent logs a falsifiable prediction (`harness predict --expect "root cause is X; ≤2 files; suite green" --confidence 0.7`) and scores it afterward. `harness stats` then shows claimed confidence against actual hit rate per bucket and per category, with Brier scores. Overconfidence is not a vibe to discuss — it is a number on a specific category, and `/calibrate` attaches a corrective rule to it. Judgement about its *own work* is structurally protected from sunk cost: the critic agent receives only the original request, the rubric, and the artifact paths — never the builder's reasoning.
+
+**Using every tool, and improving the tools.** The `routing-learnings` skill is a strict decision tree: mechanically enforceable rule → hook; repeatable procedure → skill; user-initiated workflow → command; isolated role → agent; user taste → evidenced user-model entry; single-project fact → that project's thin CLAUDE.md; everything else → discarded. The tree's first lesson is that most "memories" people hoard are actually misfiled hooks and skills. The artifacts themselves are then subject to `/meta-retro`: fire rates are logged per skill (a PostToolUse hook), zero-fire skills become prune candidates, frequently-overridden artifacts get fixed or killed, and descriptions of under-triggering skills get rewritten to be pushier.
+
+**Why auto-memory is structurally impossible, not just discouraged.** There is no free-prose store. The linter (`lint/lint_harness.py`) rejects user-model bullets lacking `(evidence: N, last: DATE, source: ...)`, rejects artifacts without provenance, rejects a kernel over 60 lines, rejects skill descriptions over 600 chars. The cheat doesn't fail review — it fails CI. Compression pressure doubles as quality pressure.
+
+**No reward hacking.** The agent's cheapest path to better metrics is weakening the instruments that measure it. So the enforcement layer — `hooks/`, `lint/`, `evals/`, `autonomy.json`, `settings.json`, `.github/` — is write-locked by a PreToolUse guard that exits 2 on any mutating tool call targeting those paths inside the harness, unless a human has placed a `HUMAN_APPROVED` marker. The guard fails open on malformed input (a broken hook must never brick a session) and is scoped to this repo only. The autonomy ledger hard-codes `enforcement: graduable=false`, and the linter rejects any edit that changes that. Three layers deep: prose rule in the kernel, mechanical block in the hook, schema check in the lint.
+
+**Autonomy, graduated rather than granted.** Every category of change (skills, commands, agents, user-model, memory) starts at zero autonomy: all changes are PRs a human reviews. `autonomy.json` tracks proposed/accepted per category; at ≥20 proposals with ≥95% acceptance, `/meta-retro` may propose flipping that category to auto-merge — itself a human-reviewed change. Trust is earned per category from measured agreement, and the measuring stick can never be auto-modified.
+
+**Right track / wrong track, and trainable intuition.** Two mechanisms. In-flight: the logged prediction is a tripwire — the moment observed reality diverges from `--expect`, the agent stops and re-plans rather than pushing through. Across failures: the `stuck-detection` ladder (strike 1: fix the hypothesized cause; strike 2: state the broken assumption aloud and switch *strategy class*, not parameters; strike 3: escalate with falsified hypotheses in hand). Every derailment then routes somewhere permanent — a hook if the cause was mechanical, a skill if it was a knowledge gap, a user-model entry if it misread the human. Intuition improves because its failures are never free twice.
+
+**Getting better at this specific user, any domain.** Corrections are treated as the highest-value signal in the system. A UserPromptSubmit hook pattern-matches likely corrections into a ledger automatically (false positives are cheap; `/retro` filters). At three corrections in a session, a context nudge fires; at stop time, a Stop-hook gate blocks once and demands a retro before the agent walks away from fresh signal. The user-model file accumulates only evidenced, dated, decaying claims — `/gc` retires anything unconfirmed in 90–180 days, because taste drifts. Domain-independence falls out of the routing tree: domains differ in content, but corrections, predictions, and stuck events look identical everywhere.
+
+**One hive mind across many projects.** The harness installs at user scope, so every project on the machine runs the same brain. Projects get a deliberately thin local CLAUDE.md (`project-init.sh` writes the contract: repo-specific facts only, under 40 lines, anything seen in a second project gets promoted upstream). Learnings flow one direction — branch and PR into this repo — so there is exactly one trunk of accumulated intelligence. On a second machine, `git clone && ./install.sh` restores the whole mind; teammates can fork it; CI guards it.
+
+**Never losing context while staying lean.** Tiered by access cost. Always-loaded: the 60-line kernel plus a one-line SessionStart status banner (calibration %, unscored debt, sessions since last meta-retro) — the entire fixed tax. Trigger-loaded: skill bodies. On-demand: memory files, ADRs, archives — greppable on disk, costing nothing until read. Hot telemetry: gitignored JSONL in `state/`. Cold: `/gc` rolls state older than 30 days into versioned monthly rollups in `memory/calibration/` and decays the user model. Nothing is forgotten — it is demoted down the access hierarchy, and the linter caps every always-loaded tier. (A vector index over these files is an acceptable later add-on only as a rebuildable cache; the files stay the source of truth — see ADR 0001.)
+
+**Learning automations from conversation.** The pipeline from "we just did something repeatable" to "it is now infrastructure" is: retro-miner spots it in the transcript → routing tree says skill/command/hook → `harness-authoring` standards shape it → lint checks it → auditor challenges it → PR ships it → `/capture-eval` pins the behavior into the regression corpus so the next harness change can't silently break it. The corpus is the system's long-term ground truth: the only artifact that can *prove* harness vN+1 beats vN rather than feeling like it.
+
+**External state.** Hot state is machine-local JSONL with a tiny CLI (`bin/harness`: predict, outcome, stats, corrections, skill-fired, skill-stats, gc). Durable state is the repo. The boundary rule: anything worth keeping past 30 days must survive translation into a versioned, falsifiable artifact — that translation step is where junk dies.
+
+## The three loops
+
+1. **Inner (per task):** predict → act under hooks → score → critic if significant.
+2. **Middle (per session, `/retro`):** mine corrections + misses + stuck events → ≤3 routed diffs → lint → audit → PR.
+3. **Outer (monthly, `/meta-retro`):** prune zero-fire skills, fix overridden artifacts, review calibration drift, replay evals, graduate autonomy categories, keep the kernel under pressure.
+
+## Operating cadence
+
+After significant tasks: `/retro` (the Stop gate will insist when you forget). Every ~10 sessions: `/calibrate` then `/gc`. Monthly: `/meta-retro`. After any accepted task that recurs or was correction-born: `/capture-eval`.
+
+## Repository map
+
+```
+CLAUDE.md          kernel (≤60 lines, lint-enforced)     settings.json   hook registration
+skills/            6 trigger-loaded procedures           agents/         3 fresh-context roles
+commands/          6 named workflows                     hooks/          6 lifecycle enforcers (write-locked)
+bin/harness        state ledger CLI                      lint/           self-lint (budgets, falsifiability)
+memory/            user-model, ADRs, rollups (versioned) state/          hot JSONL (gitignored)
+evals/             regression corpus + runner            autonomy.json   graduated-autonomy ledger
+tests/             hook behavior tests                   .github/        CI: lint + tests + eval replay
+```
+
+## Honest limits
+
+This compounds; it does not explode. Model capability is fixed, so what grows is the elimination of repeated mistakes plus accumulated procedure and taste — most of what makes a senior engineer senior, delivered asymptotically per domain. The correction detector is a heuristic (retro filters its noise). Full eval replay costs API budget, so CI gates it behind a repo variable. Skill fire-logging depends on the Skill tool surfacing in PostToolUse on your Claude Code version; if it doesn't, `/meta-retro` falls back to transcript grep. And the system is only as honest as its scoring — which is why unscored predictions show up in the session banner as debt, and why "unverifiable" scores as a miss.
+
+## Provenance
+
+Seed version 0.1.0, built 2026-06-12. Founding constraint (ADR 0001): the repo is the memory; there is no other memory.

@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""harness — state ledger CLI for the self-improving harness.
+
+Subcommands:
+  predict      Log a falsifiable prediction before acting.
+  outcome      Score a prediction after the fact.
+  stats        Calibration report (hit rate + Brier score by confidence bucket).
+  corrections  add | count | list  — user-correction ledger.
+  skill-fired  Record that a skill triggered (called by PostToolUse hook).
+  skill-stats  Fire counts per skill over a window (feeds /meta-retro).
+  gc           Roll hot state older than N days into versioned monthly summaries.
+
+All hot data is JSONL under state/ (machine-local, gitignored).
+Rollups land in memory/calibration/ (versioned, shippable).
+"""
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import uuid
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATE = os.path.join(ROOT, "state")
+MEMORY = os.path.join(ROOT, "memory")
+
+PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
+CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
+SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
+
+
+def _now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def _append(path: str, rec: dict) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def _read(path: str) -> list:
+    if not os.path.exists(path):
+        return []
+    out = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    out.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return out
+
+
+def _write_all(path: str, recs: list) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        for r in recs:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+# ---------------------------------------------------------------- predict
+def cmd_predict(args) -> int:
+    pid = uuid.uuid4().hex[:8]
+    rec = {
+        "id": pid,
+        "ts": _now(),
+        "task": args.task,
+        "expect": args.expect,
+        "confidence": max(0.0, min(1.0, args.confidence)),
+        "category": args.category,
+        "result": None,
+    }
+    _append(PREDICTIONS, rec)
+    print(f"prediction logged: {pid}  (score it later: harness outcome {pid} --result hit|miss)")
+    return 0
+
+
+def cmd_outcome(args) -> int:
+    recs = _read(PREDICTIONS)
+    found = False
+    for r in recs:
+        if r.get("id") == args.id:
+            r["result"] = args.result
+            r["scored_ts"] = _now()
+            if args.notes:
+                r["notes"] = args.notes
+            found = True
+            break
+    if not found:
+        print(f"no prediction with id {args.id}", file=sys.stderr)
+        return 1
+    _write_all(PREDICTIONS, recs)
+    print(f"scored {args.id}: {args.result}")
+    return 0
+
+
+def _brier(recs: list) -> float:
+    """Mean squared error of confidence vs. binary outcome. 0 = oracle, 0.25 = coin flip."""
+    scored = [(r["confidence"], 1.0 if r["result"] == "hit" else 0.0)
+              for r in recs if r.get("result") in ("hit", "miss")]
+    if not scored:
+        return float("nan")
+    return sum((c - o) ** 2 for c, o in scored) / len(scored)
+
+
+def cmd_stats(args) -> int:
+    recs = _read(PREDICTIONS)
+    scored = [r for r in recs if r.get("result") in ("hit", "miss")]
+    pending = [r for r in recs if r.get("result") is None]
+    if not scored:
+        print("no scored predictions yet — calibration unknown, not good.")
+        if pending:
+            print(f"{len(pending)} pending; score them: harness outcome <id> --result hit|miss")
+        return 0
+    hits = sum(1 for r in scored if r["result"] == "hit")
+    print(f"scored: {len(scored)}  hit-rate: {hits / len(scored):.0%}  brier: {_brier(scored):.3f}"
+          f"  pending: {len(pending)}")
+    buckets = {"low <0.6": [], "mid 0.6-0.85": [], "high >0.85": []}
+    for r in scored:
+        c = r["confidence"]
+        key = "low <0.6" if c < 0.6 else ("mid 0.6-0.85" if c <= 0.85 else "high >0.85")
+        buckets[key].append(r)
+    for name, rs in buckets.items():
+        if rs:
+            hr = sum(1 for r in rs if r["result"] == "hit") / len(rs)
+            avg_c = sum(r["confidence"] for r in rs) / len(rs)
+            drift = hr - avg_c
+            flag = "  <-- OVERCONFIDENT" if drift < -0.15 else ("  <-- underconfident" if drift > 0.15 else "")
+            print(f"  {name:14s} n={len(rs):<3d} claimed {avg_c:.0%} actual {hr:.0%}{flag}")
+    cats = {}
+    for r in scored:
+        cats.setdefault(r.get("category") or "general", []).append(r)
+    for cat, rs in sorted(cats.items()):
+        hr = sum(1 for r in rs if r["result"] == "hit") / len(rs)
+        print(f"  category {cat:12s} n={len(rs):<3d} hit {hr:.0%}")
+    return 0
+
+
+# ------------------------------------------------------------ corrections
+def cmd_corrections(args) -> int:
+    if args.action == "add":
+        _append(CORRECTIONS, {"ts": _now(), "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "manual"),
+                              "note": args.note or "", "source": "manual"})
+        print("correction logged.")
+    elif args.action == "count":
+        recs = _read(CORRECTIONS)
+        if args.session:
+            recs = [r for r in recs if r.get("session") == args.session]
+        print(len(recs))
+    else:  # list
+        for r in _read(CORRECTIONS)[-(args.last or 20):]:
+            print(f"{r['ts']}  [{r.get('session', '?')[:8]}]  {r.get('note', r.get('snippet', ''))[:120]}")
+    return 0
+
+
+# ------------------------------------------------------------ skill usage
+def cmd_skill_fired(args) -> int:
+    _append(SKILL_USAGE, {"ts": _now(), "skill": args.name,
+                          "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "?")})
+    return 0
+
+
+def cmd_skill_stats(args) -> int:
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=args.days)
+    counts: dict = {}
+    for r in _read(SKILL_USAGE):
+        try:
+            ts = dt.datetime.fromisoformat(r["ts"])
+        except (KeyError, ValueError):
+            continue
+        if ts >= cutoff:
+            counts[r["skill"]] = counts.get(r["skill"], 0) + 1
+    skills_dir = os.path.join(ROOT, "skills")
+    installed = sorted(os.listdir(skills_dir)) if os.path.isdir(skills_dir) else []
+    for s in installed:
+        n = counts.get(s, 0)
+        flag = "  <-- ZERO FIRES, prune candidate" if n == 0 else ""
+        print(f"{s:24s} fired {n:4d}x in {args.days}d{flag}")
+    for s, n in sorted(counts.items()):
+        if s not in installed:
+            print(f"{s:24s} fired {n:4d}x  (not in skills/ — project skill? promote or ignore)")
+    return 0
+
+
+# -------------------------------------------------------------------- gc
+def cmd_gc(args) -> int:
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=args.days)
+    moved = 0
+    for path, kind in ((PREDICTIONS, "predictions"), (CORRECTIONS, "corrections"), (SKILL_USAGE, "skill_usage")):
+        recs = _read(path)
+        hot, cold = [], {}
+        for r in recs:
+            try:
+                ts = dt.datetime.fromisoformat(r["ts"])
+            except (KeyError, ValueError):
+                hot.append(r)
+                continue
+            if ts >= cutoff or (kind == "predictions" and r.get("result") is None):
+                hot.append(r)  # never archive unscored predictions silently
+            else:
+                cold.setdefault(ts.strftime("%Y-%m"), []).append(r)
+        for month, rs in cold.items():
+            summary_path = os.path.join(MEMORY, "calibration", f"{month}.json")
+            existing = {}
+            if os.path.exists(summary_path):
+                with open(summary_path, encoding="utf-8") as f:
+                    existing = json.load(f)
+            bucket = existing.setdefault(kind, {"n": 0})
+            bucket["n"] += len(rs)
+            if kind == "predictions":
+                scored = [r for r in rs if r.get("result") in ("hit", "miss")]
+                if scored:
+                    prev_n = bucket.get("scored", 0)
+                    prev_hits = round(bucket.get("hit_rate", 0.0) * prev_n)
+                    new_hits = prev_hits + sum(1 for r in scored if r["result"] == "hit")
+                    bucket["scored"] = prev_n + len(scored)
+                    bucket["hit_rate"] = round(new_hits / bucket["scored"], 3)
+                    bucket["brier"] = round(_brier(scored), 3)
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(existing, f, indent=2)
+            moved += len(rs)
+        _write_all(path, hot)
+    print(f"gc: rolled {moved} cold records into memory/calibration/ monthly summaries.")
+    print("reminder: also run the user-model decay pass described in commands/gc.md.")
+    return 0
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(prog="harness", description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sp = sub.add_parser("predict")
+    sp.add_argument("--task", required=True)
+    sp.add_argument("--expect", required=True, help="falsifiable expected outcome")
+    sp.add_argument("--confidence", type=float, required=True)
+    sp.add_argument("--category", default="general")
+    sp.set_defaults(fn=cmd_predict)
+
+    sp = sub.add_parser("outcome")
+    sp.add_argument("id")
+    sp.add_argument("--result", choices=["hit", "miss"], required=True)
+    sp.add_argument("--notes", default="")
+    sp.set_defaults(fn=cmd_outcome)
+
+    sp = sub.add_parser("stats")
+    sp.set_defaults(fn=cmd_stats)
+
+    sp = sub.add_parser("corrections")
+    sp.add_argument("action", choices=["add", "count", "list"])
+    sp.add_argument("--note", default="")
+    sp.add_argument("--session", default="")
+    sp.add_argument("--last", type=int, default=20)
+    sp.set_defaults(fn=cmd_corrections)
+
+    sp = sub.add_parser("skill-fired")
+    sp.add_argument("name")
+    sp.add_argument("--session", default="")
+    sp.set_defaults(fn=cmd_skill_fired)
+
+    sp = sub.add_parser("skill-stats")
+    sp.add_argument("--days", type=int, default=30)
+    sp.set_defaults(fn=cmd_skill_stats)
+
+    sp = sub.add_parser("gc")
+    sp.add_argument("--days", type=int, default=30)
+    sp.set_defaults(fn=cmd_gc)
+
+    args = p.parse_args()
+    return args.fn(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

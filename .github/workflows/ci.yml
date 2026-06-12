@@ -1,0 +1,34 @@
+name: harness-ci
+on:
+  push: {branches: [main]}
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Harness self-lint (budgets, falsifiability, autonomy firewall)
+        run: python3 lint/lint_harness.py
+      - name: Hook behavior tests
+        run: python3 tests/test_hooks.py
+      - name: Eval corpus structure
+        run: python3 evals/run_evals.py --dry-run
+  regression-evals:
+    # Real eval replay. Runs only when the repo owner provides an API key —
+    # merging enforcement-layer or skill changes without this is flying blind.
+    runs-on: ubuntu-latest
+    if: ${{ vars.RUN_FULL_EVALS == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Replay regression corpus
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 evals/run_evals.py

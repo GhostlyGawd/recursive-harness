@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {"matcher": "startup|resume|clear",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_start.py"}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_correction.py"}]}
+    ],
+    "PreToolUse": [
+      {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_enforcement_layer.py"}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "Skill",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_skill_use.py"}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/stop_retro_gate.py"}]}
+    ],
+    "SessionEnd": [
+      {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_end.py"}]}
+    ]
+  }
+}
