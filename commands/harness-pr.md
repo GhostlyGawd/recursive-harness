@@ -8,7 +8,9 @@ For the change described in $ARGUMENTS:
 2. Apply the change per skill: harness-authoring (budgets, provenance,
    duplication check first).
 3. `python3 lint/lint_harness.py` — must be clean.
-4. Spawn **harness-auditor** on the diff; address findings.
+4. Spawn **harness-auditor** on the diff; address findings. If the diff
+   touches enforcement paths, also run /run-evals now and paste the report
+   into the PR body — the regression gate is procedural (ADR 0003).
 5. Push and `gh pr create` with body:
 
    ## What

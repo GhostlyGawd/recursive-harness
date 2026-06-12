@@ -1,4 +1,7 @@
 name: harness-ci
+# CI is pure Python by design (ADR 0003): no Claude invocation, headless or
+# otherwise, ever. Regression REPLAY happens in interactive sessions via the
+# /run-evals command; /harness-pr requires its report for enforcement diffs.
 on:
   push: {branches: [main]}
   pull_request:
@@ -17,22 +20,3 @@ jobs:
         run: python3 tests/test_hooks.py
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run
-  regression-evals:
-    # Real eval replay on the owner's Claude SUBSCRIPTION via the claude CLI.
-    # No API key, ever (ADR 0002): run `claude setup-token` locally, save the
-    # printed sk-ant-oat01-... token as repo secret CLAUDE_CODE_OAUTH_TOKEN,
-    # then set repo variable RUN_FULL_EVALS=true.
-    # Deliberately do NOT set ANTHROPIC_API_KEY here — if both are present,
-    # the API key takes precedence and breaks subscription auth.
-    runs-on: ubuntu-latest
-    if: ${{ vars.RUN_FULL_EVALS == 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12"}
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
-      - name: Replay regression corpus (subscription auth)
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: python3 evals/run_evals.py

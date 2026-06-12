@@ -13,8 +13,8 @@ Follow skill: eval-capture. Concretely, for the task just finished
      criteria — corrections the user made are the first criteria);
    - `meta.json`: date, category (matching prediction categories), source
      session, origin: correction|recurring|taste.
-3. Verify it passes today: `python3 evals/run_evals.py --subset <slug>`
-   (or `--dry-run` if no API budget). A day-one failure is a finding or a
+3. Verify it passes today via /run-evals <slug> in this session (structure
+   alone: `run_evals.py --dry-run`). A day-one failure is a finding or a
    bad rubric — resolve before committing.
 4. Branch `eval/$(date +%F)-<slug>`, lint, push, PR. Evals are
    enforcement-layer: a human merges, always.

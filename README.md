@@ -59,16 +59,16 @@ After significant tasks: `/retro` (the Stop gate will insist when you forget). E
 ```
 CLAUDE.md          kernel (≤60 lines, lint-enforced)     settings.json   hook registration
 skills/            6 trigger-loaded procedures           agents/         3 fresh-context roles
-commands/          6 named workflows                     hooks/          6 lifecycle enforcers (write-locked)
+commands/          7 named workflows                     hooks/          6 lifecycle enforcers (write-locked)
 bin/harness        state ledger CLI                      lint/           self-lint (budgets, falsifiability)
 memory/            user-model, ADRs, rollups (versioned) state/          hot JSONL (gitignored)
 evals/             regression corpus + runner            autonomy.json   graduated-autonomy ledger
-tests/             hook behavior tests                   .github/        CI: lint + tests + eval replay
+tests/             hook behavior tests                   .github/        CI: pure-Python lint + tests
 ```
 
 ## Honest limits
 
-This compounds; it does not explode. Model capability is fixed, so what grows is the elimination of repeated mistakes plus accumulated procedure and taste — most of what makes a senior engineer senior, delivered asymptotically per domain. The correction detector is a heuristic (retro filters its noise). Eval replay runs entirely on your Claude subscription via the `claude` CLI — `claude login` locally, a `claude setup-token` OAuth token (`CLAUDE_CODE_OAUTH_TOKEN` secret) in CI; no API key is used anywhere, by decision (ADR 0002). It still consumes subscription usage (from 2026-06-15, the separate Agent SDK credit), so CI gates the full run behind `RUN_FULL_EVALS=true` and smoke `--subset` runs are preferred day-to-day. Skill fire-logging depends on the Skill tool surfacing in PostToolUse on your Claude Code version; if it doesn't, `/meta-retro` falls back to transcript grep. And the system is only as honest as its scoring — which is why unscored predictions show up in the session banner as debt, and why "unverifiable" scores as a miss.
+This compounds; it does not explode. Model capability is fixed, so what grows is the elimination of repeated mistakes plus accumulated procedure and taste — most of what makes a senior engineer senior, delivered asymptotically per domain. The correction detector is a heuristic (retro filters its noise). Nothing in the harness runs headless — no `claude -p`, no Agent SDK, no API key, anywhere (ADRs 0002–0003). Regression replay happens inside your interactive session: `/run-evals` spawns one fresh subagent per corpus case (the same isolation headless mode would provide, on your ordinary subscription auth), grades via each case's `check.py` or the critic agent, and writes a results ledger. CI is pure Python — lint, hook tests, corpus structure — so it can never silently depend on a Claude invocation. The cost accepted: the replay gate is procedural rather than robot-enforced, which is why `/harness-pr` demands the replay report in the body of any enforcement-layer PR. Skill fire-logging depends on the Skill tool surfacing in PostToolUse on your Claude Code version; if it doesn't, `/meta-retro` falls back to transcript grep. And the system is only as honest as its scoring — which is why unscored predictions show up in the session banner as debt, and why "unverifiable" scores as a miss.
 
 ## Provenance
 

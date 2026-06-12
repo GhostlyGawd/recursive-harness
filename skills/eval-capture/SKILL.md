@@ -34,6 +34,6 @@ Skip: one-offs, secrets/proprietary data (sanitize or skip), pure lookups.
 - Tag `category` to match prediction categories so calibration stats and eval
   results join up in /meta-retro.
 
-Run: `python3 evals/run_evals.py --subset <slug>` to verify the case passes
-against current behavior before committing it. A case that fails on day one
+Verify in-session before committing: run /run-evals <slug> (fresh subagent
+performs the task, no headless — ADR 0003) and confirm it passes today. A case that fails on day one
 is either a real finding (file it) or a bad rubric (fix it).

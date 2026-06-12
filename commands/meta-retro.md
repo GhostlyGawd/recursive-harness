@@ -15,9 +15,9 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
 3. **Calibration drift**: `harness stats`. Any category overconfident by >15
    points → add a dated note to memory/calibration/notes.md and check whether
    that category has eval coverage; if not, that's the next eval-capture.
-4. **Eval health**: `python3 evals/run_evals.py --dry-run` (structure), and a
-   real run if budget allows. Failing case = regression or stale rubric;
-   decide which, explicitly, per case.
+4. **Eval health**: `python3 evals/run_evals.py --dry-run` (structure), then
+   replay via /run-evals IN THIS SESSION (subagents; never headless — ADR
+   0003). Failing case = regression or stale rubric; decide which, per case.
 5. **Autonomy graduation**: for each autonomy.json category with
    proposed >= 20 and accepted/proposed >= 0.95, propose flipping
    `auto_merge: true` — via PR, since autonomy.json is enforcement-layer.

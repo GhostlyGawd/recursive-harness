@@ -10,7 +10,8 @@ stale entries. This file is read on demand, never auto-loaded.
 - wants the harness itself versioned and shippable to GitHub, rejects opaque auto-memory as an anti-pattern (evidence: 1, last: 2026-06-12, source: stated)
 - prefers full builds over plans-about-plans; "I want it built" (evidence: 1, last: 2026-06-12, source: stated)
 
-- everything must run on subscription CLI auth (claude login / setup-token); API-key dependencies are rejected outright (evidence: 1, last: 2026-06-12, source: corrections)
+- everything must run on ordinary subscription CLI auth; API-key dependencies are rejected outright (evidence: 2, last: 2026-06-12, source: corrections)
+- no headless execution anywhere: claude -p / Agent SDK must never be load-bearing; use in-session subagents for isolation instead (evidence: 1, last: 2026-06-12, source: corrections)
 
 ## Working style
 

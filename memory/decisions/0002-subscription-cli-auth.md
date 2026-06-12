@@ -1,7 +1,8 @@
 # ADR 0002: All Claude execution runs on subscription CLI auth — no API keys
 
 date: 2026-06-12
-status: accepted
+status: accepted; CI setup-token mechanism superseded by ADR 0003
+(no-API-key principle stands)
 provenance: user correction, session 2026-06-12 ("This thing cannot use an
 api key. It has to be able to do it in cli")
 

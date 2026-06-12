@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
-"""run_evals — replay the regression corpus against the current harness.
+"""run_evals — corpus validation, mechanical grading, and the results ledger.
 
-Each case in evals/corpus/<slug>/ is run in an isolated temp dir via headless
-`claude -p` (Claude Code's non-interactive mode), then graded by the case's
-own check.py (objective) or by the critic agent against rubric.md (subjective,
-also via `claude -p` with a fresh context).
+NO HEADLESS EXECUTION (ADR 0003). This script never invokes Claude. The
+replay itself happens inside an interactive Claude Code session via the
+/run-evals command: live Claude spawns one FRESH subagent per case (same
+isolation `claude -p` would have provided, on the same subscription auth),
+then calls back into this script to grade and record.
 
 Modes:
-  --dry-run          validate corpus structure only (no API, CI-safe)
-  --subset slug[,..] run named cases only
-  (default)          run everything; requires `claude` CLI + auth
-
-Results land in evals/results/<timestamp>.json. Exit 1 if any case fails.
+  --dry-run                       validate corpus structure (pure Python, CI-safe)
+  --grade SLUG WORKDIR            run the case's check.py on WORKDIR; records result
+  --record SLUG pass|fail DETAIL  record a critic-subagent verdict (rubric cases)
+  --report                        summarize the current results ledger
+  --reset                         start a fresh results ledger (new replay run)
 """
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORPUS = os.path.join(ROOT, "evals", "corpus")
 RESULTS = os.path.join(ROOT, "evals", "results")
-TIMEOUT = 600
+LEDGER = os.path.join(RESULTS, "current.jsonl")
 
 
 def discover() -> list[str]:
@@ -42,7 +41,7 @@ def validate(slug: str) -> list[str]:
         problems.append("missing task.md")
     has_check = os.path.exists(os.path.join(case, "check.py"))
     has_rubric = os.path.exists(os.path.join(case, "rubric.md"))
-    if has_check == has_rubric:  # need exactly one grader
+    if has_check == has_rubric:  # exactly one grader required
         problems.append("need exactly one of check.py / rubric.md")
     meta_path = os.path.join(case, "meta.json")
     if not os.path.exists(meta_path):
@@ -58,97 +57,89 @@ def validate(slug: str) -> list[str]:
     return problems
 
 
-def run_case(slug: str) -> dict:
-    case = os.path.join(CORPUS, slug)
-    task = open(os.path.join(case, "task.md"), encoding="utf-8").read()
-    workdir = tempfile.mkdtemp(prefix=f"eval-{slug}-")
-    # copy fixtures (everything except graders/meta) into the sandbox
-    for f in os.listdir(case):
-        if f not in ("task.md", "check.py", "rubric.md", "meta.json"):
-            src = os.path.join(case, f)
-            dst = os.path.join(workdir, f)
-            shutil.copytree(src, dst) if os.path.isdir(src) else shutil.copy2(src, dst)
-    started = time.time()
-    try:
-        proc = subprocess.run(
-            ["claude", "-p", task, "--output-format", "json",
-             "--permission-mode", "acceptEdits"],
-            cwd=workdir, capture_output=True, text=True, timeout=TIMEOUT,
-        )
-        agent_out = proc.stdout
-    except FileNotFoundError:
-        return {"slug": slug, "status": "error",
-                "detail": "`claude` CLI not found — install Claude Code and authenticate "
-                          "via subscription (`claude login`, or CLAUDE_CODE_OAUTH_TOKEN "
-                          "from `claude setup-token` in CI). No API key (ADR 0002)."}
-    except subprocess.TimeoutExpired:
-        return {"slug": slug, "status": "fail", "detail": f"timeout after {TIMEOUT}s"}
-
-    check = os.path.join(case, "check.py")
-    if os.path.exists(check):
-        g = subprocess.run([sys.executable, check, workdir],
-                           capture_output=True, text=True, timeout=120)
-        status = "pass" if g.returncode == 0 else "fail"
-        detail = (g.stdout + g.stderr).strip()[:500]
-    else:
-        rubric = open(os.path.join(case, "rubric.md"), encoding="utf-8").read()
-        grader_prompt = (
-            "You are the critic agent (fresh context; you did not build this). "
-            "Grade the artifacts in the current directory against the original "
-            f"request and rubric below. Output JSON only: "
-            '{"verdict":"pass|fail","defects":["..."]}.\n\n'
-            f"REQUEST:\n{task}\n\nRUBRIC:\n{rubric}"
-        )
-        g = subprocess.run(["claude", "-p", grader_prompt, "--output-format", "json"],
-                           cwd=workdir, capture_output=True, text=True, timeout=TIMEOUT)
-        try:
-            payload = json.loads(g.stdout)
-            inner = json.loads(payload.get("result", "{}")) if isinstance(
-                payload.get("result"), str) else payload.get("result", {})
-            status = "pass" if inner.get("verdict") == "pass" else "fail"
-            detail = "; ".join(inner.get("defects", []))[:500]
-        except (json.JSONDecodeError, AttributeError):
-            status, detail = "error", "grader output unparseable"
-    return {"slug": slug, "status": status, "detail": detail,
-            "seconds": round(time.time() - started, 1),
-            "agent_output_chars": len(agent_out)}
+def record(slug: str, status: str, detail: str) -> None:
+    os.makedirs(RESULTS, exist_ok=True)
+    with open(LEDGER, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                            "slug": slug, "status": status,
+                            "detail": detail[:500]}) + "\n")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--subset", default="")
+    ap.add_argument("--grade", nargs=2, metavar=("SLUG", "WORKDIR"))
+    ap.add_argument("--record", nargs=3, metavar=("SLUG", "STATUS", "DETAIL"))
+    ap.add_argument("--report", action="store_true")
+    ap.add_argument("--reset", action="store_true")
     args = ap.parse_args()
 
-    slugs = discover()
-    if args.subset:
-        want = set(args.subset.split(","))
-        slugs = [s for s in slugs if s in want]
-    if not slugs:
-        print("no eval cases found")
-        return 1
+    if args.reset:
+        if os.path.exists(LEDGER):
+            stamped = os.path.join(RESULTS, time.strftime("%Y%m%d-%H%M%S") + ".jsonl")
+            os.rename(LEDGER, stamped)
+            print(f"previous ledger archived: {stamped}")
+        print("fresh ledger ready")
+        return 0
 
-    bad_structure = {s: validate(s) for s in slugs}
-    bad_structure = {s: p for s, p in bad_structure.items() if p}
-    if bad_structure:
-        for s, p in bad_structure.items():
-            print(f"STRUCTURE {s}: " + "; ".join(p))
-        return 1
     if args.dry_run:
+        slugs = discover()
+        if not slugs:
+            print("no eval cases found")
+            return 1
+        bad = {s: p for s in slugs if (p := validate(s))}
+        for s, p in bad.items():
+            print(f"STRUCTURE {s}: " + "; ".join(p))
+        if bad:
+            return 1
         print(f"dry-run: {len(slugs)} case(s) structurally valid: {', '.join(slugs)}")
         return 0
 
-    results = [run_case(s) for s in slugs]
-    os.makedirs(RESULTS, exist_ok=True)
-    out = os.path.join(RESULTS, time.strftime("%Y%m%d-%H%M%S") + ".json")
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
-    failed = [r for r in results if r["status"] != "pass"]
-    for r in results:
-        print(f"{r['status'].upper():6s} {r['slug']:24s} {r.get('detail', '')[:80]}")
-    print(f"\n{len(results) - len(failed)}/{len(results)} passed — results: {out}")
-    return 1 if failed else 0
+    if args.grade:
+        slug, workdir = args.grade
+        check = os.path.join(CORPUS, slug, "check.py")
+        if not os.path.exists(check):
+            print(f"{slug} has no check.py — it is rubric-graded; spawn the critic "
+                  "subagent and use --record instead")
+            return 1
+        g = subprocess.run([sys.executable, check, workdir],
+                           capture_output=True, text=True, timeout=120)
+        status = "pass" if g.returncode == 0 else "fail"
+        detail = (g.stdout + g.stderr).strip()
+        record(slug, status, detail)
+        print(f"{status.upper()} {slug}: {detail[:200]}")
+        return 0 if status == "pass" else 1
+
+    if args.record:
+        slug, status, detail = args.record
+        if status not in ("pass", "fail"):
+            print("status must be pass|fail")
+            return 1
+        record(slug, status, detail)
+        print(f"recorded {status.upper()} {slug}")
+        return 0
+
+    if args.report:
+        if not os.path.exists(LEDGER):
+            print("no current ledger — run /run-evals (in-session) first")
+            return 1
+        rows = [json.loads(l) for l in open(LEDGER, encoding="utf-8") if l.strip()]
+        latest = {}
+        for r in rows:
+            latest[r["slug"]] = r  # last verdict per case wins
+        failed = [r for r in latest.values() if r["status"] != "pass"]
+        for r in latest.values():
+            print(f"{r['status'].upper():5s} {r['slug']:24s} {r['detail'][:70]}")
+        missing = [s for s in discover() if s not in latest]
+        if missing:
+            print(f"NOT RUN: {', '.join(missing)}")
+        print(f"\n{len(latest) - len(failed)}/{len(latest)} passed"
+              + (f", {len(missing)} not run" if missing else ""))
+        return 1 if failed or missing else 0
+
+    ap.print_help()
+    return 0
 
 
 if __name__ == "__main__":
