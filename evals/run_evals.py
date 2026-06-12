@@ -78,7 +78,9 @@ def run_case(slug: str) -> dict:
         agent_out = proc.stdout
     except FileNotFoundError:
         return {"slug": slug, "status": "error",
-                "detail": "`claude` CLI not found — install Claude Code or use --dry-run"}
+                "detail": "`claude` CLI not found — install Claude Code and authenticate "
+                          "via subscription (`claude login`, or CLAUDE_CODE_OAUTH_TOKEN "
+                          "from `claude setup-token` in CI). No API key (ADR 0002)."}
     except subprocess.TimeoutExpired:
         return {"slug": slug, "status": "fail", "detail": f"timeout after {TIMEOUT}s"}
 

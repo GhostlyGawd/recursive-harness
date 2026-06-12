@@ -10,6 +10,8 @@ stale entries. This file is read on demand, never auto-loaded.
 - wants the harness itself versioned and shippable to GitHub, rejects opaque auto-memory as an anti-pattern (evidence: 1, last: 2026-06-12, source: stated)
 - prefers full builds over plans-about-plans; "I want it built" (evidence: 1, last: 2026-06-12, source: stated)
 
+- everything must run on subscription CLI auth (claude login / setup-token); API-key dependencies are rejected outright (evidence: 1, last: 2026-06-12, source: corrections)
+
 ## Working style
 
 (empty — earn entries, don't guess them)

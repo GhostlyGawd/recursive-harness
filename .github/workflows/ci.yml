@@ -18,8 +18,12 @@ jobs:
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run
   regression-evals:
-    # Real eval replay. Runs only when the repo owner provides an API key —
-    # merging enforcement-layer or skill changes without this is flying blind.
+    # Real eval replay on the owner's Claude SUBSCRIPTION via the claude CLI.
+    # No API key, ever (ADR 0002): run `claude setup-token` locally, save the
+    # printed sk-ant-oat01-... token as repo secret CLAUDE_CODE_OAUTH_TOKEN,
+    # then set repo variable RUN_FULL_EVALS=true.
+    # Deliberately do NOT set ANTHROPIC_API_KEY here — if both are present,
+    # the API key takes precedence and breaks subscription auth.
     runs-on: ubuntu-latest
     if: ${{ vars.RUN_FULL_EVALS == 'true' }}
     steps:
@@ -28,7 +32,7 @@ jobs:
         with: {python-version: "3.12"}
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
-      - name: Replay regression corpus
+      - name: Replay regression corpus (subscription auth)
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: python3 evals/run_evals.py
