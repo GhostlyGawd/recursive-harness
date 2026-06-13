@@ -32,6 +32,17 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
   "run migrations in a transaction; the 2026-05 incident was a half-applied
   migration" is a learning.
 
+## Enforcement exemptions (lint / hook rules)
+
+An exemption to a lint or hook rule MUST be a human-gated allowlist edited only
+via /harness-pr (e.g. `SEED_ARTIFACTS`, `VENDORED_SKILLS`) — NEVER a field the
+checked artifact can set on itself (frontmatter flag, marker line, env var). A
+self-assertable exemption silently turns the rule into opt-out for the whole tree.
+If an artifact must carry a human-readable marker, keep it inert and make the
+linter ignore it; always surface the waiver in lint output, never skip silently.
+(session 61f58113, 2026-06-13: a self-asserted `vendored: true` B3 waiver was
+caught by the harness-auditor as a backdoor, then replaced with a path allowlist.)
+
 ## Per-type notes
 
 - **Agents**: define what context they get — and what they must NOT get. Any
