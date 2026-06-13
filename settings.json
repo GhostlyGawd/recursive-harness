@@ -1,8 +1,4 @@
 {
-  "statusLine": {
-    "type": "command",
-    "command": "bash \"D:/GitHub Projects/recursive-harness/statusline-command.sh\""
-  },
   "hooks": {
     "SessionStart": [
       {"matcher": "startup|resume|clear",
