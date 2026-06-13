@@ -5,7 +5,10 @@ Enforced invariants (each one exists to kill a specific failure mode):
 
   B1  CLAUDE.md <= 60 non-empty lines          (kernel bloat = silent context tax)
   B2  skill description <= 600 chars            (descriptions are always-loaded)
-  B3  skill body <= 200 lines                   (split into references/ instead)
+  B3  skill body <= 200 lines                   (split into references/ instead;
+      paths in VENDORED_SKILLS are exempt — third-party imports kept whole. That
+      allowlist is editable only via a human-gated PR, so the waiver CANNOT be
+      self-asserted in frontmatter. B2/F2 still apply to vendored skills.)
   B4  command file <= 80 lines
   B5  agent file <= 80 lines, must declare name+description frontmatter
   F1  every memory/user-model.md bullet carries (evidence: N, last: YYYY-MM-DD ...)
@@ -32,6 +35,16 @@ SEED_ARTIFACTS = {  # v1 ships these; provenance not required for seeds
     "commands/retro.md", "commands/meta-retro.md", "commands/calibrate.md",
     "commands/gc.md", "commands/capture-eval.md", "commands/harness-pr.md",
     "agents/critic.md", "agents/retro-miner.md", "agents/harness-auditor.md",
+}
+
+# provenance: 2026-06-13, session 61f58113-3d14-49bb-b486-3d852924b177; event: user request to
+# vendor a large third-party skill (huashu-design, 472-line SKILL.md body) into the trunk, which
+# required a human-gated waiver of the B3 body-line cap. Add paths here only via /harness-pr.
+VENDORED_SKILLS = {  # third-party skills imported whole; B3 body cap waived ONLY for these.
+    # This is the security boundary: a path lands here only through a human-gated PR edit
+    # to this enforcement file. It deliberately does NOT key on frontmatter — a self-asserted
+    # `vendored: true` would make B3 opt-out for the entire skills/ tree. B2/F2 still bind.
+    "skills/huashu-design",
 }
 
 
@@ -87,8 +100,11 @@ def check_skills() -> None:
         elif len(desc) > 600:
             err("B2", f"{rel}: description {len(desc)} chars (budget 600; it is always-loaded)")
         n = nonempty_lines(skill_md)
-        if n > 200:
+        if n > 200 and rel not in VENDORED_SKILLS:
             err("B3", f"{rel}: SKILL.md {n} lines (budget 200; move detail to references/)")
+        elif n > 200 and rel in VENDORED_SKILLS:
+            print(f"  note: {rel}: SKILL.md {n} lines - B3 waived (allowlisted vendored import; "
+                  f"trigger-load cost is opt-in). B2 + provenance still enforced.")
         if rel not in SEED_ARTIFACTS and "provenance:" not in open(skill_md, encoding="utf-8").read():
             err("F2", f"{rel}: no provenance line — where did this learning come from?")
 
