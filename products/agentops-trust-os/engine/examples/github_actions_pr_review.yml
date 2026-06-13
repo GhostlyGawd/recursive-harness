@@ -1,0 +1,52 @@
+# Sample GitHub Actions workflow: run a coding agent under the Agent Flight Recorder,
+# then upload the audit report + SOC 2 evidence pack as build artifacts. Every agent
+# run in CI becomes a replayable, governed, auditable record.
+#
+# Drop this at .github/workflows/agent-pr-review.yml in a consuming repo.
+
+name: Agent PR Review (AgentOps)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  agent-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install AgentOps SDK
+        run: pip install agentops-trust-os
+
+      - name: Run the agent under the flight recorder
+        env:
+          AGENTOPS_DB: agentops_ci.db
+          # The recorder needs no model keys for the demo agent; a real agent would set its own.
+        run: python examples/coding_agent_demo.py
+
+      - name: Export audit + compliance evidence
+        run: |
+          python - <<'PY'
+          import agentops
+          store = agentops.Store("agentops_ci.db")
+          exp = agentops.EvidenceExporter(store)
+          for t in store.list_tasks():
+              open(f"audit_{t.task_id}.md", "w", encoding="utf-8").write(exp.audit_report(t.task_id))
+          pack = exp.evidence_pack("SOC2")
+          open("evidence_soc2.md", "w", encoding="utf-8").write(exp.render_pack_markdown(pack))
+          # Fail the build if any agent task tripped a critical incident or broke audit integrity.
+          assert pack["integrity"]["all_verified"], "agent audit-trail integrity broken"
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentops-evidence
+          path: |
+            audit_*.md
+            evidence_soc2.md

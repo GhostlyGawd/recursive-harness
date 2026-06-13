@@ -1,0 +1,12 @@
+# generated / local
+*.db
+*.db-journal
+*.db-wal
+examples/out/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.coverage
