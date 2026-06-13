@@ -5,3 +5,4 @@ evals/results/*
 __pycache__/
 *.pyc
 HUMAN_APPROVED
+.claude-private/

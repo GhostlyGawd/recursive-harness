@@ -1,0 +1,16 @@
+{
+  "name": "@agentops/sdk",
+  "version": "0.1.0",
+  "description": "Agent Flight Recorder — JS/TS SDK. Record, govern, and prove what your AI agents do. Zero dependencies.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" },
+  "keywords": ["ai-agents", "observability", "governance", "llmops", "ai-trust", "tracing"],
+  "license": "Apache-2.0",
+  "dependencies": {}
+}
