@@ -16,7 +16,7 @@ import re
 import sys
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROTECTED = ("hooks", "lint", "evals", ".github", "autonomy.json", "settings.json")
+PROTECTED = ("hooks", "lint", "evals", ".github", "autonomy.json", "settings.json", "templates")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 # Bash patterns that can mutate files; reads are fine.
 MUTATING = re.compile(
