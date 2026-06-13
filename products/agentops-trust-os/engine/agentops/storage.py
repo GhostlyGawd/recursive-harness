@@ -46,7 +46,11 @@ CREATE TABLE IF NOT EXISTS incidents (
     incident_id TEXT PRIMARY KEY, task_id TEXT, tenant TEXT, severity TEXT,
     detected_at INTEGER, data TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_events_task ON events(task_id, seq);
+-- Commits each task's event count + head hash so tail-truncation of the log is detectable.
+CREATE TABLE IF NOT EXISTS chain_heads (
+    task_id TEXT PRIMARY KEY, head_hash TEXT, event_count INTEGER DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_task_seq ON events(task_id, seq);
 CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant, project, status);
 CREATE INDEX IF NOT EXISTS idx_appr_status ON approvals(tenant, status);
 """
@@ -60,6 +64,7 @@ class Store:
             os.makedirs(parent, exist_ok=True)
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA busy_timeout=5000")  # tolerate concurrent writers
         self._lock = threading.RLock()
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
@@ -74,7 +79,7 @@ class Store:
                 "INSERT OR REPLACE INTO tasks VALUES (?,?,?,?,?,?,?,?)",
                 (task.task_id, task.tenant, task.project, task.status,
                  task.started_at, task.ended_at, task.parent_task_id,
-                 json.dumps(task.to_dict())),
+                 json.dumps(task.to_dict(), default=str)),
             )
             self._conn.commit()
         return task
@@ -118,7 +123,14 @@ class Store:
                 "INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (event.event_id, event.task_id, tenant, event.seq, event.ts,
                  event.type, event.status, event.hash, event.prev_hash,
-                 json.dumps(event.to_dict())),
+                 json.dumps(event.to_dict(), default=str)),
+            )
+            # commit the running head hash + count so a deleted tail is detectable
+            self._conn.execute(
+                "INSERT INTO chain_heads(task_id, head_hash, event_count) VALUES(?,?,1) "
+                "ON CONFLICT(task_id) DO UPDATE SET head_hash=excluded.head_hash, "
+                "event_count=event_count+1",
+                (event.task_id, event.hash),
             )
             self._conn.commit()
         return event
@@ -130,7 +142,11 @@ class Store:
         return [Event.from_dict(json.loads(r["data"])) for r in rows]
 
     def verify_chain(self, task_id: str):
-        """Recompute the hash chain. Returns (ok: bool, broken_event_ids: list)."""
+        """Recompute the hash chain. Returns (ok: bool, broken_event_ids: list).
+
+        Detects edits/reordering (a recomputed hash or prev_hash won't match) AND
+        deletion of the tail (the committed event_count / head_hash won't match).
+        """
         events = self.get_events(task_id)
         broken, prev = [], None
         for ev in events:
@@ -138,6 +154,14 @@ class Store:
             if ev.hash != expected or ev.prev_hash != prev:
                 broken.append(ev.event_id)
             prev = ev.hash
+        head = self._conn.execute(
+            "SELECT head_hash, event_count FROM chain_heads WHERE task_id=?", (task_id,)
+        ).fetchone()
+        if head is not None:
+            if len(events) != head["event_count"]:
+                broken.append("<truncated-or-extended>")
+            elif events and events[-1].hash != head["head_hash"]:
+                broken.append("<head-mismatch>")
         return (len(broken) == 0, broken)
 
     # -------------------------------------------------------------- approvals

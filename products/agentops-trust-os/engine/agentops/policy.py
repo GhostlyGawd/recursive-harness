@@ -71,6 +71,8 @@ class PolicyEngine:
                 if not _triggered(rule, context):
                     continue
                 effect = rule.get("effect", PolicyEffect.ALLOW.value)
+                if effect not in _PRECEDENCE:
+                    effect = PolicyEffect.DENY.value  # fail closed on a misconfigured/typo'd effect
                 cand = Decision(effect, rule.get("reason", ""), policy.policy_id, rule.get("id"))
                 if best is None or _PRECEDENCE[effect] > _PRECEDENCE[best.effect]:
                     best = cand
@@ -78,8 +80,9 @@ class PolicyEngine:
 
 
 def _matches(match: dict, ctx: dict) -> bool:
-    for key in ("tool", "action", "type", "actor"):
-        want = match.get(key)
+    # Iterate EVERY key in the rule's match (not just known ones) so a typo'd key
+    # doesn't silently collapse an intended-narrow rule into match-everything.
+    for key, want in match.items():
         if want is None or want == "*":
             continue
         got = ctx.get(key)
@@ -95,13 +98,15 @@ def _triggered(rule: dict, ctx: dict) -> bool:
     conds = [k for k in ("max_cost_usd", "task_budget_usd", "deny_data_tags") if k in rule]
     if not conds:
         return True  # pure match rule fires whenever it matches
-    if "max_cost_usd" in rule and float(ctx.get("cost_usd", 0.0)) > float(rule["max_cost_usd"]):
+    if "max_cost_usd" in rule and float(ctx.get("cost_usd") or 0.0) > float(rule["max_cost_usd"]):
         return True
-    if "task_budget_usd" in rule and float(ctx.get("task_cost_usd", 0.0)) > float(rule["task_budget_usd"]):
+    if "task_budget_usd" in rule and float(ctx.get("task_cost_usd") or 0.0) > float(rule["task_budget_usd"]):
         return True
     if "deny_data_tags" in rule:
-        tags = set(ctx.get("data_tags", []) or [])
-        if tags & set(rule["deny_data_tags"]):
+        tags = ctx.get("data_tags") or []
+        if isinstance(tags, str):  # a bare string would otherwise iterate by character
+            tags = [tags]
+        if set(tags) & set(rule["deny_data_tags"]):
             return True
     return False
 

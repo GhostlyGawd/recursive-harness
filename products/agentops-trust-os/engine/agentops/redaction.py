@@ -16,16 +16,19 @@ from typing import Any, List, Tuple
 
 # Field names whose *values* are always masked, regardless of content.
 DEFAULT_SENSITIVE_KEYS = frozenset({
-    "password", "passwd", "secret", "api_key", "apikey", "token", "access_token",
+    "password", "passwd", "secret", "secret_key", "api_key", "apikey", "token", "access_token",
     "refresh_token", "authorization", "auth", "private_key", "client_secret",
-    "session", "cookie", "ssn", "credit_card", "card_number",
+    "aws_secret_access_key", "aws_secret", "session", "cookie", "ssn", "credit_card", "card_number",
 })
 
-# Value patterns masked anywhere they appear in a string.
+# Value patterns masked anywhere they appear in a string. Order matters: the more
+# specific anthropic key is tested before the generic ``sk-`` openai key so it is
+# tagged correctly.
 DEFAULT_PATTERNS: List[Tuple[str, "re.Pattern"]] = [
-    ("openai_key", re.compile(r"sk-[A-Za-z0-9_\-]{20,}")),
     ("anthropic_key", re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}")),
+    ("openai_key", re.compile(r"sk-[A-Za-z0-9_\-]{20,}")),
     ("aws_key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("github_pat", re.compile(r"github_pat_[A-Za-z0-9_]{20,}")),
     ("github_token", re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}")),
     ("bearer", re.compile(r"Bearer\s+[A-Za-z0-9._\-]{16,}")),
     ("private_key_block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),

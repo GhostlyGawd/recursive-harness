@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any, List, Optional
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
@@ -27,14 +28,19 @@ _DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
 
 
 def _load_api_keys() -> dict:
-    keys = {"demo-key": "default"}
+    """Explicit AGENTOPS_API_KEYS config REPLACES the dev key (no permanent backdoor).
+    The ``demo-key`` default applies only when nothing valid is configured."""
     raw = os.environ.get("AGENTOPS_API_KEYS")
     if raw:
         try:
-            keys.update(json.loads(raw))
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                cleaned = {k: v for k, v in parsed.items() if k and v}  # drop empty key/tenant
+                if cleaned:
+                    return cleaned
         except json.JSONDecodeError:
             pass
-    return keys
+    return {"demo-key": "default"}
 
 
 def create_app(store: Optional[Store] = None, api_keys: Optional[dict] = None) -> FastAPI:
@@ -61,8 +67,11 @@ def create_app(store: Optional[Store] = None, api_keys: Optional[dict] = None) -
     @app.post("/v1/tasks")
     def create_task(body: dict = Body(...), tenant: str = Depends(tenant_of)):
         body = dict(body)
-        body["tenant"] = tenant
+        body["tenant"] = tenant  # tenant is always the caller's, never client-supplied
         task = Task.from_dict({"name": body.get("name", "task"), "actor": body.get("actor", "agent"), **body})
+        existing = store.get_task(task.task_id)
+        if existing and existing.tenant != tenant:
+            raise HTTPException(status_code=403, detail="task id belongs to another tenant")
         store.create_task(task)
         return task.to_dict()
 
@@ -100,7 +109,9 @@ def create_app(store: Optional[Store] = None, api_keys: Optional[dict] = None) -
     # ------------------------------------------------------------- events
     @app.post("/v1/events")
     def ingest_events(body: dict = Body(...), tenant: str = Depends(tenant_of)):
-        events = body.get("events") if isinstance(body, dict) and "events" in body else [body]
+        events = body["events"] if isinstance(body, dict) and "events" in body else [body]
+        if not isinstance(events, list) or not all(isinstance(e, dict) for e in events):
+            raise HTTPException(status_code=400, detail="body must be an event object or {events: [event, ...]}")
         stored = []
         for raw in events:
             if "task_id" not in raw or not store.get_task(raw["task_id"]):
@@ -122,10 +133,13 @@ def create_app(store: Optional[Store] = None, api_keys: Optional[dict] = None) -
         appr = store.get_approval(approval_id)
         if not appr or appr.tenant != tenant:
             raise HTTPException(status_code=404, detail="approval not found")
+        if appr.status != "pending":
+            raise HTTPException(status_code=409, detail=f"approval already {appr.status}")
         decision = body.get("decision", "approved")
         by = body.get("by", "human")
         appr.status = decision
         appr.decided_by = by
+        appr.decided_at = int(time.time() * 1000)
         appr.decision_note = body.get("note", "")
         appr.edited_payload = body.get("edited_payload")
         store.update_approval(appr)

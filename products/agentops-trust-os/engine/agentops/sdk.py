@@ -239,7 +239,9 @@ class Recorder:
         decision: Decision = self.policy.evaluate(ctx)
 
         if decision.allowed:
+            # accrue the action's declared cost so per-task budgets accumulate guarded spend
             self._emit(EventType.POLICY_CHECK.value, name=action, status=Status.OK.value,
+                       cost_usd=cost_usd,
                        attributes={"effect": decision.effect, "reason": decision.reason,
                                    "policy_id": decision.policy_id, "tool": tool})
             return GuardResult(True, decision.effect, decision.reason)
@@ -275,11 +277,12 @@ class Recorder:
         return self._apply_decision(appr, ApprovalDecision(decision, by, note, edited_payload))
 
     def _apply_decision(self, appr: ApprovalRequest, verdict: "ApprovalDecision") -> GuardResult:
+        red_edit, _ = self.redactor.redact(verdict.edited_payload)
         appr.status = verdict.decision
         appr.decided_at = self._clock()
         appr.decided_by = verdict.by
         appr.decision_note = verdict.note
-        appr.edited_payload = verdict.edited_payload
+        appr.edited_payload = red_edit  # redact human-supplied edits before persisting
         self.store.update_approval(appr)
         approved = verdict.decision in ("approved", "edited")
         self._build_event(appr.task_id, EventType.APPROVAL.value, name=appr.action,
@@ -322,9 +325,13 @@ class _TaskContext:
         return self._handle
 
     def __exit__(self, exc_type, exc, tb) -> bool:
-        if exc is not None:
-            self._handle.fail(reason=f"{exc_type.__name__}: {exc}")
-        elif not self._handle._ended:
-            self._handle.succeed()
-        _current.reset(self._token)
+        # Always reset the contextvar, even if finalization raises — otherwise the
+        # task scope would leak into the next task on this thread.
+        try:
+            if exc is not None:
+                self._handle.fail(reason=f"{exc_type.__name__}: {exc}")
+            elif not self._handle._ended:
+                self._handle.succeed()
+        finally:
+            _current.reset(self._token)
         return False  # never swallow exceptions

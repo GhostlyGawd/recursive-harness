@@ -1,26 +1,30 @@
 // AgentOps — Agent Flight Recorder SDK for JavaScript / TypeScript (Node 18+).
 // Zero dependencies. Records tasks + events, redacts sensitive data at the edge,
-// evaluates policy locally, and ships events to the AgentOps ingestion API.
-// Event field names mirror the Python SDK exactly so both write the same schema.
+// evaluates policy locally, and ships tasks + events to the AgentOps ingestion API.
+// Event + task field names mirror the Python SDK exactly so both write one schema.
 
 const SCHEMA_VERSION = "0.1.0";
 
 // ---- redaction (mirror of the Python Redactor) ----
 const SENSITIVE_KEYS = new Set([
-  "password", "passwd", "secret", "api_key", "apikey", "token", "access_token",
+  "password", "passwd", "secret", "secret_key", "api_key", "apikey", "token", "access_token",
   "refresh_token", "authorization", "auth", "private_key", "client_secret",
-  "session", "cookie", "ssn", "credit_card", "card_number",
+  "aws_secret_access_key", "aws_secret", "session", "cookie", "ssn", "credit_card", "card_number",
 ]);
+// Order matters: the specific anthropic key is tested before the generic sk- openai key.
 const PATTERNS = [
-  ["openai_key", /sk-[A-Za-z0-9_-]{20,}/g],
   ["anthropic_key", /sk-ant-[A-Za-z0-9_-]{20,}/g],
+  ["openai_key", /sk-[A-Za-z0-9_-]{20,}/g],
   ["aws_key", /AKIA[0-9A-Z]{16}/g],
+  ["github_pat", /github_pat_[A-Za-z0-9_]{20,}/g],
   ["github_token", /gh[pousr]_[A-Za-z0-9]{20,}/g],
   ["bearer", /Bearer\s+[A-Za-z0-9._-]{16,}/g],
   ["private_key_block", /-----BEGIN [A-Z ]*PRIVATE KEY-----/g],
+  ["email", /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g],
   ["jwt", /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g],
 ];
 const MASK = "***REDACTED***";
+const MAX_STRING = 20000;
 
 export function redact(value, found = new Set(), key = null) {
   if (key !== null && typeof key === "string" && SENSITIVE_KEYS.has(key.toLowerCase())) {
@@ -37,6 +41,7 @@ export function redact(value, found = new Set(), key = null) {
   }
   if (typeof value === "string") {
     let s = value;
+    if (s.length > MAX_STRING) { found.add("truncated"); s = s.slice(0, MAX_STRING) + "...[truncated]"; }
     for (const [tag, re] of PATTERNS) {
       if (re.test(s)) { found.add(`pattern:${tag}`); s = s.replace(re, MASK); }
       re.lastIndex = 0;
@@ -46,20 +51,26 @@ export function redact(value, found = new Set(), key = null) {
   return value;
 }
 
-// ---- cost (mirror subset of the Python price table) ----
+// ---- cost (mirror of the Python price table) ----
 const PRICES = {
   "anthropic/claude-opus-4": [0.015, 0.075],
   "anthropic/claude-sonnet-4": [0.003, 0.015],
+  "anthropic/claude-haiku-4": [0.0008, 0.004],
+  "anthropic/claude-3-5-sonnet": [0.003, 0.015],
   "openai/gpt-4o": [0.005, 0.015],
   "openai/gpt-4o-mini": [0.00015, 0.0006],
+  "openai/gpt-4.1": [0.002, 0.008],
+  "openai/o3": [0.01, 0.04],
   "google/gemini-2.5-pro": [0.00125, 0.005],
+  "google/gemini-2.5-flash": [0.0003, 0.0025],
   "mock/mock-fast": [0.0005, 0.0015],
   "mock/mock-smart": [0.003, 0.015],
 };
 const DEFAULT_RATE = [0.002, 0.008];
 export function computeCost(provider, model, tokensIn = 0, tokensOut = 0) {
   const [ri, ro] = PRICES[`${(provider || "").toLowerCase()}/${model}`] || DEFAULT_RATE;
-  return Math.round(((tokensIn / 1000) * ri + (tokensOut / 1000) * ro) * 1e6) / 1e6;
+  const ti = Math.max(0, tokensIn), to = Math.max(0, tokensOut);
+  return Math.round((ti / 1000 * ri + to / 1000 * ro) * 1e6) / 1e6;
 }
 
 // ---- policy engine (mirror of the Python evaluator) ----
@@ -69,14 +80,16 @@ export function evaluatePolicy(rules, ctx) {
   for (const rule of rules || []) {
     if (!matches(rule.match || {}, ctx)) continue;
     if (!triggered(rule, ctx)) continue;
-    const cand = { effect: rule.effect || "allow", reason: rule.reason || "", rule_id: rule.id };
+    let effect = rule.effect || "allow";
+    if (!(effect in PREC)) effect = "deny"; // fail closed on a misconfigured effect
+    const cand = { effect, reason: rule.reason || "", rule_id: rule.id };
     if (!best || PREC[cand.effect] > PREC[best.effect]) best = cand;
   }
   return best || { effect: "allow", reason: "no matching policy rule" };
 }
 function matches(match, ctx) {
-  for (const key of ["tool", "action", "type", "actor"]) {
-    const want = match[key];
+  // iterate every key so a typo'd match key doesn't collapse the rule to match-all
+  for (const [key, want] of Object.entries(match)) {
     if (want === undefined || want === "*") continue;
     const got = ctx[key];
     if (Array.isArray(want)) { if (!want.includes(got)) return false; }
@@ -90,8 +103,9 @@ function triggered(rule, ctx) {
   if ("max_cost_usd" in rule && (ctx.cost_usd || 0) > rule.max_cost_usd) return true;
   if ("task_budget_usd" in rule && (ctx.task_cost_usd || 0) > rule.task_budget_usd) return true;
   if ("deny_data_tags" in rule) {
-    const tags = new Set(ctx.data_tags || []);
-    if (rule.deny_data_tags.some((t) => tags.has(t))) return true;
+    let tags = ctx.data_tags || [];
+    if (typeof tags === "string") tags = [tags]; // a bare string would iterate by character
+    if (rule.deny_data_tags.some((t) => tags.includes(t))) return true;
   }
   return false;
 }
@@ -103,6 +117,8 @@ export function defaultPolicy() {
     { id: "approve-prod", match: { action: ["merge_pull_request", "deploy", "delete_resource", "send_external_email"] },
       effect: "require_approval", reason: "Production-affecting actions require a human approver" },
     { id: "budget", match: {}, effect: "require_approval", task_budget_usd: 5.0, reason: "Task budget exceeded" },
+    { id: "deny-pii", match: {}, effect: "deny", deny_data_tags: ["ssn", "card_number"],
+      reason: "Regulated PII must not leave the workflow" },
   ];
 }
 
@@ -111,16 +127,21 @@ function newId(prefix) {
 }
 function hashStr(s) { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
-// ---- default transport: POST events to the ingestion API ----
-function fetchTransport(apiUrl, apiKey) {
-  return async (events) => {
-    const res = await fetch(`${apiUrl}/v1/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
-      body: JSON.stringify({ events }),
-    });
-    if (!res.ok) throw new Error(`ingest failed: ${res.status} ${await res.text()}`);
-    return res.json();
+// ---- default sender: upsert the task, then POST its events ----
+// Mirrors the API contract: a task must exist server-side before its events ingest.
+function fetchSender(apiUrl, apiKey) {
+  const headers = { "Content-Type": "application/json", "X-API-Key": apiKey };
+  return async ({ task, events }) => {
+    if (task) {
+      const r = await fetch(`${apiUrl}/v1/tasks`, { method: "POST", headers, body: JSON.stringify(task) });
+      if (!r.ok) throw new Error(`task upsert failed: ${r.status} ${await r.text()}`);
+    }
+    if (events && events.length) {
+      const r = await fetch(`${apiUrl}/v1/events`, { method: "POST", headers, body: JSON.stringify({ events }) });
+      if (!r.ok) throw new Error(`ingest failed: ${r.status} ${await r.text()}`);
+      return r.json();
+    }
+    return { ingested: 0 };
   };
 }
 
@@ -130,6 +151,7 @@ class TaskHandle {
     this.task = task;
     this.cost_usd = 0;
     this._seq = 0;
+    this._buffer = [];
     this._ended = false;
   }
   get id() { return this.task.task_id; }
@@ -149,7 +171,7 @@ class TaskHandle {
       attributes, redactions: [...found].sort(),
     };
     this.cost_usd += ev.cost_usd;
-    this.client._buffer.push(ev);
+    this._buffer.push(ev);
     return ev;
   }
 
@@ -174,12 +196,14 @@ class TaskHandle {
       throw e;
     }
   }
+  // Local, advisory policy decision. Canonical approval registration is server-side
+  // (Python SDK / API). Routes are recorded as policy_check events on flush.
   guard(action, { tool = null, payload = null, costUsd = 0, dataTags = null } = {}) {
     const ctx = { type: "tool_call", tool, action, actor: this.client.agent, cost_usd: costUsd,
       task_cost_usd: this.cost_usd, data_tags: dataTags || [] };
     const d = evaluatePolicy(this.client.policy, ctx);
     if (d.effect === "allow") {
-      this._emit("policy_check", { name: action, status: "ok", attributes: { effect: d.effect, reason: d.reason, tool } });
+      this._emit("policy_check", { name: action, status: "ok", cost_usd: costUsd, attributes: { effect: d.effect, reason: d.reason, tool } });
       return { allowed: true, effect: d.effect, reason: d.reason };
     }
     if (d.effect === "deny") {
@@ -197,7 +221,19 @@ class TaskHandle {
     this._ended = true;
     Object.assign(this.task, { status, ended_at: Date.now() }, extra);
     if (extra.output != null) this.task.output = redact(extra.output);
-    await this.client.flush();
+    await this.flush();
+  }
+
+  // Upsert the task (so it exists server-side) and ship buffered events. On failure,
+  // re-enqueue the batch so events are not silently dropped.
+  async flush() {
+    const batch = this._buffer.splice(0, this._buffer.length);
+    try {
+      return await this.client._send({ task: this.task, events: batch });
+    } catch (e) {
+      this._buffer.unshift(...batch);
+      throw e;
+    }
   }
 }
 
@@ -207,18 +243,17 @@ export class AgentOps {
     this.apiUrl = apiUrl; this.apiKey = apiKey; this.agent = agent;
     this.project = project; this.tenant = tenant;
     this.policy = policy || [];
-    this._transport = transport || fetchTransport(apiUrl, apiKey);
-    this._buffer = [];
+    // transport receives { task, events }; default upserts the task then posts events
+    this._send = transport || fetchSender(apiUrl, apiKey);
   }
 
   startTask(name, { input = null, tags = [], actor = null } = {}) {
-    const found = new Set();
     const task = { task_id: newId("task"), name, actor: actor || this.agent, status: "running",
-      project: this.project, tenant: this.tenant, started_at: Date.now(), input: redact(input, found), tags };
+      project: this.project, tenant: this.tenant, started_at: Date.now(), input: redact(input), tags };
     return new TaskHandle(this, task);
   }
 
-  // convenience: run an async fn as a task, auto-succeed/fail
+  // run an async fn as a task, auto-succeed/fail (flushes task + events on finish)
   async task(name, fn, opts = {}) {
     const t = this.startTask(name, opts);
     try {
@@ -229,12 +264,6 @@ export class AgentOps {
       if (!t._ended) await t.fail(`${e.name}: ${e.message}`);
       throw e;
     }
-  }
-
-  async flush() {
-    if (!this._buffer.length) return { ingested: 0 };
-    const batch = this._buffer.splice(0, this._buffer.length);
-    return this._transport(batch);
   }
 }
 

@@ -82,7 +82,7 @@ class IncidentDetector:
     def _secret_leaks(self, task: Task, events: List[Event]) -> List[Incident]:
         leaking = []
         for e in events:
-            for v in (e.input, e.output, e.attributes):
+            for v in (e.input, e.output, e.attributes, e.error, e.name):
                 if contains_unredacted_secret(v):
                     leaking.append(e)
                     break

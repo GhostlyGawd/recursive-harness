@@ -49,5 +49,6 @@ def rate_for(provider: Optional[str], model: Optional[str]) -> Tuple[float, floa
 def compute_cost(provider: Optional[str], model: Optional[str], tokens_in: int, tokens_out: int) -> float:
     """USD cost for a model call. Rounded to 6 dp (sub-cent fidelity)."""
     rin, rout = rate_for(provider, model)
-    cost = (tokens_in / 1000.0) * rin + (tokens_out / 1000.0) * rout
+    ti, to = max(0, tokens_in), max(0, tokens_out)  # negative counts must never reduce accrued cost
+    cost = (ti / 1000.0) * rin + (to / 1000.0) * rout
     return round(cost, 6)
