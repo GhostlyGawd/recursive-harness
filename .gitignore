@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 HUMAN_APPROVED
 .claude-private/
+# Ventures are outputs, not the harness brain — kept on disk, not in the trunk.
+# Each venture is its own repo (or untracked working dir) under products/<slug>/.
+products/
