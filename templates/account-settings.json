@@ -1,0 +1,83 @@
+{
+  "_provenance": "Canonical fleet account settings. PORTABLE — no machine paths. account-init.sh materializes a real <CLAUDE_CONFIG_DIR>/settings.json from this, substituting {{REPO_ROOT}} with the local repo root. Edit hooks/statusLine HERE, never in a live account settings.json. Per-account deviations go in accounts/<name>/overrides.json (gitignored), deep-merged last. provenance: session 56295237, 2026-06-13.",
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"{{REPO_ROOT}}/statusline-command.sh\""
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/session_start.py\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/log_correction.py\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_enforcement_layer.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/log_skill_use.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/stop_retro_gate.py\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/session_end.py\""
+          }
+        ]
+      }
+    ]
+  },
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": false,
+  "skipDangerousModePermissionPrompt": true
+}

@@ -2,14 +2,20 @@
 
 A self-improving harness for Claude Code, built on one premise taken seriously: **the model's weights are frozen, so the harness is the entire learnable parameter space.** Learning is defined as committing reviewed diffs to this repository — never as accumulating prose memory. Everything below follows from that definition.
 
-This repo installs as your user-scope Claude Code configuration (`~/.claude`). One brain, every project, versioned, shippable to GitHub, and improvable only through a pipeline that lints, audits, and regression-tests its own changes.
+This repo is the shared brain. By default it runs **siloed inside the repo**: a fleet of Claude Code accounts each runs from its own config dir under `.claude-private/accounts/<name>/` (gitignored, pinned by `CLAUDE_CONFIG_DIR`), which views the harness through symlinks plus a `settings.json` generated from a portable canonical — so the harness never writes to or touches the OS-global `~/.claude`. (A legacy single-user `~/.claude` install is still available, opt-in.) One brain, every account, versioned, shippable to GitHub, and improvable only through a pipeline that lints, audits, and regression-tests its own changes.
 
 ## Quick start
 
 ```bash
 git clone <your-fork> recursive-harness && cd recursive-harness
-./install.sh                  # symlinks to ~/.claude, inits git, self-lints
-cd ~/code/some-project && ~/.claude/project-init.sh   # thin per-project contract
+
+# Fleet / siloed (default): complete a per-account config dir INSIDE the repo.
+# The fleet tooling pins CLAUDE_CONFIG_DIR; this fills the dir in (symlinks + generated settings).
+./account-init.sh <name>      # or, inside a fleet session: ./account-init.sh
+./project-init.sh             # run in a project root for its thin CLAUDE.md contract
+
+# Single-user global (legacy, opt-in): symlink the whole repo to ~/.claude.
+./install.sh --global-legacy  # refuses if ~/.claude is a real dir or CLAUDE_CONFIG_DIR is set
 ```
 
 From then on: work normally. The hooks watch, the kernel routes, `/retro` harvests.
@@ -36,7 +42,7 @@ A 60-line kernel (`CLAUDE.md`) is the only always-loaded instruction. Six skills
 
 **Getting better at this specific user, any domain.** Corrections are treated as the highest-value signal in the system. A UserPromptSubmit hook pattern-matches likely corrections into a ledger automatically (false positives are cheap; `/retro` filters). At three corrections in a session, a context nudge fires; at stop time, a Stop-hook gate blocks once and demands a retro before the agent walks away from fresh signal. The user-model file accumulates only evidenced, dated, decaying claims — `/gc` retires anything unconfirmed in 90–180 days, because taste drifts. Domain-independence falls out of the routing tree: domains differ in content, but corrections, predictions, and stuck events look identical everywhere.
 
-**One hive mind across many projects.** The harness installs at user scope, so every project on the machine runs the same brain. Projects get a deliberately thin local CLAUDE.md (`project-init.sh` writes the contract: repo-specific facts only, under 40 lines, anything seen in a second project gets promoted upstream). Learnings flow one direction — branch and PR into this repo — so there is exactly one trunk of accumulated intelligence. On a second machine, `git clone && ./install.sh` restores the whole mind; teammates can fork it; CI guards it.
+**One hive mind across many accounts and projects.** Every account in the fleet, and every project on the machine, runs the same brain — each account through its own siloed config dir (`account-init.sh` materializes it from the repo: symlinks + a generated `settings.json`), so isolation of credentials/sessions never costs a forked brain. Projects get a deliberately thin local CLAUDE.md (`project-init.sh` writes the contract: repo-specific facts only, under 40 lines, anything seen in a second project gets promoted upstream). Learnings flow one direction — branch and PR into this repo — so there is exactly one trunk of accumulated intelligence. On a second machine, `git clone` + `./account-init.sh <name>` (or the legacy `./install.sh --global-legacy`) restores the whole mind; teammates can fork it; CI guards it.
 
 **Never losing context while staying lean.** Tiered by access cost. Always-loaded: the 60-line kernel plus a one-line SessionStart status banner (calibration %, unscored debt, sessions since last meta-retro) — the entire fixed tax. Trigger-loaded: skill bodies. On-demand: memory files, ADRs, archives — greppable on disk, costing nothing until read. Hot telemetry: gitignored JSONL in `state/`. Cold: `/gc` rolls state older than 30 days into versioned monthly rollups in `memory/calibration/` and decays the user model. Nothing is forgotten — it is demoted down the access hierarchy, and the linter caps every always-loaded tier. (A vector index over these files is an acceptable later add-on only as a rebuildable cache; the files stay the source of truth — see ADR 0001.)
 
@@ -63,7 +69,9 @@ commands/          7 named workflows                     hooks/          6 lifec
 bin/harness        state ledger CLI                      lint/           self-lint (budgets, falsifiability)
 memory/            user-model, ADRs, rollups (versioned) state/          hot JSONL (gitignored)
 evals/             regression corpus + runner            autonomy.json   graduated-autonomy ledger
+templates/         portable canonical account settings   account-init.sh per-account config-dir generator
 tests/             hook behavior tests                   .github/        CI: pure-Python lint + tests
+.claude-private/   per-account config dirs (gitignored)  install.sh      legacy global ~/.claude install (opt-in)
 ```
 
 ## Honest limits

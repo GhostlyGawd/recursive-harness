@@ -10,7 +10,8 @@ cat >> CLAUDE.md << 'TPL'
 
 ## Harness contract (do not bloat this file)
 
-This project consumes the user-scope harness (~/.claude). Rules:
+This project consumes the shared harness (the fleet account's config dir, or a
+legacy ~/.claude install). Rules:
 - Only facts true of THIS repo belong here: build quirks, domain glossary,
   invariants. One line each. No procedures, no preferences, no wisdom —
   those route upstream (skill: routing-learnings).

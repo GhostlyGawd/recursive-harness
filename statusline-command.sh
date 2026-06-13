@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# statusline-command.sh — renders the fleet HUD (context % + 5h/7d rate-limit usage) from the
+# statusline JSON on stdin. Portable: hardcodes no paths. provenance: session 56295237, 2026-06-13.
 input=$(cat)
 
 # --- Context window ---
@@ -12,8 +14,8 @@ seven_d=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage  // empt
 
 parts=()
 
-# Context: "Ctx 42% (84k/200k)"
-if [ -n "$ctx_used" ] && [ "$ctx_size" -gt 0 ] 2>/dev/null; then
+# Context: "Ctx 42% (84k/200k)" — require numeric inputs so the awk math can't error
+if [ -n "$ctx_used" ] && [[ "$ctx_size" =~ ^[0-9]+$ ]] && [ "$ctx_size" -gt 0 ] && [[ "$ctx_total" =~ ^[0-9]+$ ]]; then
   ctx_k=$(awk "BEGIN { printf \"%.0f\", $ctx_total / 1000 }")
   ctx_size_k=$(awk "BEGIN { printf \"%.0f\", $ctx_size / 1000 }")
   parts+=("$(printf '\033[36mCtx\033[0m \033[1m%.0f%%\033[0m (%sk/%sk)' "$ctx_used" "$ctx_k" "$ctx_size_k")")
