@@ -23,6 +23,8 @@
 #   ./account-init.sh                          # repair the account named by $CLAUDE_CONFIG_DIR
 #   ./account-init.sh <name>                   # init/repair .claude-private/accounts/<name>
 #   ./account-init.sh [name] --sync-settings   # also (re)generate settings.json (backs up first)
+#
+# provenance: session 56295237, 2026-06-13 — fleet-config silo restructure (Stage 1).
 set -euo pipefail
 
 # Force REAL (native) symlinks on Windows/Git-Bash. Default MSYS `ln -s` silently deep-COPIES
