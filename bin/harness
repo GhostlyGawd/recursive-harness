@@ -8,6 +8,8 @@ Subcommands:
   corrections  add | count | list  — user-correction ledger.
   skill-fired  Record that a skill triggered (called by PostToolUse hook).
   skill-stats  Fire counts per skill over a window (feeds /meta-retro).
+  followup     add | list | done | count — deferred-task ledger (TTL-decayed,
+               so it can't rot into a guilt pile). Captured silently; pulled via /followups.
   gc           Roll hot state older than N days into versioned monthly summaries.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
@@ -27,6 +29,8 @@ MEMORY = os.path.join(ROOT, "memory")
 PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
 CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
 SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
+FOLLOWUPS = os.path.join(STATE, "followups.jsonl")
+FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active view (decay)
 
 
 def _now() -> str:
@@ -228,6 +232,60 @@ def cmd_gc(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------- followups
+def _followup_active(r: dict, cutoff: dt.datetime) -> bool:
+    """Open AND not past its TTL. Unparseable timestamps stay visible (never silently dropped)."""
+    if r.get("status") != "open":
+        return False
+    try:
+        return dt.datetime.fromisoformat(r["ts"]) >= cutoff
+    except (KeyError, ValueError):
+        return True
+
+
+def cmd_followup(args) -> int:
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=FOLLOWUP_TTL_DAYS)
+    if args.action == "add":
+        if not args.arg.strip():
+            print("nothing to log (give the follow-up text)", file=sys.stderr)
+            return 1
+        fid = uuid.uuid4().hex[:6]
+        _append(FOLLOWUPS, {"id": fid, "ts": _now(), "text": args.arg.strip(),
+                            "task": args.task or os.environ.get("CLAUDE_SESSION_ID", ""),
+                            "status": "open"})
+        print(f"follow-up logged: {fid}")
+        return 0
+
+    recs = _read(FOLLOWUPS)
+    if args.action == "count":
+        print(sum(1 for r in recs if _followup_active(r, cutoff)))
+        return 0
+    if args.action == "done":
+        for r in recs:
+            if r.get("id") == args.arg:
+                r["status"] = "done"
+                r["done_ts"] = _now()
+                _write_all(FOLLOWUPS, recs)
+                print(f"follow-up {args.arg} marked done")
+                return 0
+        print(f"no follow-up with id {args.arg}", file=sys.stderr)
+        return 1
+    # list
+    shown = recs if args.all else [r for r in recs if _followup_active(r, cutoff)]
+    if not shown:
+        print("no follow-ups." if args.all else "no open follow-ups (clean slate).")
+        return 0
+    for r in shown:
+        st = r.get("status", "open")
+        try:
+            stale = st == "open" and dt.datetime.fromisoformat(r["ts"]) < cutoff
+        except (KeyError, ValueError):
+            stale = False
+        mark = "done " if st == "done" else ("stale" if stale else "open ")
+        print(f"  [{r.get('id', '?')}] {mark} {r.get('ts', '')[:10]}  {r.get('text', '')[:100]}")
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -264,6 +322,13 @@ def main() -> int:
     sp = sub.add_parser("skill-stats")
     sp.add_argument("--days", type=int, default=30)
     sp.set_defaults(fn=cmd_skill_stats)
+
+    sp = sub.add_parser("followup")
+    sp.add_argument("action", choices=["add", "list", "done", "count"])
+    sp.add_argument("arg", nargs="?", default="", help="text (for add) or id (for done)")
+    sp.add_argument("--task", default="")
+    sp.add_argument("--all", action="store_true", help="include done + stale entries")
+    sp.set_defaults(fn=cmd_followup)
 
     sp = sub.add_parser("gc")
     sp.add_argument("--days", type=int, default=30)
