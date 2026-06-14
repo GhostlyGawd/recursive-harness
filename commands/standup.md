@@ -26,9 +26,15 @@ b. If local main is BEHIND origin/main and the tree is clean: `git merge --ff-on
 c. Delete merged LOCAL branches with `git branch -d` (NEVER -D: -d refuses
    anything unmerged, which is the safety net). Never the current branch or main.
    Anything -d refuses, list under "kept (unmerged)" with its name — do not force.
-d. Delete merged REMOTE branches: only names in `git branch -r --merged origin/main`,
-   excluding `origin/main` and `origin/HEAD`. `git push origin --delete <names>`.
-   Each recovers from its PR merge commit, so deleting unasked loses no history.
+d. Delete merged REMOTE branches. Re-derive the list from `git branch -r --merged
+   origin/main` AFTER the step-(a) fetch (never a cached value); exclude
+   `origin/main`, `origin/HEAD`, and any long-lived branch (master/develop/release/*).
+   `git push origin --delete <names>` has NO unmerged-refusal of its own — unlike
+   (c)'s `-d`, this list is the ONLY guard, so keep it tight. Skip anything with an
+   open PR (`gh pr list --state open`). A branch merged by squash/rebase won't show
+   in `--merged` (the safe side — it's kept); to prune those, confirm
+   `gh pr view <branch> --json state` is MERGED, else leave it and report. Each
+   delete recovers from its PR, so doing this unasked loses no history.
 e. Clear stale `state/retro_gate_*` markers — any whose session id is NOT the
    current session (a prior session's gate is inert; the file is gitignored and
    regenerates). Keep the current session's marker. If the current id is unknown,
