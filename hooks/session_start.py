@@ -51,9 +51,23 @@ def main() -> int:
                              if s.get("ts", "9999")[:10] > last.isoformat())
         except ValueError:
             pass
+    # Quiet open-follow-up count (mirrors `harness followup count`: open AND
+    # within the 30-day TTL). Shown only when >0 so a clean ledger stays silent.
+    fu_cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=30)
+
+    def _fu_open(r):
+        if r.get("status") != "open":
+            return False
+        try:
+            return dt.datetime.fromisoformat(r["ts"]) >= fu_cutoff
+        except Exception:
+            return True  # never silently drop an unparseable follow-up
+    open_fu = sum(1 for r in _jsonl("followups.jsonl") if _fu_open(r))
+    fu = f" | {open_fu} open follow-ups (/followups)" if open_fu else ""
     print(f"[harness] {calib} | {pending} unscored predictions"
           f" | {since_meta} sessions since last /meta-retro"
-          f" | learnings route to artifacts, not memory (routing-learnings skill)")
+          f" | learnings route to artifacts, not memory (routing-learnings skill)"
+          f"{fu}")
     return 0
 
 

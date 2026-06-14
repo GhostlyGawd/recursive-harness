@@ -61,19 +61,27 @@ def main() -> int:
         cmd = ti.get("command", "")
         if MUTATING.search(cmd):
             root = os.path.realpath(HARNESS_ROOT)
-            tilde_root = "~" + root[len(os.path.expanduser("~")):] if root.startswith(
-                os.path.expanduser("~")) else root
-            for token in re.split(r"[\s;|&]+", cmd):
-                token = token.strip("'\"")
-                if root in token or tilde_root in token:
-                    hit = _inside_protected(token.replace(tilde_root, root))
-                    if hit:
+            home = os.path.expanduser("~")
+            tilde_root = "~" + root[len(home):] if root.startswith(home) else root
+            # Substring-match full <root>/<component> prefixes against the WHOLE
+            # command, NOT per whitespace-split token: the root path can contain
+            # spaces (e.g. "GitHub Projects"), which a tokenized scan splits apart
+            # so `root in token` never matches and the guard silently fails open.
+            # Normalize separators so both / and \ command forms are caught.
+            cmd_norm = cmd.replace("\\", "/")
+            for base in (root, tilde_root):
+                base_norm = base.replace("\\", "/").rstrip("/")
+                for comp in PROTECTED:
+                    if f"{base_norm}/{comp}" in cmd_norm:
+                        hit = comp
                         break
+                if hit:
+                    break
 
     if hit:
         print(
             f"BLOCKED by harness guard: '{hit}' is enforcement-layer "
-            f"(hooks/lint/evals/autonomy/settings inside {HARNESS_ROOT}).\n"
+            f"(hooks/lint/evals/.github/autonomy/settings/templates inside {HARNESS_ROOT}).\n"
             "Self-modification of the layer that measures you requires human review.\n"
             "Correct path: stage the change as a PR via /harness-pr and explain why.\n"
             "If the human is present and approves right now, ask THEM to run:\n"
