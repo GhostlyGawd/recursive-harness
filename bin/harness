@@ -10,6 +10,8 @@ Subcommands:
   skill-stats  Fire counts per skill over a window (feeds /meta-retro).
   followup     add | list | done | count — deferred-task ledger (TTL-decayed,
                so it can't rot into a guilt pile). Captured silently; pulled via /followups.
+  approve      Record a human's enforcement-layer approval (verbal/remote OK) and
+               place the HUMAN_APPROVED marker; --revoke removes it; --status shows it.
   gc           Roll hot state older than N days into versioned monthly summaries.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
@@ -31,6 +33,8 @@ CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
 SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
 FOLLOWUPS = os.path.join(STATE, "followups.jsonl")
 FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active view (decay)
+APPROVALS = os.path.join(STATE, "approvals.jsonl")
+MARKER = os.path.join(ROOT, "HUMAN_APPROVED")
 
 
 def _now() -> str:
@@ -286,6 +290,51 @@ def cmd_followup(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------- approve
+# provenance: session 9147f304, 2026-06-14 — added so a remote/voice human can grant
+# enforcement-layer approval without a shell `touch`; logs the verbatim grant for audit.
+def cmd_approve(args) -> int:
+    """Record a human enforcement-layer approval and place/remove the marker.
+
+    The marker only UNLOCKS drafting an enforcement-layer edit on a branch; the
+    binding gate stays the PR merge (a human action). This command exists so a
+    REMOTE/voice human can grant that unlock without a shell: the agent runs it
+    ONLY on an explicit, unambiguous human grant, recording the grant verbatim.
+    Fabricating a grant here is the same betrayal as hand-touching the marker —
+    the audit trail (state/approvals.jsonl) is what makes it checkable.
+    """
+    if args.status:
+        present = os.path.exists(MARKER)
+        recs = _read(APPROVALS)
+        print(f"HUMAN_APPROVED marker: {'PRESENT' if present else 'absent'}")
+        if recs:
+            last = recs[-1]
+            print(f"last log: {last.get('ts')} [{last.get('action')}] scope={last.get('scope')!r} "
+                  f"grant={last.get('grant')!r}")
+        return 0
+    if args.revoke:
+        existed = os.path.exists(MARKER)
+        if existed:
+            os.remove(MARKER)
+        _append(APPROVALS, {"ts": _now(), "action": "revoke", "scope": args.scope or "",
+                            "grant": "", "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "remote")})
+        print("HUMAN_APPROVED removed — guard re-locked." if existed else "no marker present; logged revoke.")
+        return 0
+    # grant
+    if not (args.scope or "").strip() or not (args.grant or "").strip():
+        print("approve needs BOTH --scope and --grant (the human's verbatim words). "
+              "Refusing to create the marker without a recorded grant.", file=sys.stderr)
+        return 1
+    _append(APPROVALS, {"ts": _now(), "action": "grant", "scope": args.scope.strip(),
+                        "grant": args.grant.strip(),
+                        "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "remote")})
+    with open(MARKER, "w", encoding="utf-8") as f:
+        f.write(f"approved: {args.scope.strip()}\ngrant: {args.grant.strip()}\nlogged: {_now()}\n")
+    print(f"HUMAN_APPROVED placed for scope {args.scope.strip()!r} (grant logged to state/approvals.jsonl).")
+    print("Make ONLY the approved edit, then run: harness approve --revoke")
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -329,6 +378,14 @@ def main() -> int:
     sp.add_argument("--task", default="")
     sp.add_argument("--all", action="store_true", help="include done + stale entries")
     sp.set_defaults(fn=cmd_followup)
+
+    sp = sub.add_parser("approve")
+    sp.add_argument("--scope", default="", help="what the edit is (e.g. 'autonomy ledger reconciliation')")
+    sp.add_argument("--grant", default="", help="the human's verbatim approving words")
+    sp.add_argument("--session", default="")
+    sp.add_argument("--revoke", action="store_true", help="remove the marker, re-lock the guard")
+    sp.add_argument("--status", action="store_true", help="show marker state + last grant")
+    sp.set_defaults(fn=cmd_approve)
 
     sp = sub.add_parser("gc")
     sp.add_argument("--days", type=int, default=30)
