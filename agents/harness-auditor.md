@@ -25,10 +25,11 @@ CHECKS, in order:
    content. Then ask: does any change make a check weaker, narrower, or
    skippable (relaxed budget, narrowed matcher, deleted eval case, lowered
    graduation threshold)? Weakening + self-proposed = reward-hacking smell;
-   say so plainly. If the edit was drafted under a verbal/remote grant,
-   confirm a matching record exists in the SHARED tree's `state/approvals.jsonl`
-   (absolute path; it is gitignored, so a worktree checkout won't have it) — an
-   enforcement edit with no human touch AND no logged grant is a backdoor.
+   say so plainly. If the edit was drafted under a verbal/remote grant, the PR
+   body MUST quote the verbatim grant (`## Approval`): `state/approvals.jsonl`
+   is gitignored and never reaches you, so the committed quote is the only grant
+   evidence you (or the merging human) can see. An enforcement edit with no human
+   touch and no PR-quoted grant is a backdoor — flag it.
 2. DUPLICATION: grep skills/, commands/, agents/, CLAUDE.md for overlapping
    triggers or content. Overlap → verdict: merge into the existing artifact.
 3. PROVENANCE: every new/changed artifact carries provenance (date, session,

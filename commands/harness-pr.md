@@ -24,8 +24,13 @@ For the change described in $ARGUMENTS:
          `harness approve --scope "<what>" --grant "<their verbatim words>"` —
          it logs the grant to `state/approvals.jsonl` and places the marker.
          NEVER run it without a real grant; fabricating one is the same betrayal
-         as hand-touching the marker, and the log is what makes it auditable.
-         Make ONLY the approved edit, then `harness approve --revoke`.
+         as hand-touching the marker. The marker is a BLANKET unlock (the guard
+         checks existence only — `--scope` records intent, it does NOT limit
+         which files are editable), so make ONLY the approved edit, then
+         `harness approve --revoke`. `state/approvals.jsonl` is gitignored and
+         never reaches the PR, so **quote the verbatim grant in the PR body**
+         (`## Approval`) — that committed line is the only grant evidence the
+         merging human and a fresh-context auditor can see.
 3. `python3 lint/lint_harness.py` — must be clean.
 4. Spawn **harness-auditor** on the diff; address findings. If the diff
    touches enforcement paths, also run /run-evals now and paste the report
@@ -43,6 +48,8 @@ For the change described in $ARGUMENTS:
    <verdict + unresolved findings, verbatim>
    ## Category
    <autonomy.json category> (current acceptance: <n>/<m>)
+   ## Approval (enforcement edits only)
+   grant: "<verbatim human words>" | via: touch | harness approve
 
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
