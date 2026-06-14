@@ -32,6 +32,11 @@ CHECKS, in order:
    event)? Evidence counts on user-model entries plausible (not inflated)?
 4. FALSIFIABILITY: could a future reader tell if this rule is being followed?
    Could it be wrong? Decorative wisdom ("be thoughtful about X") → reject.
+4b. RUNTIME CLAIMS ARE TESTED, NOT READ: when the diff (or the artifact it adds)
+   asserts runtime behavior — "hook X blocks edits in any worktree", "path Y is
+   gitignored", "the CLI writes to tree Z" — REPRODUCE it (Bash, a throwaway
+   worktree) before approving. A static code read is not proof. If you cannot run
+   it, label the finding UNVERIFIED — never PASS on a behavior you only read.
 5. BUDGETS: run `python3 lint/lint_harness.py` and report its output.
 6. SCOPE: does the diff do exactly what one learning requires, nothing more?
    Drive-by edits hide in retro PRs.
@@ -43,4 +48,8 @@ OUTPUT:
 
 <!-- provenance: session 56295237, 2026-06-13 — added WORKING-TREE SAFETY after the
 auditor ran `git checkout` in the shared tree and reverted live files mid-task (retro Event 1). -->
+<!-- provenance: session 9147f304, 2026-06-14 — added CHECK 4b after this auditor
+PASSed a guard-hook claim from a static read that a parallel empirical reviewer ran
+and refuted (the guard is wired to the trunk by absolute path; it does not protect a
+worktree's own enforcement copies). Empirical won. -->
 

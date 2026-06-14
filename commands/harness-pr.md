@@ -4,7 +4,10 @@ description: Open a properly-documented harness change PR (the manual path; /ret
 
 For the change described in $ARGUMENTS:
 
-1. Work in the harness repo (`cd ~/.claude`), branch `proposal/$(date +%F)-<slug>`.
+1. Work in the harness repo (`cd ~/.claude`). `git fetch origin` first and branch
+   `proposal/$(date +%F)-<slug>` off `origin/main`, NOT a possibly-stale local
+   `main` — a stale base makes `gh pr merge`'s diffstat surface files already on
+   the remote as if they were yours, reading as phantom scope-creep.
 2. Apply the change per skill: harness-authoring (budgets, provenance,
    duplication check first).
    - **If it edits the enforcement layer** (hooks/ lint/ evals/ autonomy.json
@@ -36,3 +39,9 @@ For the change described in $ARGUMENTS:
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
    Otherwise leave for human review — and say so without grumbling.
+
+<!-- provenance: session 9147f304, 2026-06-14 — added the fetch/branch-off-origin
+step to (1) after a PR branched off a stale local main; the merge diffstat listed
+another PR's already-on-remote file (commands/standup.md) and triggered a false-alarm
+scope-creep probe. -->
+

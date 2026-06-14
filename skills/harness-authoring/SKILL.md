@@ -15,6 +15,15 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
    adding a sibling. Two overlapping skills split the trigger and both rot.
 2. **Right artifact check**: re-run the routing-learnings tree. The most common
    authoring error is writing a skill for what should be a hook.
+3. **Source-of-truth gate** (artifacts asserting external behavior): if the
+   artifact states facts about an external process, tool, or environment — CLI
+   behavior, where files live, how cleanup works, what a hook blocks — verify
+   each load-bearing claim against the authoritative source (live docs via
+   WebFetch, and/or an empirical test) BEFORE shipping, not after. Porting a
+   sibling-repo skill does NOT inherit verification — its facts were true in the
+   OTHER repo. (session 9147f304, 2026-06-14: ported the worktree skill and
+   opened PR #14 before reading the live Claude Code docs the skill's own §5
+   mandated; shipped a false guard-hook claim a user-requested second pass caught.)
 
 ## Budgets (lint-enforced — they are quality pressure, not bureaucracy)
 
