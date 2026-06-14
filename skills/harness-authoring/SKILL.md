@@ -75,3 +75,16 @@ caught by the harness-auditor as a backdoor, then replaced with a path allowlist
   always propose via PR — the guard will (correctly) block direct edits.
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
+
+## Editing tracked files on this Windows checkout (core.autocrlf=true)
+
+Working tree is CRLF, committed blobs are LF. Before building exact-match Edit
+`old_string`s, normalize the file CRLF→LF (or read the committed view with
+`git show HEAD:<path>`) — else the match silently fails, or a whole-file EOL
+flip pollutes the diff. A file showing "modified" may be a pure EOL artifact:
+confirm real change with `git diff --ignore-cr-at-eol` before calling the tree
+dirty (`git restore` is then content-neutral). Stage only intended files
+(`git add -- <paths>`, never `-A`) so a gitignored marker/state file can't ride
+into an enforcement-layer commit.
+(session cca5ccb9, 2026-06-14: a subagent normalized two guard files CRLF→LF
+before editing; a "modified" .claude/settings.json was a pure EOL artifact.)

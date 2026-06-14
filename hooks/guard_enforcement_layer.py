@@ -74,7 +74,14 @@ def main() -> int:
             for base in (root, tilde_root):
                 base_norm = base.replace("\\", "/").rstrip("/")
                 for comp in PROTECTED:
-                    if f"{base_norm}/{comp}" in cmd_norm:
+                    # Match the <root>/<component> prefix only at a path-component
+                    # boundary. Exclude filename-CONTINUATION chars [A-Za-z0-9_-] so a
+                    # sibling like "bin-old"/".claude-private" is not over-blocked. A
+                    # trailing "." or whitespace IS a boundary and still blocks: Win32
+                    # path APIs alias "autonomy.json." -> "autonomy.json", so "." is
+                    # deliberately NOT excluded (the FILE_TOOLS branch realpath-resolves
+                    # that same alias, L44).
+                    if re.search(re.escape(f"{base_norm}/{comp}") + r"(?![A-Za-z0-9_-])", cmd_norm):
                         hit = comp
                         break
                 if hit:
