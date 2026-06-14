@@ -13,9 +13,22 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
 1. **Duplication check**: `grep -ri <topic> skills/ commands/ agents/ CLAUDE.md`.
    If a near-match exists, STRENGTHEN it (and bump its provenance) instead of
    adding a sibling. Two overlapping skills split the trigger and both rot.
-2. **Right artifact check**: re-run the routing-learnings tree. The most common
+2. **Adopt-vs-rebuild gate** (the dup check at FLEET scale): before building or
+   porting a capability a SIBLING/PARENT harness already implements, STOP — grep
+   the sibling harnesses too, not just this repo. Run the comparison, then put an
+   explicit choice to the USER — adopt/vendor the sibling's artifact (skill
+   `vendoring-skills`), let it flow via the master-harness consolidation, or
+   rebuild here — and get a BUILD decision before writing code. A predict-first
+   that only scores the port's mechanics (additive? lint-clean?) is NOT a build
+   decision; predict the strategic question ("is a competing copy worth
+   maintaining in this trunk?"). Kernel directive 6: never fork the brain.
+   (session a0a4278d, 2026-06-14: ported fable's competitor-scan into a new
+   recursive competitive-research skill, commit b948a8a; the user then cancelled
+   the whole effort — fable's was better "in every way" — so the port was sunk
+   work the gate would have prevented.)
+3. **Right artifact check**: re-run the routing-learnings tree. The most common
    authoring error is writing a skill for what should be a hook.
-3. **Source-of-truth gate** (artifacts asserting external behavior): if the
+4. **Source-of-truth gate** (artifacts asserting external behavior): if the
    artifact states facts about an external process, tool, or environment — CLI
    behavior, where files live, how cleanup works, what a hook blocks — verify
    each load-bearing claim against the authoritative source (live docs via
