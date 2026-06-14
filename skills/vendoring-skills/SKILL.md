@@ -1,7 +1,7 @@
 ---
 name: vendoring-skills
 description: Procedure for importing a THIRD-PARTY Claude Code skill (a SKILL.md pack from GitHub etc.) into this harness. Use when the user asks to "install/add/vendor a skill", points at an external skill repo, or wants a skill pack available across the fleet. Covers trunk-vs-account placement, slimming heavy media, provenance for re-vendoring, and the lint B3 allowlist when the skill exceeds the body cap. Skipping it leads to tens of MB of binaries in the trunk, a CI-breaking oversized SKILL.md, or a forked brain.
-provenance: session 61f58113-3d14-49bb-b486-3d852924b177, 2026-06-13 — user imported github.com/alchaincyf/huashu-design into the trunk; `npx skills add` and a naive full copy both went wrong before this procedure existed.
+provenance: session 61f58113-3d14-49bb-b486-3d852924b177, 2026-06-13 — user imported github.com/alchaincyf/huashu-design into the trunk; `npx skills add` and a naive full copy both went wrong before this procedure existed. (2026-06-13 retro: added the Windows symlink-integrity pointer to ADR 0004.)
 ---
 
 # Vendoring a third-party skill
@@ -11,7 +11,9 @@ vendored dependency. Keep it traceable and lean.
 
 ## Placement
 Default to the shared trunk `skills/` (kernel prime directive 6, ONE TRUNK): one
-brain, every account sees it via the config-dir symlink. Raise account-local
+brain, every account sees it via the config-dir symlink (on Windows that link
+must be a REAL symlink, not an MSYS `ln -s` copy, or the account forks the trunk
+— see ADR 0004). Raise account-local
 isolation only if the user needs real credential/scope separation — don't
 over-argue it when they said "to my account"; the trunk is the default.
 
