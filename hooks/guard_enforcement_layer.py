@@ -16,7 +16,9 @@ import re
 import sys
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROTECTED = ("hooks", "lint", "evals", ".github", "autonomy.json", "settings.json", "templates")
+# bin/ is protected because bin/harness mints the HUMAN_APPROVED unlock (cmd_approve);
+# leaving it editable would let an agent silently weaken the grant requirement (followup 5384ed).
+PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 # Bash patterns that can mutate files; reads are fine.
 MUTATING = re.compile(
@@ -81,7 +83,7 @@ def main() -> int:
     if hit:
         print(
             f"BLOCKED by harness guard: '{hit}' is enforcement-layer "
-            f"(hooks/lint/evals/.github/autonomy/settings/templates inside {HARNESS_ROOT}).\n"
+            f"(hooks/lint/evals/bin/.github/autonomy/settings/templates inside {HARNESS_ROOT}).\n"
             "Self-modification of the layer that measures you requires human review.\n"
             "Correct path: stage the change as a PR via /harness-pr and explain why.\n"
             "If the human is present and approves right now, ask THEM to run:\n"

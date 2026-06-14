@@ -41,6 +41,17 @@ rc, _, _ = run("guard_enforcement_layer.py",
                {"tool_name": "Bash", "tool_input": {"command": f"cat {ROOT}/hooks/session_start.py"}})
 check("guard allows read-only bash on protected paths", rc == 0, f"rc={rc}")
 
+# bin/ is enforcement-layer: bin/harness mints the HUMAN_APPROVED unlock (followup 5384ed)
+rc, _, err = run("guard_enforcement_layer.py",
+                 {"tool_name": "Write",
+                  "tool_input": {"file_path": os.path.join(ROOT, "bin", "evil.py")}})
+check("guard blocks write into bin/", rc == 2 and "BLOCKED" in err, f"rc={rc}")
+
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"rm -f {ROOT}/bin/harness"}})
+check("guard blocks bash mutation of bin/", rc == 2, f"rc={rc}")
+
 marker = os.path.join(ROOT, "HUMAN_APPROVED")
 open(marker, "w").close()
 rc, _, _ = run("guard_enforcement_layer.py",
