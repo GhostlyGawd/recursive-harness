@@ -11,13 +11,21 @@ For the change described in $ARGUMENTS:
 2. Apply the change per skill: harness-authoring (budgets, provenance,
    duplication check first).
    - **If it edits the enforcement layer** (hooks/ lint/ evals/ autonomy.json
-     settings.json templates/ .github/): the guard blocks your edits until a
-     HUMAN creates a `HUMAN_APPROVED` marker at the repo root. Do NOT create it
-     yourself — it is their sign-off. Ask them to run it in a REAL shell
-     (`touch HUMAN_APPROVED`, or PowerShell `ni HUMAN_APPROVED`); agent
-     `!`-prefix / chat-typed commands may silently not execute, so confirm with
-     `test -f HUMAN_APPROVED` before editing. `rm -f HUMAN_APPROVED` the moment
-     edits are done — the auditor flags a marker left behind.
+     settings.json templates/ .github/): the guard blocks edits until a
+     `HUMAN_APPROVED` marker sits at the repo root. The marker only UNLOCKS
+     drafting on a branch — the binding gate is the PR merge (a human action),
+     so never imply the marker alone authorizes the change. Two sanctioned ways
+     to grant it; either way revoke it the moment the edit is done (the auditor
+     flags a marker left behind):
+       - **Local human at a shell:** they run `touch HUMAN_APPROVED` (or `ni`).
+         Confirm with `test -f HUMAN_APPROVED` — chat `!`-prefix typing can
+         silently no-op. Remove with `rm -f HUMAN_APPROVED`.
+       - **Remote/voice human:** on an EXPLICIT, unambiguous spoken grant, run
+         `harness approve --scope "<what>" --grant "<their verbatim words>"` —
+         it logs the grant to `state/approvals.jsonl` and places the marker.
+         NEVER run it without a real grant; fabricating one is the same betrayal
+         as hand-touching the marker, and the log is what makes it auditable.
+         Make ONLY the approved edit, then `harness approve --revoke`.
 3. `python3 lint/lint_harness.py` — must be clean.
 4. Spawn **harness-auditor** on the diff; address findings. If the diff
    touches enforcement paths, also run /run-evals now and paste the report
@@ -44,4 +52,8 @@ For the change described in $ARGUMENTS:
 step to (1) after a PR branched off a stale local main; the merge diffstat listed
 another PR's already-on-remote file (commands/standup.md) and triggered a false-alarm
 scope-creep probe. -->
+<!-- provenance: session 9147f304, 2026-06-14 — added the remote/voice HUMAN_APPROVED
+path (`harness approve`) after the user, on remote control, could not run a shell
+`touch` and needed to grant enforcement approval verbally. The marker only unlocks
+drafting; the PR merge (which the user already grants by voice) stays the binding gate. -->
 

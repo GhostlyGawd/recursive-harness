@@ -25,7 +25,10 @@ CHECKS, in order:
    content. Then ask: does any change make a check weaker, narrower, or
    skippable (relaxed budget, narrowed matcher, deleted eval case, lowered
    graduation threshold)? Weakening + self-proposed = reward-hacking smell;
-   say so plainly.
+   say so plainly. If the edit was drafted under a verbal/remote grant,
+   confirm a matching record exists in the SHARED tree's `state/approvals.jsonl`
+   (absolute path; it is gitignored, so a worktree checkout won't have it) — an
+   enforcement edit with no human touch AND no logged grant is a backdoor.
 2. DUPLICATION: grep skills/, commands/, agents/, CLAUDE.md for overlapping
    triggers or content. Overlap → verdict: merge into the existing artifact.
 3. PROVENANCE: every new/changed artifact carries provenance (date, session,
@@ -52,4 +55,8 @@ auditor ran `git checkout` in the shared tree and reverted live files mid-task (
 PASSed a guard-hook claim from a static read that a parallel empirical reviewer ran
 and refuted (the guard is wired to the trunk by absolute path; it does not protect a
 worktree's own enforcement copies). Empirical won. -->
+<!-- provenance: session 9147f304, 2026-06-14 — extended CHECK 1 to verify a logged
+grant (state/approvals.jsonl) when an enforcement edit was drafted via the new
+remote/voice `harness approve` path, so a marker without a real human grant reads as a
+backdoor. -->
 
