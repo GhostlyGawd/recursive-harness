@@ -84,8 +84,9 @@ Two paths with two different bars — don't conflate them:
   **keep** or **remove**. A **named session** also prompts (so you can resume
   the worktree later) rather than auto-removing.
 - **Background sweep (`cleanupPeriodDays`):** a looser bar — auto-removes aged
-  subagent worktrees with no uncommitted changes, no untracked files, and **no
-  _unpushed_ commits**. `--worktree` user sessions are **never** swept.
+  subagent- and background-session worktrees with no uncommitted changes, no
+  untracked files, and **no _unpushed_ commits**. `--worktree` user sessions are
+  **never** swept.
 - **`claude --worktree` and `-p` non-interactive runs are NOT auto-cleaned.**
   Manual: `git worktree remove <path>` (`--force` to discard changes), then
   `git worktree prune`.
