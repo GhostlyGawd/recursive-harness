@@ -52,6 +52,22 @@ rc, _, _ = run("guard_enforcement_layer.py",
                 "tool_input": {"command": f"rm -f {ROOT}/bin/harness"}})
 check("guard blocks bash mutation of bin/", rc == 2, f"rc={rc}")
 
+# component-boundary match: a prefix-sharing SIBLING must NOT be over-blocked,
+# while the real protected path (incl. at end-of-arg) still blocks.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"rm -rf {ROOT}/bin-backup/old"}})
+check("guard allows bash mutation of bin-prefixed sibling (no over-block)", rc == 0, f"rc={rc}")
+
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": f"rm -rf {ROOT}/hooks"}})
+check("guard blocks bash mutation of protected dir at end-of-arg", rc == 2, f"rc={rc}")
+
+# trailing dot/space is a Win32 path alias of the protected file -> must still block
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": f"rm -f {ROOT}/autonomy.json."}})
+check("guard blocks trailing-dot Win32 alias (autonomy.json.)", rc == 2, f"rc={rc}")
+
 marker = os.path.join(ROOT, "HUMAN_APPROVED")
 open(marker, "w").close()
 rc, _, _ = run("guard_enforcement_layer.py",
