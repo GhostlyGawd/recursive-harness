@@ -16,4 +16,6 @@ stale entries. This file is read on demand, never auto-loaded.
 
 ## Working style
 
-(empty — earn entries, don't guess them)
+- no destructive or irreversible action until it is verified end-to-end AND explicitly approved; prefer non-destructive paths (copy-not-move, new branch/worktree, additive/reversible edits) and minimize blast radius (evidence: 1, last: 2026-06-14, source: stated)
+- when adapting another repo's artifact, COPY it into the target repo and edit the copy — never modify the source repo (evidence: 1, last: 2026-06-14, source: stated)
+- iterate harness/skill changes in an isolated git worktree and test end-to-end before merging or replacing anything (evidence: 1, last: 2026-06-14, source: stated)
