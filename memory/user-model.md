@@ -19,3 +19,8 @@ stale entries. This file is read on demand, never auto-loaded.
 - no destructive or irreversible action until it is verified end-to-end AND explicitly approved; prefer non-destructive paths (copy-not-move, new branch/worktree, additive/reversible edits) and minimize blast radius (evidence: 1, last: 2026-06-14, source: stated)
 - when adapting another repo's artifact, COPY it into the target repo and edit the copy — never modify the source repo (evidence: 1, last: 2026-06-14, source: stated)
 - iterate harness/skill changes in an isolated git worktree and test end-to-end before merging or replacing anything (evidence: 1, last: 2026-06-14, source: stated)
+
+## Calibration (prediction-bias rollup; /calibrate consumes this)
+
+- on this user's builds the model OVER-predicts late-stage quality-gate friction: when the brief is well-scoped and the agent strong, a demanding design/Critic bar clears first try — 3 of the 7 scored misses on this build were an expected Critic/design-fix round that never came (design passed 5/5; launch-hardening friction points falsified). Discount predicted last-mile gate friction for well-scoped briefs (evidence: 3, last: 2026-06-16, source: inferred)
+- the model UNDER-predicts cross-platform native-process CI friction: Windows-only CI took ~6 iterations vs a predicted <=1. Widen friction estimates for Windows/native-process CI work (evidence: 1, last: 2026-06-16, source: inferred)
