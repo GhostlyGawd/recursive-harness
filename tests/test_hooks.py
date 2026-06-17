@@ -117,12 +117,12 @@ check("guard ignores non-mutating tools", rc == 0, f"rc={rc}")
 # correction logger: detects signal, stays quiet otherwise
 sess = "testsession123"
 log = os.path.join(ROOT, "state", "corrections.jsonl")
-before = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+before = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 rc, out, _ = run("log_correction.py", {"prompt": "No, that's wrong — I meant the staging DB", "session_id": sess})
-after = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+after = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 check("correction logger records signal", rc == 0 and after == before + 1, f"{before}->{after}")
 rc, out, _ = run("log_correction.py", {"prompt": "looks great, continue please", "session_id": sess})
-after2 = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+after2 = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 check("correction logger ignores praise", rc == 0 and after2 == after, f"{after}->{after2}")
 
 # stop gate: blocks at threshold, then only once
@@ -169,8 +169,8 @@ for hook in ("guard_enforcement_layer.py", "log_correction.py", "stop_retro_gate
 for f in ("corrections.jsonl", "skill_usage.jsonl", "sessions.jsonl"):
     path = os.path.join(ROOT, "state", f)
     if os.path.exists(path):
-        keep = [l for l in open(path) if sess not in l and '"other"' not in l]
-        open(path, "w").writelines(keep)
+        keep = [l for l in open(path, encoding="utf-8") if sess not in l and '"other"' not in l]
+        open(path, "w", encoding="utf-8").writelines(keep)
 gate = os.path.join(ROOT, "state", f"retro_gate_{sess}")
 os.path.exists(gate) and os.remove(gate)
 cad_gate = os.path.join(ROOT, "state", "cadence_gate_cadence_test_sess")
