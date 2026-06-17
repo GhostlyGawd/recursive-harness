@@ -4,15 +4,16 @@ description: Monthly audit of the harness itself — prune dead weight, surface 
 
 Audit the harness as a system (skill: retrospection, applied to the repo):
 
-1. **Usage**: `~/.claude/bin/harness skill-stats --days 30`.
+1. **Usage**: resolve the CLI install-agnostically (never assume `~/.claude`; resolve
+   per shell) — `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"; "$HARNESS/bin/harness" skill-stats --days 30`.
    Zero-fire skills → propose pruning or a description rewrite (per
    skill-creator wisdom: skills under-trigger when descriptions aren't pushy).
    Confirm with the user before deleting anything with provenance < 90d old.
 2. **Override scan**: corrections that contradict an existing artifact mean
-   the artifact is wrong. `harness corrections list --last 100`, grep against
+   the artifact is wrong. `"$HARNESS/bin/harness" corrections list --last 100`, grep against
    skills/ and user-model claims. Wrong artifact → fix or kill, don't append a
    contradicting sibling.
-3. **Calibration drift**: `harness stats`. Any category overconfident by >15
+3. **Calibration drift**: `"$HARNESS/bin/harness" stats`. Any category overconfident by >15
    points → add a dated note to memory/calibration/notes.md and check whether
    that category has eval coverage; if not, that's the next eval-capture.
 4. **Eval health**: `python3 evals/run_evals.py --dry-run` (structure), then

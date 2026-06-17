@@ -2,7 +2,7 @@
 description: Garbage-collect harness memory — roll up hot state, decay stale user-model entries, merge duplicates. Memory that only grows is a junk drawer.
 ---
 
-1. `~/.claude/bin/harness gc --days 30` — rolls cold state/ records into
+1. `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"; "$HARNESS/bin/harness" gc --days 30` — rolls cold state/ records into
    memory/calibration/<YYYY-MM>.json (versioned). Unscored predictions are
    never silently archived; score or explicitly drop them first (/calibrate).
 2. **User-model decay pass** over memory/user-model.md:
