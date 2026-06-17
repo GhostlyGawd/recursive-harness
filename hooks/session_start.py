@@ -7,10 +7,53 @@ feedback system; everything else loads on demand.
 import datetime as dt
 import json
 import os
+import subprocess
 import sys
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(HARNESS_ROOT, "state")
+
+
+def _git(args):
+    """Run a git command in the harness root; stripped stdout or None on any
+    failure. Best-effort: a hook must never break a session over git."""
+    try:
+        r = subprocess.run(["git", *args], cwd=HARNESS_ROOT,
+                           capture_output=True, text=True, timeout=3)
+    except Exception:
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def _branch_warning():
+    """One banner line when this session sits on a non-main branch in the harness
+    MAIN checkout. Scoped TIGHTLY — fires only when cwd's git toplevel IS the
+    harness root: never in another project, never in a `.claude/worktrees/*`
+    checkout (whose own `worktree-<name>` branch is correct, and whose toplevel is
+    the worktree path, not HARNESS_ROOT). High-signal because the harness learning
+    flows (/retro, /harness-pr, /calibrate, /gc, /meta-retro) branch in-place and
+    never `git checkout main` when done, silently stranding the NEXT session on a
+    dead branch. Returns '' on any git failure — the banner must still print."""
+    top = _git(["rev-parse", "--show-toplevel"])
+    if not top:
+        return ""
+    if os.path.normcase(os.path.normpath(top)) != \
+            os.path.normcase(os.path.normpath(HARNESS_ROOT)):
+        return ""  # another repo, or a worktree checkout — non-main is fine there
+    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"])
+    if not branch or branch in ("main", "master", "HEAD"):
+        return ""
+    try:
+        merged = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],
+            cwd=HARNESS_ROOT, capture_output=True, timeout=3).returncode == 0
+    except Exception:
+        merged = False
+    note = "already merged - safe to" if merged else "not main -"
+    # ASCII only: the banner prints to a cp1252 console here, where a non-ASCII
+    # glyph raises UnicodeEncodeError and crashes the hook (exit 1).
+    return (f"[harness] (!) on branch '{branch}' ({note} "
+            f"`git checkout main` to return to trunk)")
 
 
 def _jsonl(name):
@@ -68,6 +111,9 @@ def main() -> int:
           f" | {since_meta} sessions since last /meta-retro"
           f" | learnings route to artifacts, not memory (routing-learnings skill)"
           f"{fu}")
+    warn = _branch_warning()
+    if warn:
+        print(warn)
     return 0
 
 

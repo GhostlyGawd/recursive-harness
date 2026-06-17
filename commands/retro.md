@@ -27,6 +27,11 @@ Run the retrospection procedure (skill: retrospection). Concretely:
 7. `touch state/retro_gate_<session_id>`; report to the user: events found,
    routes chosen, PR links. One line each. If nothing met the signal bar,
    SAY SO and stop — empty retros are honest; padded ones poison the trunk.
+8. **Return to trunk: `git checkout main`** (branch-hygiene). /retro branches
+   in-place on `retro/<date>-<slug>`; ending the session still on it strands the
+   NEXT session on a dead branch (the SessionStart banner flags this, but don't
+   create the mess). The drafted work is safe on its pushed branch + PR. If the
+   retro produced no PR (empty signal), you never left `main` — nothing to do.
 
 <!-- provenance: 2026-06-17 (prediction 4cf104ba) — replaced the hardcoded `~/.claude`
 with an install-agnostic harness-root resolution
