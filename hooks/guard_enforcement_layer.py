@@ -42,28 +42,17 @@ MUTATING = re.compile(
     r"|>{1,2}(?!&[0-9-])"
     r"|open\s*\([^)]*,\s*['\"][wax]"
 )
-# Shell self-creation of the HUMAN_APPROVED marker — catch every real write TARGET
-# while NOT blocking a command that merely MENTIONS the marker in prose (a commit/PR
-# body documenting it). (followups c36988, 6b3443) The first narrowing (a8ed081)
-# UNDER-blocked — leading whitespace, `VAR=val` prefixes, csh `>&FILE`, and quoted
-# spaced redirect targets all slipped through (auditor BLOCK). The marker counts as a
-# write target when it is:
-#   * the TARGET of a redirect (>, >>, >&) — the FIRST token after the operator:
-#     quoted (may contain spaces) or an unquoted no-space path. Requiring it to be the
-#     redirect TARGET (not just somewhere after a `>`) lets a prose `2>&1 ...
-#     HUMAN_APPROVED` mention through while still catching `>&` writes to the marker;
-#   * the operand of a create-verb at a command boundary (`^` / after `;`&`|`),
-#     tolerating leading whitespace and `VAR=val` / `sudo` prefixes — heredoc/quoted
-#     PROSE is newline-separated, not command-separated, so it stays unmatched;
-#   * a python open(...,'w'|'a'|'x') on it.
-# Write-tool path is covered separately by _is_marker. Residual: a prose line with a
-# literal `> HUMAN_APPROVED` adjacency over-blocks (safe, rare); the real fix for
-# shell-string leakiness is cwd-jailed Bash (followup 109f86).
-_MARKER_CREATE = re.compile(
-    r">>?&?\s*(?:\"[^\"\n]*HUMAN_APPROVED|'[^'\n]*HUMAN_APPROVED|[^\s'\";|&<>\n]*HUMAN_APPROVED)"
-    r"|(?:^|[;&|])\s*(?:\w+=\S+\s+)*(?:sudo\s+)?(?:touch|tee|install|cp|mv|ln|dd)\b[^\n;|]*HUMAN_APPROVED"
-    r"|open\s*\([^)]*HUMAN_APPROVED[^)]*,\s*['\"][wax]"
-)
+# The HUMAN_APPROVED marker gets the SAME any-mutating-token + name-mention check the
+# protected-dir scan below uses, so it is protected exactly as well as hooks/lint/evals
+# -- and no better: a python non-`open` writer (pathlib.write_text, os.open) still slips
+# through, the shared structural gap (followup 109f86; the real fix is cwd-jailed Bash).
+# A NARROW "is it a write TARGET?" regex was tried (6b3443) and REVERTED: three auditor
+# rounds showed wrappers (eval / subshell / command / env / xargs / bash -c / truncate /
+# absolute-path verb / ...) defeat any boundary-anchored pattern, and UNDER-blocking the
+# unlock is strictly worse than OVER-blocking prose. Cost of this broad form: a command
+# that merely MENTIONS the marker alongside a write verb (a commit/PR body) is
+# over-blocked -- write such payloads with `--body-file` / `-F file`. The Write-tool path
+# is covered separately by _is_marker.
 
 
 def _inside_protected(path: str) -> str | None:
@@ -121,12 +110,12 @@ def main() -> int:
     elif tool == "Bash":
         cmd = ti.get("command", "")
         cmd_norm = cmd.replace("\\", "/")
-        # Block agent self-creation of the marker via shell, but only when it is a
-        # real write TARGET (see _MARKER_CREATE) — NOT a mere prose mention. A read
-        # (cat/test -f) carries no write target and is allowed. When the marker
+        # Block agent self-creation of the marker via shell: the marker is named AND a
+        # mutating token is present (same any-token logic as the protected-dir scan).
+        # A read (cat/test -f) carries no mutating token and is allowed. When the marker
         # already EXISTS we returned 0 above, so a legitimate post-approval
         # `rm HUMAN_APPROVED` revoke never reaches here.
-        if _MARKER_CREATE.search(cmd_norm):
+        if "HUMAN_APPROVED" in cmd_norm and MUTATING.search(cmd):
             hit = "HUMAN_APPROVED"
         elif MUTATING.search(cmd):
             root = os.path.realpath(HARNESS_ROOT)
