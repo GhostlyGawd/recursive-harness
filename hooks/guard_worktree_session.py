@@ -5,8 +5,10 @@ The stateful complement to Guard A (guard_worktree_isolation.py). Guard A stops
 a session reaching INTO a sibling worktree's files; Guard B stops a SECOND live
 session colliding INSIDE the same tree. Two live Claude sessions sharing one
 checkout edit the same files and silently clobber each other — the exact failure
-worktrees exist to prevent. EVERY tree is guarded: each `.claude/worktrees/<name>`
-AND the main checkout (user decision, 2026-06-17). On collision the block is an
+worktrees exist to prevent. BLOCKING is scoped to actual `.claude/worktrees/<name>`
+trees; the main checkout is TRACKED but never blocked — session-id churn in one long
+session was false-positiving the live user out of their own main tree (see the
+PreToolUse note, 2026-06-17). On collision inside a worktree the block is an
 ONBOARDING step — it walks the user into their own isolated worktree.
 
 Ownership model — OWNERSHIP FOLLOWS THE SESSION'S CWD (one session owns exactly
@@ -350,12 +352,23 @@ def main() -> int:
                     _save_map(repo, m)
             return 0
 
-        # PreToolUse (and any other tool event): block a different fresh owner,
-        # else claim my tree (and release any tree I moved away from).
+        # PreToolUse (and any other tool event): block a different fresh owner --
+        # but ONLY inside an actual `.claude/worktrees/<name>` tree. The MAIN checkout
+        # is no longer blocked: a long-lived single session churns its session_id
+        # (compaction / wakeups / resume each mint a new ID), and the dead predecessor
+        # id's still-fresh heartbeat was locking the live user out of their OWN main
+        # checkout. There is no reliable stable per-terminal identity here to tell
+        # churn from a real 2nd terminal (the recorded pid is the short-lived hook's,
+        # not the session's), so session_id-keyed blocking on the main tree is a
+        # net-harmful false positive. Worktree isolation -- the part that actually
+        # prevents parallel-agent clobbering -- is retained; the main checkout is still
+        # CLAIMED (heartbeat/diagnostics) but never blocks. (user report + fix,
+        # 2026-06-17; reverses the earlier "guard the main checkout too" scope now that
+        # the churn false-positive is shown to dominate the rare real-collision case.)
         m = _load_map(repo)
         now = time.time()
         owner = m.get(tree)
-        if owner and owner.get("session_id") != sid and not _is_stale(owner, now):
+        if _worktree_root(tree) and owner and owner.get("session_id") != sid and not _is_stale(owner, now):
             _block(owner, tree, now)
             return 2
         _claim(m, tree, sid)
