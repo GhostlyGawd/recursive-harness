@@ -2,7 +2,9 @@
   "hooks": {
     "SessionStart": [
       {"matcher": "startup|resume|clear",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_start.py"}]}
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_start.py"}]},
+      {"matcher": "resume|clear",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
     ],
     "UserPromptSubmit": [
       {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_correction.py"}]}
@@ -11,7 +13,9 @@
       {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_enforcement_layer.py"}]},
       {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_isolation.py"}]}
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_isolation.py"}]},
+      {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
     ],
     "PostToolUse": [
       {"matcher": "Skill",
@@ -21,7 +25,8 @@
       {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/stop_retro_gate.py"}]}
     ],
     "SessionEnd": [
-      {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_end.py"}]}
+      {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_end.py"},
+                 {"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
     ]
   }
 }
