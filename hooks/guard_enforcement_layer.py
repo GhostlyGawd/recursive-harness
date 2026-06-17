@@ -42,17 +42,26 @@ MUTATING = re.compile(
     r"|>{1,2}(?!&[0-9-])"
     r"|open\s*\([^)]*,\s*['\"][wax]"
 )
-# Shell self-creation of the HUMAN_APPROVED marker, matched NARROWLY so a command
-# that merely MENTIONS the marker in prose (a commit/PR body documenting it) is not
-# blocked (followup 6b3443 — the earlier broad `"HUMAN_APPROVED" in cmd` check
-# false-blocked `gh pr create` whose body discussed the marker). The marker must be
-# a real write TARGET: a redirect destination, the operand of a create-verb at a
-# command boundary (`^` or after `;`/`&`/`|`, SAME line — heredoc/quoted prose is
-# newline-separated, not command-separated, so it won't match), or a python
-# open(...,'w') on it. The Write-tool path is covered separately by _is_marker.
+# Shell self-creation of the HUMAN_APPROVED marker — catch every real write TARGET
+# while NOT blocking a command that merely MENTIONS the marker in prose (a commit/PR
+# body documenting it). (followups c36988, 6b3443) The first narrowing (a8ed081)
+# UNDER-blocked — leading whitespace, `VAR=val` prefixes, csh `>&FILE`, and quoted
+# spaced redirect targets all slipped through (auditor BLOCK). The marker counts as a
+# write target when it is:
+#   * the TARGET of a redirect (>, >>, >&) — the FIRST token after the operator:
+#     quoted (may contain spaces) or an unquoted no-space path. Requiring it to be the
+#     redirect TARGET (not just somewhere after a `>`) lets a prose `2>&1 ...
+#     HUMAN_APPROVED` mention through while still catching `>&` writes to the marker;
+#   * the operand of a create-verb at a command boundary (`^` / after `;`&`|`),
+#     tolerating leading whitespace and `VAR=val` / `sudo` prefixes — heredoc/quoted
+#     PROSE is newline-separated, not command-separated, so it stays unmatched;
+#   * a python open(...,'w'|'a'|'x') on it.
+# Write-tool path is covered separately by _is_marker. Residual: a prose line with a
+# literal `> HUMAN_APPROVED` adjacency over-blocks (safe, rare); the real fix for
+# shell-string leakiness is cwd-jailed Bash (followup 109f86).
 _MARKER_CREATE = re.compile(
-    r">{1,2}(?!&[0-9-])\s*['\"]?[^\s'\";|&<>]*HUMAN_APPROVED"
-    r"|(?:^|[;&|]\s*)(?:sudo\s+)?(?:touch|tee|install|cp|mv|ln|dd)\b[^\n;&|]*HUMAN_APPROVED"
+    r">>?&?\s*(?:\"[^\"\n]*HUMAN_APPROVED|'[^'\n]*HUMAN_APPROVED|[^\s'\";|&<>\n]*HUMAN_APPROVED)"
+    r"|(?:^|[;&|])\s*(?:\w+=\S+\s+)*(?:sudo\s+)?(?:touch|tee|install|cp|mv|ln|dd)\b[^\n;|]*HUMAN_APPROVED"
     r"|open\s*\([^)]*HUMAN_APPROVED[^)]*,\s*['\"][wax]"
 )
 
