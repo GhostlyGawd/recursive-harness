@@ -63,7 +63,12 @@ self-assertable exemption silently turns the rule into opt-out for the whole tre
 If an artifact must carry a human-readable marker, keep it inert and make the
 linter ignore it; always surface the waiver in lint output, never skip silently.
 (session 61f58113, 2026-06-13: a self-asserted `vendored: true` B3 waiver was
-caught by the harness-auditor as a backdoor, then replaced with a path allowlist.)
+caught by the harness-auditor as a backdoor, then replaced with a path allowlist.
+session c32fdd41, 2026-06-17: a self-assertable `HARNESS_SESSION_TTL_SECONDS` env
+override in Guard B let any second session set the staleness TTL to ~0 to evict the
+live owner — same class, caught again by the harness-auditor, removed for a fixed
+compile-time TTL.) A tunable that moves a guard's eviction/staleness threshold is
+itself enforcement-relevant — make it a constant, not env-readable.
 
 ## Per-type notes
 
@@ -73,6 +78,13 @@ caught by the harness-auditor as a backdoor, then replaced with a path allowlist
 - **Hooks**: stdin JSON in, exit 0/2 out, fail OPEN on malformed input (a
   broken hook must never brick the session), narrowest possible matcher, and
   always propose via PR — the guard will (correctly) block direct edits.
+  When a hook keys on a path that ENCODES identity (e.g. `.claude/worktrees/<name>`),
+  canonicalize LEXICALLY (abspath + normcase + textual `\\?\` strip), NEVER
+  `os.path.realpath` — resolving symlinks collapses a relocated/symlinked worktree
+  to its target and destroys the identity the guard keys on; sweep any
+  path-normalization change with a regression test before landing. (session
+  c32fdd41, 2026-06-17: realpath adopted to close `\\?\`/8.3 aliases, reverted — it
+  broke symlinked-worktree identity and didn't even strip `\\?\`; lexical was right.)
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
 
