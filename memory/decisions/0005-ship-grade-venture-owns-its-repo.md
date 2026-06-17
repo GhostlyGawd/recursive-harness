@@ -2,7 +2,7 @@
 
 date: 2026-06-16
 status: accepted
-provenance: 2026-06-16 cross-Grove retro — source: superset-replica-build/DECISIONS.md ADR-0001 (own fresh sibling repo) & ADR-0012 (making that repo public unblocked GitHub Actions billing), STATE.json (github.com/GhostlyGawd/grove); contradicts venture-build SKILL.md:35 + references/artifacts.md (the `products/<slug>/` scaffold). Folds own-fresh-repo x3.
+provenance: 2026-06-16 cross-Grove retro — source: superset-replica-build/DECISIONS.md ADR-0001 (own fresh sibling repo) & ADR-0012 (making that repo public unblocked GitHub Actions billing), STATE.json (github.com/GhostlyGawd/grove); reconciled in venture-build's phase-1 SCAFFOLD step (which now branches ship-grade-vs-internal); references/artifacts.md still to follow. Folds own-fresh-repo x3.
 
 ## Decision
 A venture intended to ship PUBLICLY gets its OWN fresh git repository — a sibling
@@ -40,8 +40,9 @@ Same root cause as the prior "orchestrator IS the harness → don't worktree the
 brain" finding: the harness is the learnable layer, not a product container.
 
 ## Consequence (the artifact this changes)
-venture-build's phase-1 SCAFFOLD step (SKILL.md "Create `products/<slug>/`")
-and references/artifacts.md must branch on ship-grade-vs-internal:
+venture-build's phase-1 SCAFFOLD step now branches on ship-grade-vs-internal
+(applied in the cross-Grove retro); `references/artifacts.md` should follow the
+same branch:
 - ship-grade → `git init` a fresh sibling repo (own LICENSE, releases, public
   remote when CI/billing demands it); the harness keeps only a thin pointer +
   the venture ledger.

@@ -16,12 +16,19 @@ about to be used to route retro learnings. A user push forced verification:
   skill. Sharing CLAUDE.md is not evidence of sharing the skill.
 
 ## Decision
-CONVERGE, do not fork. Fold Grove's proven pieces — its blackboard, its build
-loop, its Critic, and its design layers — INTO the existing venture-build skill.
-Do NOT spawn a sibling "grove-build" skill, and do NOT leave the two structures
-running in parallel as separate brains. One trunk (kernel directive 6). The
-L1/L2/L4/L5/L7 enrichments execute this verdict against venture-build; the design
-layer is extracted as the `design-fanout` skill that venture-build calls.
+CONVERGE, do not fork. Fold only Grove's proven, GENERALIZABLE pieces — chiefly
+the blackboard resume-contract and the cold-CI gate — INTO the existing
+venture-build skill, kept lean. Do NOT spawn a sibling "grove-build" skill, and do
+NOT leave the two structures running in parallel as separate brains. One trunk
+(kernel directive 6).
+
+The design pipeline is captured in the Grove narrative
+(`superset-replica-build/docs/HOW-WE-BUILT-GROVE.md` §4), NOT as a harness skill: a
+first attempt (a `design-fanout` skill) was created then DROPPED because it
+overlapped the vendored `huashu-design` skill — which already does design-direction
+fan-out + anti-slop review — and added a "monster skill" the user rejected. The
+per-phase-Critic, cross-platform, and dep-substitution learnings were likewise kept
+OUT of the skill (they live in the narrative + Grove's own ADRs) to avoid bloat.
 
 ## Why
 - Kernel directive 6 forbids forking the brain. Two parallel autonomous-build
