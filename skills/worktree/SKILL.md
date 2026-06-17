@@ -73,6 +73,16 @@ collide, make it.
   `worktree.symlinkDirectories` exists for heavy dirs but has **known bugs**
   (cleanup can silently fail; a write can replace the symlink with a regular
   file) — prefer `.worktreeinclude`, use symlinks only knowingly.
+- **Untracked files in a worktree are not automatically THIS repo's work.** A
+  harness worktree can accumulate strays from a *different* project — you ran a
+  sibling project's task here, or a trial dropped its output in. Before
+  `git add`/committing an untracked dir, resolve its home first: is the same dir
+  tracked, and newer, in a sibling repo (`ls` the projects dir;
+  `git -C <sibling> log -- <dir>`)? If so, the copy here is a stray — remove it,
+  don't commit it into the trunk. (2026-06-17: a 162-file
+  `skills/yc-venture-foundry/` was committed into the harness before we caught it
+  lived, newer, as `yc-venture-foundry/` in the sibling `yc-foundry-experiment`;
+  had to `git reset` + `rm`.)
 
 ## 3. Cleanup — and where it bites
 
