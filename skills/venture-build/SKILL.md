@@ -26,6 +26,13 @@ acquisition framing as adaptable starting points, not law; fit them to the chart
   install frozen, run CI's EXACT steps — and re-gate the exact pushed HEAD after
   adding any spec. A run where every OS job fails in ~2-3s is infra/billing, not
   code: read the run annotation before debugging. (cross-Grove retro · ADR-0011/0012)
+- VALIDATE THE PATH YOUR DOCS PRESCRIBE, not a cleaner one. CI/validation that
+  satisfies a dependency or install step one way can still be broken for the user
+  your README tells to install it differently; make one CI lane (or live run)
+  exercise the install/run path your own docs recommend — the gap between "what CI
+  installs" and "what the docs say" is where shipped-green bugs hide.
+  (2026-06-16 · Grove v1.0.1 · `grove up` rejected `npm i -g bun` on win32 — its
+  own install-hint's path — while native-install CI stayed green · GHO-394)
 - Mark simulated market/customer data "Illustrative — validate before relying." You
   cannot fabricate real interviews or revenue; say so plainly when they're absent.
 - No unsafe autonomous action ships without an approval gate in the product itself.
