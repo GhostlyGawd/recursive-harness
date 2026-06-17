@@ -42,6 +42,19 @@ MUTATING = re.compile(
     r"|>{1,2}(?!&[0-9-])"
     r"|open\s*\([^)]*,\s*['\"][wax]"
 )
+# Shell self-creation of the HUMAN_APPROVED marker, matched NARROWLY so a command
+# that merely MENTIONS the marker in prose (a commit/PR body documenting it) is not
+# blocked (followup 6b3443 — the earlier broad `"HUMAN_APPROVED" in cmd` check
+# false-blocked `gh pr create` whose body discussed the marker). The marker must be
+# a real write TARGET: a redirect destination, the operand of a create-verb at a
+# command boundary (`^` or after `;`/`&`/`|`, SAME line — heredoc/quoted prose is
+# newline-separated, not command-separated, so it won't match), or a python
+# open(...,'w') on it. The Write-tool path is covered separately by _is_marker.
+_MARKER_CREATE = re.compile(
+    r">{1,2}(?!&[0-9-])\s*['\"]?[^\s'\";|&<>]*HUMAN_APPROVED"
+    r"|(?:^|[;&|]\s*)(?:sudo\s+)?(?:touch|tee|install|cp|mv|ln|dd)\b[^\n;&|]*HUMAN_APPROVED"
+    r"|open\s*\([^)]*HUMAN_APPROVED[^)]*,\s*['\"][wax]"
+)
 
 
 def _inside_protected(path: str) -> str | None:
@@ -99,11 +112,12 @@ def main() -> int:
     elif tool == "Bash":
         cmd = ti.get("command", "")
         cmd_norm = cmd.replace("\\", "/")
-        # Block agent self-creation of the marker via shell (touch/redirect/cp/tee/
-        # dd/install/python-write). A read (cat/test -f) carries no mutating token
-        # and is allowed. When the marker already EXISTS we returned 0 above, so a
-        # legitimate post-approval `rm HUMAN_APPROVED` revoke never reaches here.
-        if "HUMAN_APPROVED" in cmd_norm and MUTATING.search(cmd):
+        # Block agent self-creation of the marker via shell, but only when it is a
+        # real write TARGET (see _MARKER_CREATE) — NOT a mere prose mention. A read
+        # (cat/test -f) carries no write target and is allowed. When the marker
+        # already EXISTS we returned 0 above, so a legitimate post-approval
+        # `rm HUMAN_APPROVED` revoke never reaches here.
+        if _MARKER_CREATE.search(cmd_norm):
             hit = "HUMAN_APPROVED"
         elif MUTATING.search(cmd):
             root = os.path.realpath(HARNESS_ROOT)

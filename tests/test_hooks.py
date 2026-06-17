@@ -138,13 +138,23 @@ if not os.path.exists(marker):
     rc, _, err = run("guard_enforcement_layer.py",
                      {"tool_name": "Write", "tool_input": {"file_path": marker}})
     check("guard blocks Write of HUMAN_APPROVED marker", rc == 2 and "HUMAN_APPROVED" in err, f"rc={rc}")
-    for mk in (f"touch {ROOT}/HUMAN_APPROVED", f"echo x > {ROOT}/HUMAN_APPROVED",
-               f"cp /tmp/x {ROOT}/HUMAN_APPROVED"):
+    for mk in (f"touch {ROOT}/HUMAN_APPROVED", "echo x > HUMAN_APPROVED",
+               f"cp /tmp/x {ROOT}/HUMAN_APPROVED", "tee HUMAN_APPROVED < /dev/null",
+               "python -c \"open('HUMAN_APPROVED','w')\"", "foo && touch HUMAN_APPROVED"):
         rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": mk}})
-        check(f"guard blocks marker self-create via '{mk.split()[0]}'", rc == 2, f"rc={rc}")
+        check(f"guard blocks marker self-create: {mk[:26]}", rc == 2, f"rc={rc}")
     rc, _, _ = run("guard_enforcement_layer.py",
                    {"tool_name": "Bash", "tool_input": {"command": f"test -f {ROOT}/HUMAN_APPROVED"}})
     check("guard allows reading the marker (test -f)", rc == 0, f"rc={rc}")
+    # 6b3443: a command that merely MENTIONS the marker in prose (a commit/PR body
+    # documenting it, write verbs present) must NOT be over-blocked.
+    for prose in (
+        'gh pr create --body "human runs touch HUMAN_APPROVED then rm -f HUMAN_APPROVED to revoke"',
+        'git commit -m "doc: touch HUMAN_APPROVED unlocks the guard"',
+        'echo "notes about HUMAN_APPROVED" > /tmp/notes.txt',
+    ):
+        rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": prose}})
+        check(f"guard does NOT over-block prose mention: {prose[:30]}", rc == 0, f"rc={rc}")
 
 rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Read",
                                               "tool_input": {"file_path": os.path.join(ROOT, "hooks", "a.py")}})
