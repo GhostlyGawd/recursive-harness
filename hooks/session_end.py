@@ -40,11 +40,13 @@ def main() -> int:
             "predictions": _count("predictions.jsonl", session),
             "skills_fired": _count("skill_usage.jsonl", session),
         }) + "\n")
-    for f in glob.glob(os.path.join(STATE, f"retro_gate_{session}")):
-        try:
-            os.remove(f)
-        except OSError:
-            pass
+    # clean up both per-session retro-nudge flags (stop_retro_gate + stop_cadence_gate)
+    for pat in (f"retro_gate_{session}", f"cadence_gate_{session}"):
+        for f in glob.glob(os.path.join(STATE, pat)):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
     return 0
 
 

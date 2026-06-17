@@ -197,6 +197,17 @@ check("stop gate fires only once per session", rc == 0 and not out.strip(), f"ou
 rc, out, _ = run("stop_retro_gate.py", {"session_id": "other", "stop_hook_active": True})
 check("stop gate respects stop_hook_active", rc == 0 and not out.strip())
 
+# cadence gate (2e87fe): multi-session retro nudge. stop_hook_active short-circuits;
+# fires at most once per session (the first run may or may not nudge depending on real
+# sessions-since-retro, but a second run for the same session must be silent).
+cad = "cadence_test_sess"
+rc, out, _ = run("stop_cadence_gate.py", {"session_id": cad, "stop_hook_active": True})
+check("cadence gate respects stop_hook_active", rc == 0 and not out.strip(), f"out={out[:60]}")
+rc1, _, _ = run("stop_cadence_gate.py", {"session_id": cad, "stop_hook_active": False})
+rc2, out2, _ = run("stop_cadence_gate.py", {"session_id": cad, "stop_hook_active": False})
+check("cadence gate fires at most once per session", rc1 == 0 and rc2 == 0 and not out2.strip(),
+      f"rc1={rc1} rc2={rc2} out2={out2[:40]}")
+
 # session_start + session_end + skill logger: run clean
 rc, out, _ = run("session_start.py", {"session_id": sess})
 check("session_start emits one status line", rc == 0 and out.startswith("[harness]"), out[:60])
@@ -207,7 +218,7 @@ check("session_end runs clean", rc == 0)
 
 # malformed stdin must fail OPEN everywhere
 for hook in ("guard_enforcement_layer.py", "log_correction.py", "stop_retro_gate.py",
-             "session_start.py", "log_skill_use.py", "session_end.py"):
+             "stop_cadence_gate.py", "session_start.py", "log_skill_use.py", "session_end.py"):
     p = subprocess.run([sys.executable, os.path.join(HOOKS, hook)],
                        input="not json{{", capture_output=True, text=True)
     check(f"{hook} fails open on garbage stdin", p.returncode == 0, f"rc={p.returncode}")
@@ -220,6 +231,8 @@ for f in ("corrections.jsonl", "skill_usage.jsonl", "sessions.jsonl"):
         open(path, "w", encoding="utf-8").writelines(keep)
 gate = os.path.join(ROOT, "state", f"retro_gate_{sess}")
 os.path.exists(gate) and os.remove(gate)
+cad_gate = os.path.join(ROOT, "state", "cadence_gate_cadence_test_sess")
+os.path.exists(cad_gate) and os.remove(cad_gate)
 
 print(f"\n{'ALL TESTS PASS' if not FAILURES else str(len(FAILURES)) + ' FAILURES: ' + ', '.join(FAILURES)}")
 sys.exit(1 if FAILURES else 0)
