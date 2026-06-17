@@ -9,7 +9,9 @@
     ],
     "PreToolUse": [
       {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_enforcement_layer.py"}]}
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_enforcement_layer.py"}]},
+      {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_isolation.py"}]}
     ],
     "PostToolUse": [
       {"matcher": "Skill",
