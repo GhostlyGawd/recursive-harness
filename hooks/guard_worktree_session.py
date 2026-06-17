@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+r"""PreToolUse + SessionEnd + SessionStart guard (Guard B): one live session per TREE.
+
+The stateful complement to Guard A (guard_worktree_isolation.py). Guard A stops
+a session reaching INTO a sibling worktree's files; Guard B stops a SECOND live
+session colliding INSIDE the same tree. Two live Claude sessions sharing one
+checkout edit the same files and silently clobber each other — the exact failure
+worktrees exist to prevent. EVERY tree is guarded: each `.claude/worktrees/<name>`
+AND the main checkout (user decision, 2026-06-17). On collision the block is an
+ONBOARDING step — it walks the user into their own isolated worktree.
+
+Ownership model — OWNERSHIP FOLLOWS THE SESSION'S CWD (one session owns exactly
+ONE tree at a time, the one it is currently working in):
+
+  TREE := the worktree root if cwd is inside `.claude/worktrees/<name>`; else the
+  nearest ancestor of cwd containing a `.git` entry (the repo / main-checkout
+  root); else cwd itself (fail-safe: keys per-cwd, only UNDER-isolates, never
+  false-blocks). Tree + repo keys are os.path.normcase'd so aliased spellings
+  (case, separators) collapse to one key on Windows AND stay distinct on a
+  case-sensitive FS — the one-owner invariant no longer leans on the filesystem.
+
+  A single per-REPO registry MAP lives in the MAIN checkout's gitignored
+  `<repo>/state/session_owners.json` == {tree_key: {"session_id","ts",...}, ...},
+  shared across the checkout AND all its `.claude/worktrees/*` (a worktree session
+  resolves the repo root by stripping `.claude/worktrees/<name>`). One file, so a
+  session that MOVES trees (e.g. EnterWorktree main->worktree, or crossing a
+  nested `.git` boundary) can atomically release the tree it left.
+
+  PreToolUse: a DIFFERENT, FRESH owner of my tree -> BLOCK (exit 2) with the
+  onboarding message. Otherwise CLAIM: write {me, now} for my tree AND drop any
+  OTHER tree I owned (I moved). The heartbeat refresh on every allowed call is the
+  liveness signal; a stale owner (heartbeat older than the TTL) is takeover-able.
+
+  SessionEnd: release every tree this session owns (clean exit frees them
+  instantly; a crash falls back to the TTL).
+
+  SessionStart with source != "startup" (resume/clear/compact): `/clear` and
+  `--resume` mint a NEW session_id for a SEQUENTIAL same-terminal transition — the
+  prior session is dead but its heartbeat is fresh — so the cwd-resolved tree's
+  claim is released (the new session re-claims on its first tool call). source ==
+  "startup" (a genuinely new terminal) is NOT released — that is the collision to
+  block. Disclosed limitation: if two terminals are live in one tree and the
+  BLOCKED one clears/resumes, ownership flips to it (the other then sees the
+  onboarding block); the one-owner invariant holds, only which side owns changes.
+
+Escape hatch HARNESS_ALLOW_MULTI_SESSION in {1,true,yes,on} -> always allow.
+Fails OPEN (exit 0) on malformed input (incl. pathological/deeply-nested JSON),
+missing/blank session_id or cwd, an unwritable state dir, a non-finite/garbage
+heartbeat, or ANY unexpected error — a guard must never brick a session, and the
+only out-of-contract exit is one this hook must never produce.
+
+Known limitations (best-effort, lock-free registry — all fail toward
+UNDER-isolation, never a brick): the read-modify-write of the shared map is not
+an OS mutex, so two sessions racing to claim distinct trees at the same instant
+can lose one update (re-healed on the next heartbeat); a still-live session that
+idles past the TTL can be taken over if a second session arrives in that window;
+and a session that crosses a NESTED `.git` boundary (a git submodule or a
+repo-in-a-subdir, which is a SEPARATE repo with its own map file) claims the inner
+tree but leaves its outer-repo claim in the other map to expire by TTL rather than
+release instantly (the common EnterWorktree case is fully released because a
+`.claude/worktrees/<name>` shares the main checkout's map); and a path ALIAS that
+real Claude Code never emits as a cwd — an 8.3 short name (LONGRE~1), or a cwd that
+is itself a symlink to a DIFFERENT real directory — keys separately from the
+canonical spelling (the guard normalizes case/separators and the `\\?\` prefix but
+deliberately does NOT resolve symlinks, since that would strip a relocated
+`.claude/worktrees` of its worktree identity).
+
+provenance: 2026-06-17, session c32fdd41 — built as Guard B, the planned
+"one-live-session-per-worktree" complement to Guard A (PR #23), per follow-up
+44dbd8. Scope (main checkout + worktrees) and onboarding-block behavior chosen by
+the user this session. Hardened across three adversarial red-team rounds + a
+harness-auditor pass: ownership-follows-cwd map (fixes EnterWorktree orphaning),
+non-finite/oversized ts -> stale, fail-open on pathological JSON (RecursionError),
+fixed non-overridable TTL (closed a self-assertable env bypass), lexical \\?\
+keying (no realpath, to keep symlinked-worktree identity), Windows os.replace retry.
+"""
+import json
+import math
+import os
+import re
+import sys
+import time
+
+# A ".claude/worktrees/<name>" segment, case-insensitive, tolerating '/' and
+# '\\'. group(1) spans from the start through <name> — the worktree root.
+_WT_RE = re.compile(
+    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$",
+    re.IGNORECASE,
+)
+
+_MAP_REL = ("state", "session_owners.json")
+# Fixed, deliberately NOT environment-overridable. A per-session env knob to
+# shorten the TTL would be a SELF-ASSERTABLE BYPASS: a second session sets it
+# tiny, every live owner instantly reads as stale, and it evicts + locks out the
+# real owner WITHOUT the human-gated hatch (harness-auditor, 2026-06-17). The
+# harness rule (skill harness-authoring): exemptions must be human-gated, never
+# self-asserted. The only sanctioned bypass is HARNESS_ALLOW_MULTI_SESSION. If a
+# tunable TTL is ever genuinely needed, add it as a human-gated config via
+# /harness-pr, not an env var any session can set.
+_TTL_SECONDS = 900          # 15 min: covers normal idle gaps; a crashed session
+#                             frees its trees after this (clean exits free them
+#                             instantly via SessionEnd; moving trees frees the old
+#                             one on the next tool call).
+_MAX_WALK = 80              # bounded parent walk so a pathological cwd can't spin.
+_REPLACE_RETRIES = 4       # Windows: os.replace fails if the file is open elsewhere.
+
+
+def _hatch_enabled() -> bool:
+    val = os.environ.get("HARNESS_ALLOW_MULTI_SESSION")
+    if val is None:
+        return False
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _ttl_seconds() -> float:
+    return _TTL_SECONDS  # fixed by design; see _TTL_SECONDS comment (no env override)
+
+
+def _strip_extended(path: str) -> str:
+    r"""Lexically strip the Windows extended-length prefix (\\?\ and \\?\UNC\),
+    which is a pure alias of the plain path. Done WITHOUT realpath so we never
+    resolve symlinks (see _normalize)."""
+    if path.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + path[len("\\\\?\\UNC\\"):]
+    if path.startswith("\\\\?\\"):
+        return path[len("\\\\?\\"):]
+    return path
+
+
+def _normalize(path: str) -> str:
+    r"""Canonical absolute form for use as a registry KEY. Lexically strips the
+    Windows \\?\ / \\?\UNC\ extended-length prefix (a pure alias), then
+    abspath+normpath; os.path.normcase (applied by the caller) folds case +
+    separators. It deliberately does NOT realpath/resolve symlinks: doing so would
+    strip a relocated or symlinked `.claude/worktrees/<name>` of its worktree
+    identity (reclassifying it as a plain checkout and splitting it from the shared
+    repo map — a worse regression than the alias it would close). Residual
+    low-realism alias gap, a cwd real Claude Code never emits: an 8.3 short name
+    (LONGRE~1), or a cwd that is itself a symlink to a DIFFERENT real directory,
+    keys separately from the canonical spelling."""
+    if not path:
+        return ""
+    return os.path.normpath(os.path.abspath(_strip_extended(os.path.expanduser(path))))
+
+
+def _worktree_root(norm_cwd: str):
+    m = _WT_RE.match(norm_cwd)
+    return m.group(1) if m else None
+
+
+def _gitwalk_root(norm_cwd: str) -> str:
+    """Nearest ancestor of norm_cwd containing a `.git` entry (file OR dir) = the
+    repo / main-checkout root. Falls back to norm_cwd (under-isolate, safe)."""
+    d = norm_cwd
+    for _ in range(_MAX_WALK):
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    return norm_cwd
+
+
+def _resolve(cwd: str):
+    """Return (tree_key, repo_root) for cwd, both os.path.normcase'd. tree_key is
+    the registry key for the tree the session is in; repo_root is where the shared
+    map file lives. For a worktree, repo_root strips `.claude/worktrees/<name>` so
+    the checkout and all its worktrees share one map. Pure best-effort; any failure
+    returns (norm, norm) which only under-isolates."""
+    norm = _normalize(cwd)
+    if not norm:
+        return "", ""
+    try:
+        wt = _worktree_root(norm)
+        if wt:
+            tree = wt
+            # strip the three trailing segments: <name>, worktrees, .claude
+            repo = os.path.dirname(os.path.dirname(os.path.dirname(wt)))
+        else:
+            tree = _gitwalk_root(norm)
+            repo = tree
+        return os.path.normcase(tree), os.path.normcase(repo or norm)
+    except Exception:
+        return os.path.normcase(norm), os.path.normcase(norm)
+
+
+def _map_path(repo_root: str) -> str:
+    return os.path.join(repo_root, *_MAP_REL)
+
+
+def _load_map(repo_root: str) -> dict:
+    try:
+        with open(_map_path(repo_root), encoding="utf-8") as f:
+            m = json.load(f)
+        if isinstance(m, dict):
+            # keep only well-formed entries
+            return {k: v for k, v in m.items()
+                    if isinstance(v, dict) and v.get("session_id")}
+    except (OSError, ValueError):
+        pass
+    return {}
+
+
+def _save_map(repo_root: str, m: dict) -> None:
+    """Atomically persist the map. Best-effort: any failure is swallowed (the call
+    still ALLOWS; a dropped write only under-isolates). Retries os.replace because
+    Windows refuses to rename onto a file another hook process has open, and cleans
+    up the temp file / stray sibling temps so they don't accumulate in state/."""
+    try:
+        path = _map_path(repo_root)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = f"{path}.tmp.{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(m, f)
+        replaced = False
+        for attempt in range(_REPLACE_RETRIES):
+            try:
+                os.replace(tmp, path)
+                replaced = True
+                break
+            except PermissionError:
+                time.sleep(0.01)  # transient Windows open-handle window
+            except OSError:
+                break
+        if not replaced:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+        else:
+            _sweep_temps(os.path.dirname(path), os.path.basename(path))
+    except Exception:
+        pass
+
+
+def _sweep_temps(state_dir: str, base: str) -> None:
+    """Best-effort: drop orphaned `<base>.tmp.*` files left by a failed replace on
+    another process so they don't accumulate (Windows)."""
+    try:
+        prefix = base + ".tmp."
+        for name in os.listdir(state_dir):
+            if name.startswith(prefix):
+                try:
+                    os.remove(os.path.join(state_dir, name))
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
+def _is_stale(entry: dict, now: float) -> bool:
+    """A non-finite or unparseable heartbeat is treated as STALE (takeover-able):
+    the safe direction — it never blocks a newcomer and never crashes _block."""
+    try:
+        t = float(entry.get("ts", 0))
+    except Exception:
+        # ANY unconvertible ts (non-numeric, or an oversized int that overflows
+        # float) -> stale. Catching only (TypeError, ValueError) let an oversized
+        # int's OverflowError escape to main's fail-open BEFORE _claim ran, which
+        # silently no-op'd the guard for that tree until the corrupt entry cleared.
+        return True
+    if not math.isfinite(t):
+        return True
+    return (now - t) > _ttl_seconds()
+
+
+def _claim(m: dict, tree: str, sid: str) -> None:
+    """Claim `tree` for `sid` and release every OTHER tree `sid` owned (the session
+    moved — ownership follows the cwd, one tree at a time)."""
+    m[tree] = {"session_id": sid, "ts": time.time(), "pid": os.getpid()}
+    for k in [k for k, v in m.items()
+              if k != tree and isinstance(v, dict) and v.get("session_id") == sid]:
+        del m[k]
+
+
+def _release_session(m: dict, sid: str) -> bool:
+    """Drop every tree owned by `sid` (SessionEnd). Returns whether anything changed."""
+    victims = [k for k, v in m.items()
+               if isinstance(v, dict) and v.get("session_id") == sid]
+    for k in victims:
+        del m[k]
+    return bool(victims)
+
+
+def _block(entry: dict, tree: str, now: float) -> None:
+    other = str(entry.get("session_id", "?"))[:8]
+    try:
+        age = max(0, int(now - float(entry.get("ts", now))))
+    except (TypeError, ValueError, OverflowError):
+        age = 0
+    wt = _worktree_root(tree)
+    where = f"worktree '{os.path.basename(wt)}'" if wt else "this checkout"
+    ttl_min = int(_ttl_seconds() // 60)
+    print(
+        f"BLOCKED by harness guard: {where} already has a live session "
+        f"(session {other}, last active {age}s ago). Two live sessions in one "
+        f"worktree/checkout edit the same files and silently clobber each other.\n"
+        "\n"
+        "To work in parallel WITHOUT clobbering, get your own isolated worktree:\n"
+        "  - in THIS session, run the EnterWorktree tool with a short name, or\n"
+        "  - in a terminal:  claude --worktree <name>\n"
+        "Your changes then live on their own branch; integrate via a PR to main "
+        "(see skill `worktree`).\n"
+        "\n"
+        f"If the other session is actually dead, it auto-frees after ~{ttl_min} "
+        "min (a clean exit frees it instantly). To intentionally share this tree "
+        "now, re-run with env HARNESS_ALLOW_MULTI_SESSION=1.",
+        file=sys.stderr,
+    )
+
+
+def main() -> int:
+    if _hatch_enabled():
+        return 0
+    try:
+        data = json.load(sys.stdin)
+    except Exception:
+        return 0  # fail open on ANY parse failure (incl. RecursionError on deep JSON)
+
+    try:
+        if not isinstance(data, dict):
+            return 0
+        sid = data.get("session_id")
+        if not isinstance(sid, str) or not sid.strip():
+            return 0  # cannot identify an owner -> never enforce
+        cwd = data.get("cwd")
+        if not isinstance(cwd, str) or not cwd.strip():
+            return 0  # no tree to scope to
+        tree, repo = _resolve(cwd)
+        if not tree or not repo:
+            return 0
+
+        event = data.get("hook_event_name", "PreToolUse")
+
+        if event == "SessionEnd":
+            m = _load_map(repo)
+            if _release_session(m, sid):
+                _save_map(repo, m)
+            return 0
+
+        if event == "SessionStart":
+            # resume/clear/compact = sequential same-terminal transition (often a
+            # NEW session_id) -> free the cwd-resolved tree so the user is not
+            # blocked by their own dead claim. startup (new terminal) is NOT freed.
+            if data.get("source") != "startup":
+                m = _load_map(repo)
+                if tree in m:
+                    del m[tree]
+                    _save_map(repo, m)
+            return 0
+
+        # PreToolUse (and any other tool event): block a different fresh owner,
+        # else claim my tree (and release any tree I moved away from).
+        m = _load_map(repo)
+        now = time.time()
+        owner = m.get(tree)
+        if owner and owner.get("session_id") != sid and not _is_stale(owner, now):
+            _block(owner, tree, now)
+            return 2
+        _claim(m, tree, sid)
+        _save_map(repo, m)
+        return 0
+    except Exception:
+        return 0  # fail open on any unexpected error
+
+
+if __name__ == "__main__":
+    sys.exit(main())
