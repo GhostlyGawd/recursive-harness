@@ -30,6 +30,11 @@ def main() -> int:
     except json.JSONDecodeError:
         return 0
     prompt = data.get("prompt", "") or ""
+    # Background-agent results reach this UserPromptSubmit hook as <task-notification>
+    # blocks, not user input; they are never corrections. Skipping them stops spurious
+    # corrections.jsonl entries that falsely trip the Stop retro gate. (followup 216b37)
+    if prompt.lstrip().startswith("<task-notification"):
+        return 0
     if not SIGNALS.search(prompt):
         return 0
     session = data.get("session_id", "?")

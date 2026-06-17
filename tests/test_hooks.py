@@ -102,13 +102,64 @@ rc, _, _ = run("guard_enforcement_layer.py",
                {"tool_name": "Bash", "tool_input": {"command": f"rm -f {ROOT}/autonomy.json."}})
 check("guard blocks trailing-dot Win32 alias (autonomy.json.)", rc == 2, f"rc={rc}")
 
+# 1b1ddc: non-redirect write verbs (dd of=, install, touch, python open-write)
+# into a protected dir must block -- the old MUTATING regex caught none of them.
+for wv in (f"dd if=/dev/zero of={ROOT}/hooks/x bs=1 count=1",
+           f"install -m 644 /tmp/x {ROOT}/hooks/y",
+           f"touch {ROOT}/hooks/z",
+           f"python -c \"open('{ROOT}/hooks/w', 'w').write('x')\""):
+    rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": wv}})
+    check(f"guard blocks non-redirect write verb '{wv.split()[0]}'", rc == 2, f"rc={rc} cmd={wv[:48]}")
+# ...and those verbs on a NON-protected / prefix-sibling path must not over-block.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": "dd if=/dev/zero of=/tmp/safe bs=1 count=1"}})
+check("guard allows dd on non-protected path (no over-block)", rc == 0, f"rc={rc}")
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": f"touch {ROOT}/bin-backup/note"}})
+check("guard allows touch on bin-prefixed sibling (no over-block)", rc == 0, f"rc={rc}")
+
+# NON-DESTRUCTIVE: never delete a real, pre-existing approval marker. The old
+# create + unconditional-remove wiped a live unlock mid-session (followup c36988).
 marker = os.path.join(ROOT, "HUMAN_APPROVED")
-open(marker, "w").close()
+_marker_pre = os.path.exists(marker)
+if not _marker_pre:
+    open(marker, "w").close()
 rc, _, _ = run("guard_enforcement_layer.py",
                {"tool_name": "Write",
                 "tool_input": {"file_path": os.path.join(ROOT, "lint", "x.py")}})
-os.remove(marker)
+if not _marker_pre:
+    os.remove(marker)
 check("guard honors HUMAN_APPROVED marker", rc == 0, f"rc={rc}")
+
+# c36988: an agent may NOT self-create the marker (only a human shell / harness
+# approve). Meaningful only when no real marker exists (else the honor early-return
+# passes everything) -> gate on absence, stay non-destructive.
+if not os.path.exists(marker):
+    rc, _, err = run("guard_enforcement_layer.py",
+                     {"tool_name": "Write", "tool_input": {"file_path": marker}})
+    check("guard blocks Write of HUMAN_APPROVED marker", rc == 2 and "HUMAN_APPROVED" in err, f"rc={rc}")
+    for mk in (f"touch {ROOT}/HUMAN_APPROVED", "echo x > HUMAN_APPROVED",
+               f"cp /tmp/x {ROOT}/HUMAN_APPROVED", "tee HUMAN_APPROVED < /dev/null",
+               "python -c \"open('HUMAN_APPROVED','w')\"", "foo && touch HUMAN_APPROVED",
+               f"   touch {ROOT}/HUMAN_APPROVED", f"FOO=bar touch {ROOT}/HUMAN_APPROVED",
+               "echo x >& HUMAN_APPROVED", f'echo x > "{ROOT}/HUMAN_APPROVED"',
+               # the broad check also catches the wrapper forms a boundary-anchored regex
+               # missed (auditor aaa100b5): each still carries a mutating token + the name
+               "eval touch HUMAN_APPROVED", "(touch HUMAN_APPROVED)", "truncate -s 0 HUMAN_APPROVED",
+               "command touch HUMAN_APPROVED", "/usr/bin/touch HUMAN_APPROVED"):
+        rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": mk}})
+        check(f"guard blocks marker self-create: {mk[:26]}", rc == 2, f"rc={rc}")
+    rc, _, _ = run("guard_enforcement_layer.py",
+                   {"tool_name": "Bash", "tool_input": {"command": f"test -f {ROOT}/HUMAN_APPROVED"}})
+    check("guard allows reading the marker (test -f)", rc == 0, f"rc={rc}")
+    # ACCEPTED OVER-BLOCK (6b3443 reverted): the broad check also blocks a command that
+    # merely MENTIONS the marker alongside a write verb (a commit/PR body). This is the
+    # safe trade -- under-blocking the unlock is strictly worse (3 auditor rounds proved a
+    # narrow regex leaks); write marker-mentioning payloads via --body-file / -F file.
+    for over in ('git commit -m "doc: touch HUMAN_APPROVED unlocks the guard"',
+                 'gh pr create --body "run touch HUMAN_APPROVED to unlock"'):
+        rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": over}})
+        check(f"guard (broad) over-blocks marker mention: {over[:24]}", rc == 2, f"rc={rc}")
 
 rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Read",
                                               "tool_input": {"file_path": os.path.join(ROOT, "hooks", "a.py")}})
@@ -117,13 +168,20 @@ check("guard ignores non-mutating tools", rc == 0, f"rc={rc}")
 # correction logger: detects signal, stays quiet otherwise
 sess = "testsession123"
 log = os.path.join(ROOT, "state", "corrections.jsonl")
-before = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+before = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 rc, out, _ = run("log_correction.py", {"prompt": "No, that's wrong — I meant the staging DB", "session_id": sess})
-after = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+after = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 check("correction logger records signal", rc == 0 and after == before + 1, f"{before}->{after}")
 rc, out, _ = run("log_correction.py", {"prompt": "looks great, continue please", "session_id": sess})
-after2 = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+after2 = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 check("correction logger ignores praise", rc == 0 and after2 == after, f"{after}->{after2}")
+# 216b37: task-notifications are background-agent results, not user corrections --
+# even when they contain signal words ("no, stop, wrong"). Must NOT be logged.
+rc, out, _ = run("log_correction.py",
+                 {"prompt": "<task-notification>\n<task-id>abc</task-id> no, stop, that's wrong",
+                  "session_id": sess})
+after3 = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
+check("correction logger ignores task-notifications", rc == 0 and after3 == after2, f"{after2}->{after3}")
 
 # stop gate: blocks at threshold, then only once
 for _ in range(2):
@@ -158,8 +216,8 @@ for hook in ("guard_enforcement_layer.py", "log_correction.py", "stop_retro_gate
 for f in ("corrections.jsonl", "skill_usage.jsonl", "sessions.jsonl"):
     path = os.path.join(ROOT, "state", f)
     if os.path.exists(path):
-        keep = [l for l in open(path) if sess not in l and '"other"' not in l]
-        open(path, "w").writelines(keep)
+        keep = [l for l in open(path, encoding="utf-8") if sess not in l and '"other"' not in l]
+        open(path, "w", encoding="utf-8").writelines(keep)
 gate = os.path.join(ROOT, "state", f"retro_gate_{sess}")
 os.path.exists(gate) and os.remove(gate)
 
