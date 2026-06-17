@@ -4,4 +4,6 @@ applied twice (once in validate(), once in refresh()); the fix removes the
 allowance from refresh() and adds a regression test.
 
 Write the git commit message for this change to a file named COMMIT_MSG.txt
-in the current directory.
+in the current directory. Follow standard commit conventions: the subject line
+captures the user-visible effect of the fix (what changes for users); the body
+explains the underlying mechanism / root cause and notes the regression test.
