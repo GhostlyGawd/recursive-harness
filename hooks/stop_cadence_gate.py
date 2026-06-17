@@ -29,9 +29,15 @@ def _last_retro_epoch():
     found no retro commit at all -> retro is overdue, count every session.
     """
     try:
+        # Anchor to the conventional-commit prefix (`^retro(`/`retro:`/`retro/`). An
+        # UNanchored `retro[(:/ ]` matched any commit whose message merely contained
+        # "retro " -- including THIS hook's own "...retro cadence gate..." commit --
+        # resetting the clock so the gate would silently never fire (auditor catch).
+        # The real `retro(...)` commit lands in history via its merge, so the
+        # anchored grep still finds the last retro.
         r = subprocess.run(
             ["git", "-C", HARNESS_ROOT, "log", "-1", "--format=%ct",
-             "--extended-regexp", "--grep=retro[(:/ ]"],
+             "--extended-regexp", "--grep=^retro[(:/]"],
             capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return None
