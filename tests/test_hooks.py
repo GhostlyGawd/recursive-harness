@@ -52,6 +52,40 @@ rc, _, _ = run("guard_enforcement_layer.py",
                 "tool_input": {"command": f"rm -f {ROOT}/bin/harness"}})
 check("guard blocks bash mutation of bin/", rc == 2, f"rc={rc}")
 
+# fd-duplication (2>&1) is NOT a file write: EXECUTING bin/harness with 2>&1 must
+# be ALLOWED even though the abs path contains <root>/bin. Regression from 2dcf71f
+# (bin/ joined PROTECTED) + the >{1,2} pattern false-blocked harness CLI runs from
+# a worktree, where bin/harness is invoked by absolute path.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"{ROOT}/bin/harness predict --task x --expect y 2>&1 | head"}})
+check("guard allows executing bin/harness with 2>&1 fd-dup", rc == 0, f"rc={rc}")
+
+# ...but a REAL file-write redirect into a protected dir must still block.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"echo pwned > {ROOT}/bin/harness"}})
+check("guard still blocks redirect write into bin/", rc == 2, f"rc={rc}")
+
+# other fd-dup targets (a fd number or '-') are also writes-of-nothing -> ALLOWED.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"{ROOT}/bin/harness stats >&2"}})
+check("guard allows >&2 fd-dup on bin/harness", rc == 0, f"rc={rc}")
+
+# CRITICAL (auditor a303fa2 catch): csh-style `>&FILE` redirects BOTH streams
+# INTO a file -- a real write -- so it must stay BLOCKED. The fd-dup exclusion is
+# `&[0-9-]` (targets &1/&2/&-) only, NEVER a bare `&`, or `echo x >& bin/harness`
+# would clobber the unlock-minting binary. Both space and no-space forms:
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"echo pwned >& {ROOT}/bin/harness"}})
+check("guard blocks csh >&FILE write into bin/ (space form)", rc == 2, f"rc={rc}")
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash",
+                "tool_input": {"command": f"echo pwned >&{ROOT}/hooks/guard_enforcement_layer.py"}})
+check("guard blocks csh >&FILE write into hooks/ (no-space form)", rc == 2, f"rc={rc}")
+
 # component-boundary match: a prefix-sharing SIBLING must NOT be over-blocked,
 # while the real protected path (incl. at end-of-arg) still blocks.
 rc, _, _ = run("guard_enforcement_layer.py",
