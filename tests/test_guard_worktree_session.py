@@ -167,21 +167,22 @@ check("worktree: blocked B did NOT steal ownership",
       (owner_of(wt, repo) or {}).get("session_id") == "A", read_map(repo))
 
 # =====================================================================
-# 2. Scope: the MAIN checkout is guarded too (user decision 2026-06-17)
+# 2. Scope: the MAIN checkout is TRACKED but NEVER blocked. A long single session
+#    churns its session_id (compaction/wakeups/resume each mint a new ID), and a
+#    dead predecessor id's still-fresh claim was locking the live user out of their
+#    OWN main tree. With no stable per-terminal identity to tell churn from a real
+#    2nd terminal, a session_id-keyed main-checkout block is a net-harmful false
+#    positive. Only actual worktrees block now. (user report + fix, 2026-06-17)
 # =====================================================================
 repo2 = new_main_tree()
 rc, _, _ = run(pl({"file_path": os.path.join(repo2, "f.py")}, repo2, session="A"))
 check("main checkout: first session A allowed", rc == 0, f"rc={rc}")
 
 rc, _, err = run(pl({"file_path": os.path.join(repo2, "f.py")}, repo2, session="B"))
-check("main checkout: second session B blocked (scope=main+worktrees)",
-      blocked(rc, err), f"rc={rc}")
-
-sub = os.path.join(repo2, "skills")
-os.makedirs(sub, exist_ok=True)
-rc, _, err = run(pl({"file_path": os.path.join(sub, "g.py")}, sub, session="C"))
-check("main checkout: subdir session resolves to same tree -> blocked",
-      blocked(rc, err), f"rc={rc}")
+check("main checkout: second session B is NOT blocked (main tracked, never blocks)",
+      rc == 0, f"rc={rc} err={err[:80]}")
+check("main checkout: B becomes owner (still claimed for tracking)",
+      (owner_of(repo2) or {}).get("session_id") == "B", read_map(repo2))
 
 # =====================================================================
 # 3. Different trees never cross-block; one shared per-repo map holds them all
@@ -198,14 +199,14 @@ check("one shared repo map holds wt-a, wt-b, and the checkout as distinct keys",
 # =====================================================================
 # 4. Staleness TTL: a stale (crashed/idle-beyond-TTL) owner can be taken over
 # =====================================================================
-repo3 = new_main_tree()
-rc, _, _ = run(pl({"file_path": os.path.join(repo3, "a")}, repo3, session="OLD"))
+repo3 = new_main_tree(); wt3 = new_worktree(repo3, "wt")  # blocking is worktree-scoped now
+rc, _, _ = run(pl({"file_path": os.path.join(wt3, "a")}, wt3, session="OLD"))
 check("ttl: OLD claims tree", rc == 0, f"rc={rc}")
-backdate(repo3, 10 * 24 * 3600)
-rc, _, _ = run(pl({"file_path": os.path.join(repo3, "a")}, repo3, session="NEW"))
+backdate(wt3, 10 * 24 * 3600, repo=repo3)
+rc, _, _ = run(pl({"file_path": os.path.join(wt3, "a")}, wt3, session="NEW"))
 check("ttl: stale owner taken over by NEW (allowed)", rc == 0, f"rc={rc}")
-check("ttl: NEW is now the owner", (owner_of(repo3) or {}).get("session_id") == "NEW", read_map(repo3))
-rc, _, err = run(pl({"file_path": os.path.join(repo3, "a")}, repo3, session="LATE"))
+check("ttl: NEW is now the owner", (owner_of(wt3, repo3) or {}).get("session_id") == "NEW", read_map(repo3))
+rc, _, err = run(pl({"file_path": os.path.join(wt3, "a")}, wt3, session="LATE"))
 check("ttl: fresh owner still blocks newcomer", blocked(rc, err), f"rc={rc}")
 
 # =====================================================================
@@ -227,14 +228,14 @@ check("release: tree free after owner exit -> NEXT allowed", rc == 0, f"rc={rc}"
 # =====================================================================
 # 6. Escape hatch (value-gated)
 # =====================================================================
-repo5 = new_main_tree()
-run(pl({"file_path": os.path.join(repo5, "a")}, repo5, session="HOLD"))
+repo5 = new_main_tree(); wt5 = new_worktree(repo5, "wt")  # blocking is worktree-scoped
+run(pl({"file_path": os.path.join(wt5, "a")}, wt5, session="HOLD"))
 for val in ("1", "true", "YES", "on"):
-    rc, _, _ = run(pl({"file_path": os.path.join(repo5, "a")}, repo5, session="X"),
+    rc, _, _ = run(pl({"file_path": os.path.join(wt5, "a")}, wt5, session="X"),
                    env_extra={"HARNESS_ALLOW_MULTI_SESSION": val})
     check(f"hatch ={val!r} enables bypass", rc == 0, f"rc={rc}")
 for val in ("0", "false", "no", "off", ""):
-    rc, _, err = run(pl({"file_path": os.path.join(repo5, "a")}, repo5, session="X"),
+    rc, _, err = run(pl({"file_path": os.path.join(wt5, "a")}, wt5, session="X"),
                      env_extra={"HARNESS_ALLOW_MULTI_SESSION": val})
     check(f"hatch ={val!r} does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
 # Regression (harness-auditor 2026-06-17): the TTL must NOT be env-overridable —
@@ -242,7 +243,7 @@ for val in ("0", "false", "no", "off", ""):
 # stale-out + evict the live owner). It must be ignored entirely; the 2nd session
 # still blocks regardless of the value.
 for val in ("0", "0.0001", "1", "-5", "99999999"):
-    rc, _, err = run(pl({"file_path": os.path.join(repo5, "a")}, repo5, session="ATK"),
+    rc, _, err = run(pl({"file_path": os.path.join(wt5, "a")}, wt5, session="ATK"),
                      env_extra={"HARNESS_SESSION_TTL_SECONDS": val})
     check(f"TTL env override ={val!r} is NOT honored (no self-assertable bypass)",
           blocked(rc, err), f"rc={rc}")
@@ -250,18 +251,18 @@ for val in ("0", "0.0001", "1", "-5", "99999999"):
 # =====================================================================
 # 7. Tool-agnostic block + onboarding message content
 # =====================================================================
-repo6 = new_main_tree()
-run(pl({"file_path": os.path.join(repo6, "a")}, repo6, session="OWN"))
-for tool, ti in (("Edit", {"file_path": os.path.join(repo6, "a")}),
-                 ("Write", {"file_path": os.path.join(repo6, "a")}),
+repo6 = new_main_tree(); wt6 = new_worktree(repo6, "wt")  # blocking is worktree-scoped
+run(pl({"file_path": os.path.join(wt6, "a")}, wt6, session="OWN"))
+for tool, ti in (("Edit", {"file_path": os.path.join(wt6, "a")}),
+                 ("Write", {"file_path": os.path.join(wt6, "a")}),
                  ("Bash", {"command": "ls"}),
-                 ("Grep", {"pattern": "x", "path": repo6}),
-                 ("Glob", {"pattern": "**/*", "path": repo6})):
-    rc, _, err = run(pl(ti, repo6, session="B", tool=tool))
+                 ("Grep", {"pattern": "x", "path": wt6}),
+                 ("Glob", {"pattern": "**/*", "path": wt6})):
+    rc, _, err = run(pl(ti, wt6, session="B", tool=tool))
     check(f"second session blocked on {tool}", blocked(rc, err), f"rc={rc}")
-rc, _, _ = run(pl({"command": "ls"}, repo6, session="OWN", tool="Bash"))
+rc, _, _ = run(pl({"command": "ls"}, wt6, session="OWN", tool="Bash"))
 check("owner allowed on Bash (heartbeat)", rc == 0, f"rc={rc}")
-_, _, err = run(pl({"file_path": os.path.join(repo6, "a")}, repo6, session="B"))
+_, _, err = run(pl({"file_path": os.path.join(wt6, "a")}, wt6, session="B"))
 low = err.lower()
 check("onboarding message mentions starting a worktree",
       ("--worktree" in low) or ("enterworktree" in low), err[:140])
@@ -303,13 +304,13 @@ for src in ("clear", "resume", "compact"):
     rc, _, _ = run(pl({"file_path": os.path.join(repo_c, "a")}, repo_c, session="NEWID"))
     check(f"after source={src}, new session claims freely (no false-block)", rc == 0, f"rc={rc}")
 
-repo_s = new_main_tree()
-run(pl({"file_path": os.path.join(repo_s, "a")}, repo_s, session="LIVE"))
-rc, _, _ = run(pl({}, repo_s, session="OTHER", event="SessionStart", tool="", source="startup"))
+repo_s = new_main_tree(); wt_s = new_worktree(repo_s, "wt")  # blocking is worktree-scoped
+run(pl({"file_path": os.path.join(wt_s, "a")}, wt_s, session="LIVE"))
+rc, _, _ = run(pl({}, wt_s, session="OTHER", event="SessionStart", tool="", source="startup"))
 check("SessionStart source=startup does NOT release", rc == 0, f"rc={rc}")
 check("SessionStart startup left the live owner intact",
-      (owner_of(repo_s) or {}).get("session_id") == "LIVE", read_map(repo_s))
-rc, _, err = run(pl({"file_path": os.path.join(repo_s, "a")}, repo_s, session="OTHER"))
+      (owner_of(wt_s, repo_s) or {}).get("session_id") == "LIVE", read_map(repo_s))
+rc, _, err = run(pl({"file_path": os.path.join(wt_s, "a")}, wt_s, session="OTHER"))
 check("new terminal (startup) still blocked by live owner", blocked(rc, err), f"rc={rc}")
 
 # =====================================================================
@@ -390,24 +391,24 @@ check("no orphaned .tmp.* files accumulate in state/", leftovers == [], leftover
 # 13. Key normalization: separator/trailing-slash variants of the SAME tree
 #     resolve to one owner key (so the 2nd session is blocked) on every OS.
 # =====================================================================
-repo_k = new_main_tree()
-run(pl({"file_path": "a"}, repo_k, session="A"))
-variant = repo_k.rstrip("/\\") + os.sep + "skills" + os.sep + ".." + os.sep  # same tree via ./.. roundtrip
+repo_k = new_main_tree(); wt_k = new_worktree(repo_k, "wt")  # blocking is worktree-scoped
+run(pl({"file_path": "a"}, wt_k, session="A"))
+variant = wt_k.rstrip("/\\") + os.sep + "sub" + os.sep + ".." + os.sep  # same tree via ./.. roundtrip
 rc, _, err = run(pl({"file_path": "a"}, variant, session="B"))
 check("separator/.. variant of same tree -> 2nd session blocked", blocked(rc, err), f"rc={rc}")
 # Case variance: blocked on a case-insensitive FS (Windows); distinct tree on a
 # case-sensitive FS (Linux) -> allowed. Assert per platform.
 if os.path.normcase("A") == os.path.normcase("a"):
-    rc, _, err = run(pl({"file_path": "a"}, repo_k.upper(), session="C"))
+    rc, _, err = run(pl({"file_path": "a"}, wt_k.upper(), session="C"))
     check("case-insensitive FS: upper-case spelling of same tree blocked", blocked(rc, err), f"rc={rc}")
 
 # Windows \\?\ extended-length prefix is a pure alias and must be stripped so the
 # prefixed spelling keys to the SAME tree (closes the round-3 \\?\ bypass without
 # resolving symlinks). Windows-only (the prefix is meaningless on POSIX).
 if os.name == "nt":
-    repo_x = new_main_tree()
-    run(pl({"file_path": "a"}, repo_x, session="A"))
-    ext = "\\\\?\\" + os.path.abspath(repo_x)
+    repo_x = new_main_tree(); wt_x = new_worktree(repo_x, "wt")  # blocking is worktree-scoped
+    run(pl({"file_path": "a"}, wt_x, session="A"))
+    ext = "\\\\?\\" + os.path.abspath(wt_x)
     rc, _, err = run(pl({"file_path": "a"}, ext, session="B"))
     check("\\\\?\\ extended-length spelling of same tree -> 2nd session blocked",
           blocked(rc, err), f"rc={rc}")
