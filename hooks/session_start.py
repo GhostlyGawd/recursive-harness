@@ -14,39 +14,46 @@ HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(HARNESS_ROOT, "state")
 
 
-def _git(args):
-    """Run a git command in the harness root; stripped stdout or None on any
-    failure. Best-effort: a hook must never break a session over git."""
+def _git(args, cwd):
+    """Run a git command in `cwd`; stripped stdout or None on any failure
+    (incl. a bad/missing cwd, which raises and is caught). Best-effort: a hook
+    must never break a session over git."""
     try:
-        r = subprocess.run(["git", *args], cwd=HARNESS_ROOT,
+        r = subprocess.run(["git", *args], cwd=cwd,
                            capture_output=True, text=True, timeout=3)
     except Exception:
         return None
     return r.stdout.strip() if r.returncode == 0 else None
 
 
-def _branch_warning():
+def _branch_warning(session_cwd):
     """One banner line when this session sits on a non-main branch in the harness
-    MAIN checkout. Scoped TIGHTLY — fires only when cwd's git toplevel IS the
-    harness root: never in another project, never in a `.claude/worktrees/*`
-    checkout (whose own `worktree-<name>` branch is correct, and whose toplevel is
-    the worktree path, not HARNESS_ROOT). High-signal because the harness learning
-    flows (/retro, /harness-pr, /calibrate, /gc, /meta-retro) branch in-place and
-    never `git checkout main` when done, silently stranding the NEXT session on a
-    dead branch. Returns '' on any git failure — the banner must still print."""
-    top = _git(["rev-parse", "--show-toplevel"])
+    MAIN checkout. Scoped via the SESSION's cwd (from the SessionStart payload),
+    NOT this file's location — the active hook is always the trunk copy (wired by
+    absolute path in settings), so keying off __file__ would report the trunk's
+    branch no matter where the session actually is. Fires only when the git
+    toplevel OF session_cwd IS the harness root: never in another project
+    (different toplevel) and never in a `.claude/worktrees/*` checkout (toplevel is
+    the worktree path, and its own `worktree-<name>` branch is correct there).
+    High-signal because the harness learning flows (/retro, /harness-pr,
+    /calibrate, /gc, /meta-retro) branch in-place and never `git checkout main`
+    when done, silently stranding the NEXT session on a dead branch. Returns ''
+    on a missing cwd or any git failure — the banner must still print."""
+    if not session_cwd:
+        return ""
+    top = _git(["rev-parse", "--show-toplevel"], session_cwd)
     if not top:
         return ""
     if os.path.normcase(os.path.normpath(top)) != \
             os.path.normcase(os.path.normpath(HARNESS_ROOT)):
         return ""  # another repo, or a worktree checkout — non-main is fine there
-    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"])
+    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], session_cwd)
     if not branch or branch in ("main", "master", "HEAD"):
         return ""
     try:
         merged = subprocess.run(
             ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],
-            cwd=HARNESS_ROOT, capture_output=True, timeout=3).returncode == 0
+            cwd=session_cwd, capture_output=True, timeout=3).returncode == 0
     except Exception:
         merged = False
     note = "already merged - safe to" if merged else "not main -"
@@ -71,8 +78,11 @@ def _jsonl(name):
 
 
 def main() -> int:
+    cwd = None
     try:
-        json.load(sys.stdin)
+        data = json.load(sys.stdin)
+        if isinstance(data, dict):
+            cwd = data.get("cwd")
     except json.JSONDecodeError:
         pass
     preds = _jsonl("predictions.jsonl")
@@ -111,7 +121,7 @@ def main() -> int:
           f" | {since_meta} sessions since last /meta-retro"
           f" | learnings route to artifacts, not memory (routing-learnings skill)"
           f"{fu}")
-    warn = _branch_warning()
+    warn = _branch_warning(cwd)
     if warn:
         print(warn)
     return 0

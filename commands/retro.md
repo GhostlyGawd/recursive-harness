@@ -43,3 +43,7 @@ when run from another project's cwd. Bare `harness` calls were pinned to
 recipe is repeated per command by necessity: a command loads standalone (the kernel
 CLAUDE.md is not loaded when cwd is another repo), shell state does not persist between
 Bash calls, and bin/ is enforcement-locked so there is no shared shim to source. -->
+<!-- provenance: session 01S8mkwD, 2026-06-17 — added step 8 (return to trunk). A user
+opened a session stranded on a stale `proposal/*` branch a prior harness flow left behind;
+/retro branches in-place on `retro/<date>-<slug>` the same way and never returned to main.
+Paired with the SessionStart banner warning (hooks/session_start.py). -->

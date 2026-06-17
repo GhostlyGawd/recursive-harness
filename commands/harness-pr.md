@@ -73,4 +73,9 @@ scope-creep probe. -->
 path (`harness approve`) after the user, on remote control, could not run a shell
 `touch` and needed to grant enforcement approval verbally. The marker only unlocks
 drafting; the PR merge (which the user already grants by voice) stays the binding gate. -->
+<!-- provenance: session 01S8mkwD, 2026-06-17 — added step 7 (return to trunk) after a
+user opened a session disoriented to find HEAD parked on a stale `proposal/*` branch a
+prior /harness-pr left behind. This flow branches in-place in the main checkout and never
+returned to main; the strand persisted across sessions. Paired with a SessionStart banner
+warning (hooks/session_start.py) as the universal noticer for any branch-creating flow. -->
 
