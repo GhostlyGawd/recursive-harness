@@ -27,6 +27,11 @@ Run the retrospection procedure (skill: retrospection). Concretely:
 7. `touch state/retro_gate_<session_id>`; report to the user: events found,
    routes chosen, PR links. One line each. If nothing met the signal bar,
    SAY SO and stop — empty retros are honest; padded ones poison the trunk.
+8. **Return to trunk: `git checkout main`** (branch-hygiene). /retro branches
+   in-place on `retro/<date>-<slug>`; ending the session still on it strands the
+   NEXT session on a dead branch (the SessionStart banner flags this, but don't
+   create the mess). The drafted work is safe on its pushed branch + PR. If the
+   retro produced no PR (empty signal), you never left `main` — nothing to do.
 
 <!-- provenance: 2026-06-17 (prediction 4cf104ba) — replaced the hardcoded `~/.claude`
 with an install-agnostic harness-root resolution
@@ -38,3 +43,7 @@ when run from another project's cwd. Bare `harness` calls were pinned to
 recipe is repeated per command by necessity: a command loads standalone (the kernel
 CLAUDE.md is not loaded when cwd is another repo), shell state does not persist between
 Bash calls, and bin/ is enforcement-locked so there is no shared shim to source. -->
+<!-- provenance: session 01S8mkwD, 2026-06-17 — added step 8 (return to trunk). A user
+opened a session stranded on a stale `proposal/*` branch a prior harness flow left behind;
+/retro branches in-place on `retro/<date>-<slug>` the same way and never returned to main.
+Paired with the SessionStart banner warning (hooks/session_start.py). -->
