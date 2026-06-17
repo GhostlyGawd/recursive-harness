@@ -4,7 +4,10 @@ description: Open a properly-documented harness change PR (the manual path; /ret
 
 For the change described in $ARGUMENTS:
 
-1. Work in the harness repo (`cd ~/.claude`). `git fetch origin` first and branch
+1. Work in the harness repo — resolve it install-agnostically (never assume `~/.claude`;
+   resolve in each shell, state does not persist):
+   `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"; cd "$HARNESS"`.
+   `git fetch origin` first and branch
    `proposal/$(date +%F)-<slug>` off `origin/main`, NOT a possibly-stale local
    `main` — a stale base makes `gh pr merge`'s diffstat surface files already on
    the remote as if they were yours, reading as phantom scope-creep.
@@ -21,13 +24,13 @@ For the change described in $ARGUMENTS:
          Confirm with `test -f HUMAN_APPROVED` — chat `!`-prefix typing can
          silently no-op. Remove with `rm -f HUMAN_APPROVED`.
        - **Remote/voice human:** on an EXPLICIT, unambiguous spoken grant, run
-         `harness approve --scope "<what>" --grant "<their verbatim words>"` —
+         `"$HARNESS/bin/harness" approve --scope "<what>" --grant "<their verbatim words>"` —
          it logs the grant to `state/approvals.jsonl` and places the marker.
          NEVER run it without a real grant; fabricating one is the same betrayal
          as hand-touching the marker. The marker is a BLANKET unlock (the guard
          checks existence only — `--scope` records intent, it does NOT limit
          which files are editable), so make ONLY the approved edit, then
-         `harness approve --revoke`. `state/approvals.jsonl` is gitignored and
+         `"$HARNESS/bin/harness" approve --revoke`. `state/approvals.jsonl` is gitignored and
          never reaches the PR, so **quote the verbatim grant in the PR body**
          (`## Approval`) — that committed line is the only grant evidence the
          merging human and a fresh-context auditor can see.

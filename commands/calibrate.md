@@ -2,12 +2,14 @@
 description: Score pending predictions and review calibration stats. Run every ~10 sessions or when the SessionStart banner shows unscored debt.
 ---
 
-1. `~/.claude/bin/harness stats` — list pending prediction ids.
+1. Resolve the CLI install-agnostically (never assume `~/.claude`; resolve per shell):
+   `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
+   `"$HARNESS/bin/harness" stats` — list pending prediction ids.
 2. For each pending id you can still evaluate, score honestly:
-   `harness outcome <id> --result hit|miss --notes "<what actually happened>"`.
+   `"$HARNESS/bin/harness" outcome <id> --result hit|miss --notes "<what actually happened>"`.
    Can't reconstruct the outcome? Score it `miss --notes "unverifiable"` —
    unfalsifiable predictions failing-open teaches you to write checkable ones.
-3. Re-run `harness stats`. For any bucket or category flagged OVERCONFIDENT:
+3. Re-run `"$HARNESS/bin/harness" stats`. For any bucket or category flagged OVERCONFIDENT:
    - append a dated line to memory/calibration/notes.md naming the category
      and the gap (claimed vs. actual);
    - adopt, for that category, the pre-mortem rule from skill: calibration

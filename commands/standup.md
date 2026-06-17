@@ -9,8 +9,10 @@ you swept. This command exists because the user approved the same sweep repeated
 
 ## 1. Report (read-only — gather in parallel)
 - Shipped: `gh pr list --state merged --limit 15` and `git log --oneline -15`.
-- Open work: `~/.claude/bin/harness followup list`, then `git status -s`.
-- Health: unscored predictions (`~/.claude/bin/harness stats` — unscored = debt),
+- Open work: resolve the CLI install-agnostically (never assume `~/.claude`; resolve per
+  shell) — `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`;
+  then `"$HARNESS/bin/harness" followup list`, then `git status -s`.
+- Health: unscored predictions (`"$HARNESS/bin/harness" stats` — unscored = debt),
   calibration (SessionStart banner), recent corrections
   (state/corrections.jsonl), cadence (sessions since /meta-retro, retro gate pending).
 Lead with a 2-3 line TL;DR, then sections: Shipped / Open / Health / Suggested next.
