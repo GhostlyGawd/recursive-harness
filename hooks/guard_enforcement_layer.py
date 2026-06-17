@@ -5,7 +5,9 @@ The agent's cheapest path to "better metrics" is weakening the checks that
 produce the metrics. This hook makes that path mechanically unavailable:
 Edit/Write/MultiEdit/NotebookEdit/Bash targeting hooks/, lint/, evals/,
 autonomy.json, or .github/ INSIDE THE HARNESS REPO exit 2 (blocked) unless a
-human has placed a HUMAN_APPROVED marker file at the harness root.
+human has placed a HUMAN_APPROVED marker file at the harness root. The marker
+itself is protected: an agent may not create it (only a human shell or
+`bin/harness approve` can), closing the self-unlock hole (followup c36988).
 
 Scope is deliberately narrow: only paths inside this harness repo are
 protected, so editing some unrelated project's hooks/ directory is untouched.
@@ -16,15 +18,19 @@ import re
 import sys
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MARKER = os.path.join(HARNESS_ROOT, "HUMAN_APPROVED")
 # bin/ is protected because bin/harness mints the HUMAN_APPROVED unlock (cmd_approve);
 # leaving it editable would let an agent silently weaken the grant requirement (followup 5384ed).
 PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
-# Bash patterns that can mutate files; reads are fine. The redirect arm is
-# `>{1,2}(?!&[0-9-])`: match a real file-write redirect — `>`, `>>`, `2>file`,
-# `&>file`, AND the csh-style `>&file` (both streams INTO a file) — but NOT a
-# file-descriptor DUPLICATION, whose target is a fd number or `-`: `2>&1`, `>&2`,
-# `2>&-`. An fd-dup copies a descriptor and writes NO file, so flagging it as
+# Bash patterns that can mutate files; reads are fine. The verb arm now also
+# covers non-redirect writers the old regex missed (followup 1b1ddc): `dd` (of=),
+# `install` (src dst), `touch` (create), and a python `open(path, 'w'|'a'|'x')`
+# write that emits no shell redirect for the path scanner to pair with.
+# The redirect arm is `>{1,2}(?!&[0-9-])`: match a real file-write redirect — `>`,
+# `>>`, `2>file`, `&>file`, AND the csh-style `>&file` (both streams INTO a file) —
+# but NOT a file-descriptor DUPLICATION, whose target is a fd number or `-`: `2>&1`,
+# `>&2`, `2>&-`. An fd-dup copies a descriptor and writes NO file, so flagging it as
 # mutating false-blocks merely EXECUTING `<root>/bin/harness ... 2>&1` from a
 # worktree (abs path contains the protected `<root>/bin` prefix) — the regression
 # from 2dcf71f (bin/ joining PROTECTED) that broke the harness CLI in worktrees.
@@ -32,7 +38,9 @@ FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 # `&` would also exclude `>&FILE`, which IS a write; `echo x >& <root>/bin/harness`
 # must stay BLOCKED (it would otherwise clobber the unlock-minting binary).
 MUTATING = re.compile(
-    r"\b(rm|mv|cp|tee|truncate|chmod|chown|ln|sed\s+-i|patch|git\s+checkout|git\s+restore)\b|>{1,2}(?!&[0-9-])"
+    r"\b(rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|sed\s+-i|patch|git\s+checkout|git\s+restore)\b"
+    r"|>{1,2}(?!&[0-9-])"
+    r"|open\s*\([^)]*,\s*['\"][wax]"
 )
 
 
@@ -55,12 +63,26 @@ def _inside_protected(path: str) -> str | None:
     return head if head in PROTECTED else None
 
 
+def _is_marker(path: str) -> bool:
+    """True if `path` targets the HUMAN_APPROVED unlock marker.
+
+    Lexical (abspath + normcase), never realpath: the marker is a fixed file at
+    the root; resolving symlinks could let an alias confuse identity. (followup c36988)
+    """
+    if not path:
+        return False
+    expanded = os.path.expanduser(path)
+    if not os.path.isabs(expanded):
+        expanded = os.path.abspath(expanded)
+    return os.path.normcase(os.path.abspath(expanded)) == os.path.normcase(os.path.abspath(MARKER))
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0  # fail open on malformed input; never brick the session
-    if os.path.exists(os.path.join(HARNESS_ROOT, "HUMAN_APPROVED")):
+    if os.path.exists(MARKER):
         return 0
 
     tool = data.get("tool_name", "")
@@ -68,10 +90,22 @@ def main() -> int:
 
     hit = None
     if tool in FILE_TOOLS:
-        hit = _inside_protected(ti.get("file_path", "") or ti.get("notebook_path", ""))
+        target = ti.get("file_path", "") or ti.get("notebook_path", "")
+        # The marker IS the unlock — an agent Write to it is a self-grant (c36988).
+        if _is_marker(target):
+            hit = "HUMAN_APPROVED"
+        else:
+            hit = _inside_protected(target)
     elif tool == "Bash":
         cmd = ti.get("command", "")
-        if MUTATING.search(cmd):
+        cmd_norm = cmd.replace("\\", "/")
+        # Block agent self-creation of the marker via shell (touch/redirect/cp/tee/
+        # dd/install/python-write). A read (cat/test -f) carries no mutating token
+        # and is allowed. When the marker already EXISTS we returned 0 above, so a
+        # legitimate post-approval `rm HUMAN_APPROVED` revoke never reaches here.
+        if "HUMAN_APPROVED" in cmd_norm and MUTATING.search(cmd):
+            hit = "HUMAN_APPROVED"
+        elif MUTATING.search(cmd):
             root = os.path.realpath(HARNESS_ROOT)
             home = os.path.expanduser("~")
             tilde_root = "~" + root[len(home):] if root.startswith(home) else root
@@ -80,7 +114,6 @@ def main() -> int:
             # spaces (e.g. "GitHub Projects"), which a tokenized scan splits apart
             # so `root in token` never matches and the guard silently fails open.
             # Normalize separators so both / and \ command forms are caught.
-            cmd_norm = cmd.replace("\\", "/")
             for base in (root, tilde_root):
                 base_norm = base.replace("\\", "/").rstrip("/")
                 for comp in PROTECTED:
@@ -97,6 +130,17 @@ def main() -> int:
                 if hit:
                     break
 
+    if hit == "HUMAN_APPROVED":
+        print(
+            "BLOCKED by harness guard: the HUMAN_APPROVED marker is the enforcement "
+            "unlock — an agent may not create it (self-granting write access to the "
+            "layer that measures you is the c36988 hole).\n"
+            "Only a human at a real shell may place it:\n"
+            f"  touch {HARNESS_ROOT}/HUMAN_APPROVED   (and remove it after the edit)\n"
+            "or, on an explicit verbal grant, run `bin/harness approve` per /harness-pr.",
+            file=sys.stderr,
+        )
+        return 2
     if hit:
         print(
             f"BLOCKED by harness guard: '{hit}' is enforcement-layer "

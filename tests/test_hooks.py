@@ -102,13 +102,49 @@ rc, _, _ = run("guard_enforcement_layer.py",
                {"tool_name": "Bash", "tool_input": {"command": f"rm -f {ROOT}/autonomy.json."}})
 check("guard blocks trailing-dot Win32 alias (autonomy.json.)", rc == 2, f"rc={rc}")
 
+# 1b1ddc: non-redirect write verbs (dd of=, install, touch, python open-write)
+# into a protected dir must block -- the old MUTATING regex caught none of them.
+for wv in (f"dd if=/dev/zero of={ROOT}/hooks/x bs=1 count=1",
+           f"install -m 644 /tmp/x {ROOT}/hooks/y",
+           f"touch {ROOT}/hooks/z",
+           f"python -c \"open('{ROOT}/hooks/w', 'w').write('x')\""):
+    rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": wv}})
+    check(f"guard blocks non-redirect write verb '{wv.split()[0]}'", rc == 2, f"rc={rc} cmd={wv[:48]}")
+# ...and those verbs on a NON-protected / prefix-sibling path must not over-block.
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": "dd if=/dev/zero of=/tmp/safe bs=1 count=1"}})
+check("guard allows dd on non-protected path (no over-block)", rc == 0, f"rc={rc}")
+rc, _, _ = run("guard_enforcement_layer.py",
+               {"tool_name": "Bash", "tool_input": {"command": f"touch {ROOT}/bin-backup/note"}})
+check("guard allows touch on bin-prefixed sibling (no over-block)", rc == 0, f"rc={rc}")
+
+# NON-DESTRUCTIVE: never delete a real, pre-existing approval marker. The old
+# create + unconditional-remove wiped a live unlock mid-session (followup c36988).
 marker = os.path.join(ROOT, "HUMAN_APPROVED")
-open(marker, "w").close()
+_marker_pre = os.path.exists(marker)
+if not _marker_pre:
+    open(marker, "w").close()
 rc, _, _ = run("guard_enforcement_layer.py",
                {"tool_name": "Write",
                 "tool_input": {"file_path": os.path.join(ROOT, "lint", "x.py")}})
-os.remove(marker)
+if not _marker_pre:
+    os.remove(marker)
 check("guard honors HUMAN_APPROVED marker", rc == 0, f"rc={rc}")
+
+# c36988: an agent may NOT self-create the marker (only a human shell / harness
+# approve). Meaningful only when no real marker exists (else the honor early-return
+# passes everything) -> gate on absence, stay non-destructive.
+if not os.path.exists(marker):
+    rc, _, err = run("guard_enforcement_layer.py",
+                     {"tool_name": "Write", "tool_input": {"file_path": marker}})
+    check("guard blocks Write of HUMAN_APPROVED marker", rc == 2 and "HUMAN_APPROVED" in err, f"rc={rc}")
+    for mk in (f"touch {ROOT}/HUMAN_APPROVED", f"echo x > {ROOT}/HUMAN_APPROVED",
+               f"cp /tmp/x {ROOT}/HUMAN_APPROVED"):
+        rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Bash", "tool_input": {"command": mk}})
+        check(f"guard blocks marker self-create via '{mk.split()[0]}'", rc == 2, f"rc={rc}")
+    rc, _, _ = run("guard_enforcement_layer.py",
+                   {"tool_name": "Bash", "tool_input": {"command": f"test -f {ROOT}/HUMAN_APPROVED"}})
+    check("guard allows reading the marker (test -f)", rc == 0, f"rc={rc}")
 
 rc, _, _ = run("guard_enforcement_layer.py", {"tool_name": "Read",
                                               "tool_input": {"file_path": os.path.join(ROOT, "hooks", "a.py")}})
@@ -124,6 +160,13 @@ check("correction logger records signal", rc == 0 and after == before + 1, f"{be
 rc, out, _ = run("log_correction.py", {"prompt": "looks great, continue please", "session_id": sess})
 after2 = sum(1 for _ in open(log)) if os.path.exists(log) else 0
 check("correction logger ignores praise", rc == 0 and after2 == after, f"{after}->{after2}")
+# 216b37: task-notifications are background-agent results, not user corrections --
+# even when they contain signal words ("no, stop, wrong"). Must NOT be logged.
+rc, out, _ = run("log_correction.py",
+                 {"prompt": "<task-notification>\n<task-id>abc</task-id> no, stop, that's wrong",
+                  "session_id": sess})
+after3 = sum(1 for _ in open(log)) if os.path.exists(log) else 0
+check("correction logger ignores task-notifications", rc == 0 and after3 == after2, f"{after2}->{after3}")
 
 # stop gate: blocks at threshold, then only once
 for _ in range(2):
