@@ -20,9 +20,19 @@ HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # leaving it editable would let an agent silently weaken the grant requirement (followup 5384ed).
 PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
-# Bash patterns that can mutate files; reads are fine.
+# Bash patterns that can mutate files; reads are fine. The redirect arm is
+# `>{1,2}(?!&[0-9-])`: match a real file-write redirect — `>`, `>>`, `2>file`,
+# `&>file`, AND the csh-style `>&file` (both streams INTO a file) — but NOT a
+# file-descriptor DUPLICATION, whose target is a fd number or `-`: `2>&1`, `>&2`,
+# `2>&-`. An fd-dup copies a descriptor and writes NO file, so flagging it as
+# mutating false-blocks merely EXECUTING `<root>/bin/harness ... 2>&1` from a
+# worktree (abs path contains the protected `<root>/bin` prefix) — the regression
+# from 2dcf71f (bin/ joining PROTECTED) that broke the harness CLI in worktrees.
+# CAUTION: the exclusion is `&[0-9-]` (fd targets only), NEVER a bare `&` — a bare
+# `&` would also exclude `>&FILE`, which IS a write; `echo x >& <root>/bin/harness`
+# must stay BLOCKED (it would otherwise clobber the unlock-minting binary).
 MUTATING = re.compile(
-    r"\b(rm|mv|cp|tee|truncate|chmod|chown|ln|sed\s+-i|patch|git\s+checkout|git\s+restore)\b|>{1,2}"
+    r"\b(rm|mv|cp|tee|truncate|chmod|chown|ln|sed\s+-i|patch|git\s+checkout|git\s+restore)\b|>{1,2}(?!&[0-9-])"
 )
 
 
