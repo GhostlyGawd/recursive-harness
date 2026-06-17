@@ -5,7 +5,7 @@ description: End-to-end procedure for turning a charter (GOAL.md or inline brief
 
 # Venture Build
 
-> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005.
+> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005. · 2026-06-17 (session d7de6b55): added the grading-independence gate after a 529-forced main-thread build.
 
 Turn a charter into a validated, managed, acquisition-ready venture. The product
 is bespoke every time; THIS procedure is what repeats. Defaults: bias to
@@ -36,6 +36,14 @@ acquisition framing as adaptable starting points, not law; fit them to the chart
 - Mark simulated market/customer data "Illustrative — validate before relying." You
   cannot fabricate real interviews or revenue; say so plainly when they're absent.
 - No unsafe autonomous action ships without an approval gate in the product itself.
+- GRADING stays independent, not BUILDING. The anti-reward-hacking invariant is that
+  whoever grades (tests + verify + red-team) is independent of whoever built — not that the
+  builder is a subagent. So if subagent spawns fail (repeated API 529 = a same-failure-twice
+  stuck signal), pulling the BUILD onto the main thread is legitimate IFF: tests were authored
+  by an independent agent BEFORE the build and stay frozen (you never edit tests for code you
+  wrote), you run them yourself as ground truth, and verify + red-team stay separate
+  fresh-context subagents. If overload blocks those too, defer the grading and say so — never
+  self-grade to force green. (2026-06-17 · session d7de6b55 · 3 builders died on 529)
 - Commit on a branch; never push / PR / merge to main unless the user asks.
 - Route learnings to artifacts, not memory (skill: routing-learnings).
 

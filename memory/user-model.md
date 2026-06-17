@@ -19,6 +19,7 @@ stale entries. This file is read on demand, never auto-loaded.
 - no destructive or irreversible action until it is verified end-to-end AND explicitly approved; prefer non-destructive paths (copy-not-move, new branch/worktree, additive/reversible edits) and minimize blast radius (evidence: 1, last: 2026-06-14, source: stated)
 - when adapting another repo's artifact, COPY it into the target repo and edit the copy — never modify the source repo (evidence: 1, last: 2026-06-14, source: stated)
 - iterate harness/skill changes in an isolated git worktree and test end-to-end before merging or replacing anything (evidence: 1, last: 2026-06-14, source: stated)
+- when a subagent's or research's identity claim about the user's own thing (product name, owner, scope) conflicts with how the user framed the task, the user's framing wins — surface the conflict and reconcile, never silently re-label; a subagent reports what's written where you point it, not the user's intent (evidence: 1, last: 2026-06-17, source: corrections)
 
 ## Calibration (prediction-bias rollup; /calibrate consumes this)
 
