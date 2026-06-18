@@ -5,11 +5,13 @@ The stateful complement to Guard A (guard_worktree_isolation.py). Guard A stops
 a session reaching INTO a sibling worktree's files; Guard B stops a SECOND live
 session colliding INSIDE the same tree. Two live Claude sessions sharing one
 checkout edit the same files and silently clobber each other — the exact failure
-worktrees exist to prevent. BLOCKING is scoped to actual `.claude/worktrees/<name>`
-trees; the main checkout is TRACKED but never blocked — session-id churn in one long
-session was false-positiving the live user out of their own main tree (see the
-PreToolUse note, 2026-06-17). On collision inside a worktree the block is an
-ONBOARDING step — it walks the user into their own isolated worktree.
+worktrees exist to prevent. WORKTREE collisions BLOCK via the owner map (below).
+The MAIN checkout cannot be safely blocked (session-id churn false-blocked a single
+session's own successor, and transcript mtime cannot tell a churned/ghost transcript
+from a real peer — auditor 2026-06-18), so it emits a NON-BLOCKING WARNING when a
+concurrent live session is detected from TRANSCRIPT liveness in the cwd-bucket (see
+_concurrent_live_session). Both the worktree block and the main warning ONBOARD the
+user toward their own isolated worktree.
 
 Ownership model — OWNERSHIP FOLLOWS THE SESSION'S CWD (one session owns exactly
 ONE tree at a time, the one it is currently working in):
@@ -75,6 +77,14 @@ harness-auditor pass: ownership-follows-cwd map (fixes EnterWorktree orphaning),
 non-finite/oversized ts -> stale, fail-open on pathological JSON (RecursionError),
 fixed non-overridable TTL (closed a self-assertable env bypass), lexical \\?\
 keying (no realpath, to keep symlinked-worktree identity), Windows os.replace retry.
+
+2026-06-18, session 43e917be — added MAIN-checkout concurrent-session detection
+(_concurrent_live_session) after diagnosing a live concurrent session bouncing HEAD
+on the shared trunk. A first transcript-mtime BLOCK attempt was harness-auditor-
+rejected (it reintroduces the 2026-06-17 self-lockout: a churned/ghost transcript is
+indistinguishable from a real peer by mtime), so it was downgraded to a NON-BLOCKING
+WARNING (sound because a false warning is harmless). Sound blocking needs a stable
+per-terminal identity — tracked as a follow-up.
 """
 import json
 import math
@@ -105,6 +115,16 @@ _TTL_SECONDS = 900          # 15 min: covers normal idle gaps; a crashed session
 #                             one on the next tool call).
 _MAX_WALK = 80              # bounded parent walk so a pathological cwd can't spin.
 _REPLACE_RETRIES = 4       # Windows: os.replace fails if the file is open elsewhere.
+
+# MAIN-checkout concurrency window for the non-blocking WARNING (see
+# _concurrent_live_session + _warn_concurrent). A live session writes its transcript
+# every turn/tool-call but can pause a minute or two while a turn is composed, so the
+# window is generous. The newer-than-mine discriminator is only a NOISE reducer here
+# (a false warning is harmless); it is NOT a safety gate, because transcript mtime
+# cannot tell a churned/ghost transcript from a real peer (auditor 2026-06-18).
+# Deliberately NOT env-overridable (same self-assertable-bypass reasoning as
+# _TTL_SECONDS).
+_CONCURRENT_WINDOW_SECONDS = 180
 
 
 def _hatch_enabled() -> bool:
@@ -285,6 +305,93 @@ def _release_session(m: dict, sid: str) -> bool:
     return bool(victims)
 
 
+def _concurrent_live_session(data, now):
+    """MAIN-checkout concurrency detector: transcript-based and session_id-FREE.
+
+    Returns (basename, age_seconds) of ANOTHER live session's transcript sharing
+    my cwd-bucket, or None. A live-concurrent transcript is a *.jsonl in the same
+    directory as my own `transcript_path`, with a DIFFERENT basename, whose mtime
+    is (a) within _CONCURRENT_WINDOW_SECONDS and (b) NEWER than my OWN transcript's
+    mtime.
+
+    IMPORTANT: the newer-than-mine gate is a NOISE REDUCER, not a safety guarantee.
+    It cannot reliably tell my OWN churned/abandoned transcript from a real peer: a
+    trailing write to the old file (a compaction/summary record), or an un-flushed
+    new transcript, can make my own ghost NEWER than mine and produce a FALSE
+    positive (harness-auditor 2026-06-18). That is acceptable ONLY because the
+    result is a non-blocking WARNING -- a false warning is harmless noise. It is
+    exactly why main-checkout BLOCKING was rejected (a false block would self-lock a
+    session out of its own trunk, the 2026-06-17 regression) and we warn instead.
+    Sound blocking would need a stable per-terminal identity; tracked as a follow-up.
+
+    Fails SAFE (returns None -> no warning) on any missing field, unreadable path,
+    or error.
+    """
+    try:
+        tp = data.get("transcript_path")
+        if not isinstance(tp, str) or not tp:
+            return None
+        tp = _normalize(tp)
+        bucket = os.path.dirname(tp)
+        my_base = os.path.normcase(os.path.basename(tp))
+        if not bucket or not os.path.isdir(bucket):
+            return None
+        try:
+            my_mtime = os.path.getmtime(tp)
+        except OSError:
+            return None  # can't compute the discriminator -> never block
+        best = None
+        for name in os.listdir(bucket):
+            if not name.endswith(".jsonl") or os.path.normcase(name) == my_base:
+                continue
+            try:
+                mtime = os.path.getmtime(os.path.join(bucket, name))
+            except OSError:
+                continue
+            age = now - mtime
+            if age < 0 or age > _CONCURRENT_WINDOW_SECONDS:
+                continue          # stale / future-dated -> not a live peer
+            if mtime <= my_mtime:
+                continue          # not newer than mine -> own churn / idle peer
+            if best is None or age < best[1]:
+                best = (name, age)
+        return best
+    except Exception:
+        return None
+
+
+def _warn_concurrent(peer) -> None:
+    """Emit a NON-BLOCKING warning (the caller exits 0). A PreToolUse hook's stderr
+    is IGNORED on exit 0, so the message must go out as JSON on stdout:
+    `systemMessage` is shown to the user; `additionalContext` informs the model;
+    permissionDecision=allow makes the non-blocking intent explicit."""
+    # NOTE: intentionally un-throttled for now -- re-warns on each PreToolUse while a
+    # peer stays live (non-blocking, so this is spam, not a lockout). A cooldown
+    # (stamp last_warn_ts in the owner map) is a tracked follow-up.
+    name, age = peer
+    sid = name[:-6] if name.endswith(".jsonl") else name  # <session_id>.jsonl
+    msg = (
+        f"WARNING (harness): another session looks live in this main checkout "
+        f"(session {sid[:8]}, transcript written {int(age)}s ago). Two live sessions "
+        f"share one HEAD and working tree and can silently clobber each other. Run "
+        f"EnterWorktree (or `claude --worktree <name>`) to isolate; set "
+        f"HARNESS_ALLOW_MULTI_SESSION=1 to silence this warning."
+    )
+    out = {
+        "systemMessage": msg,
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "non-blocking concurrent-session warning",
+            "additionalContext": (
+                "A concurrent session may be active on this main checkout; consider "
+                "offering to move into a worktree (EnterWorktree) to avoid clobbering."
+            ),
+        },
+    }
+    print(json.dumps(out))
+
+
 def _block(entry: dict, tree: str, now: float) -> None:
     other = str(entry.get("session_id", "?"))[:8]
     try:
@@ -352,25 +459,34 @@ def main() -> int:
                     _save_map(repo, m)
             return 0
 
-        # PreToolUse (and any other tool event): block a different fresh owner --
-        # but ONLY inside an actual `.claude/worktrees/<name>` tree. The MAIN checkout
-        # is no longer blocked: a long-lived single session churns its session_id
-        # (compaction / wakeups / resume each mint a new ID), and the dead predecessor
-        # id's still-fresh heartbeat was locking the live user out of their OWN main
-        # checkout. There is no reliable stable per-terminal identity here to tell
-        # churn from a real 2nd terminal (the recorded pid is the short-lived hook's,
-        # not the session's), so session_id-keyed blocking on the main tree is a
-        # net-harmful false positive. Worktree isolation -- the part that actually
-        # prevents parallel-agent clobbering -- is retained; the main checkout is still
-        # CLAIMED (heartbeat/diagnostics) but never blocks. (user report + fix,
-        # 2026-06-17; reverses the earlier "guard the main checkout too" scope now that
-        # the churn false-positive is shown to dominate the rare real-collision case.)
+        # PreToolUse (and any other tool event): block a different fresh OWNER via
+        # the owner map -- but ONLY inside an actual `.claude/worktrees/<name>`
+        # tree. The owner map cannot safely block the MAIN checkout: a long-lived
+        # single session churns its session_id (compaction / wakeups / resume each
+        # mint a new ID), and the dead predecessor id's still-fresh heartbeat
+        # locked the live user out of their OWN main checkout (no stable per-
+        # terminal identity in the map to tell churn from a real 2nd terminal).
+        # Transcript liveness can't fix that for BLOCKING either (a churned/ghost
+        # transcript is indistinguishable from a real peer by mtime -- auditor
+        # 2026-06-18), so the main checkout only WARNS (non-blocking) on a detected
+        # peer. It is still CLAIMED (heartbeat/diagnostics). (owner-map churn fix
+        # 2026-06-17; non-blocking transcript WARNING 2026-06-18.)
         m = _load_map(repo)
         now = time.time()
         owner = m.get(tree)
         if _worktree_root(tree) and owner and owner.get("session_id") != sid and not _is_stale(owner, now):
             _block(owner, tree, now)
             return 2
+        # MAIN checkout: WARN (never block) on a detected concurrent peer. Blocking
+        # here was rejected (harness-auditor 2026-06-18): transcript mtime cannot
+        # tell my own churned/ghost transcript from a real peer, so a block could
+        # self-lock me out of my own trunk (the 2026-06-17 regression). A WARNING is
+        # sound because a false positive is just harmless noise. Worktree owner-map
+        # blocking above is unchanged; this runs only for the main checkout.
+        if not _worktree_root(tree):
+            peer = _concurrent_live_session(data, now)
+            if peer is not None:
+                _warn_concurrent(peer)   # non-blocking: warn, then claim + exit 0
         _claim(m, tree, sid)
         _save_map(repo, m)
         return 0
