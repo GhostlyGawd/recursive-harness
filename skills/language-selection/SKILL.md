@@ -9,14 +9,15 @@ This skill exists to push a language choice past your default priors. Picking a
 language is a consequential, hard-to-reverse decision — it sets the deploy
 target, the performance ceiling, the libraries within reach, and the failure
 modes you live with. Reason from the task's actual requirements instead of
-reaching for whatever language is most probable by default (Python, JavaScript).
-The full catalog is in `references/index.md` — read it before recommending
-anything outside the quick table below.
+reaching for whatever language is most probable by default (Python, JavaScript),
+then consult the catalog in `references/index.md` to weigh those requirements
+against the full field before you commit.
 
 ## The procedure
 
 1. **Surface HARD constraints first** — these *eliminate* candidates; they do
-   not trade off. Get these from the task before reaching for a favorite:
+   not trade off. Read these off the task itself, before any candidate language
+   anchors your thinking:
    - Target/runtime: browser → JS/TS (or a WASM-source lang); iOS → Swift;
      no-GC / hard-real-time / tiny footprint → C / C++ / Rust / Zig; an existing
      JVM or .NET shop; serverless cold-start ceilings.
@@ -32,7 +33,11 @@ anything outside the quick table below.
      elegance; a missing one sinks an elegant choice.
    - Iteration speed vs runtime performance for the project's current phase.
    - Long-term maintainability and readability of the result.
-3. **Map domain → candidate set** (quick table below; full catalog in references).
+3. **Build the candidate set from those requirements** — consult
+   `references/index.md` and assemble candidates from what actually fits, not from
+   what comes to mind first. The index is the source of truth; reason over it
+   rather than recalling a usual answer. (The quick table below is a fast starting
+   point for common cases — candidates to verify, not answers.)
 4. **Intersect candidates with the hard constraints** → shortlist 2–3.
 5. **Break ties with soft factors.** Recommend ONE. Name the runner-up. State
    explicitly what you trade away and the condition under which the runner-up wins.
@@ -62,7 +67,11 @@ anything outside the quick table below.
 
 ## Quick domain → candidates (the common 80%)
 
-| Domain / task                          | First reach for            | Also consider                         |
+A fast starting point for common cases — entries are candidates to verify against
+your requirements and the catalog, never defaults to settle for. The genuinely
+forced cases (browser → JS/TS, iOS → Swift) are hard constraints, already in step 1.
+
+| Domain / task                          | Lead candidates            | Also consider                         |
 |----------------------------------------|----------------------------|---------------------------------------|
 | Systems / OS / embedded / no-GC        | Rust, C                    | C++, Zig, Ada (safety)                |
 | CLI tools / dev tooling                | Go, Rust                   | Python (quick), TypeScript (Node)     |
@@ -88,9 +97,11 @@ anything outside the quick table below.
 (systems, managed-runtime backend, frontend, data/ML/scientific, functional,
 mobile, scripting/shell, emerging, and domain-specific), each with a card covering
 paradigm, typing, runtime, concurrency model, performance tier, killer ecosystem,
-best-fit domains, and explicit **pick-when / avoid-when**. Read the relevant
-family before committing to anything beyond the quick table — especially for
-unfamiliar domains, niche targets, or when a hard constraint is in play.
+best-fit domains, and explicit **pick-when / avoid-when**. It is the source of
+truth the quick table only summarizes — open the relevant family every time you
+build a candidate set (step 3), not only for unfamiliar domains or niche targets.
+The families exist so you can scan the whole relevant field, not just the names
+that came to mind.
 
 <!-- provenance: 2026-06-17 · session 01S8mkwDJ8qjWH5aRDQafnv9 · trigger: user requested a language-selection reference skill the model consults when choosing a language; 2026-06-18 reframed from a human-org lens (hiring/team) to Claude choosing the best language for the task beyond default priors. -->
 
