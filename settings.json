@@ -19,7 +19,9 @@
     ],
     "PostToolUse": [
       {"matcher": "Skill",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_skill_use.py"}]}
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_skill_use.py"}]},
+      {"matcher": "Bash",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/post_merge_return_to_trunk.py"}]}
     ],
     "Stop": [
       {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/stop_retro_gate.py"},
