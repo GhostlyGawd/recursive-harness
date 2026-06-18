@@ -61,11 +61,14 @@ def run(payload, env_extra=None):
     return p.returncode, p.stdout, p.stderr
 
 
-def pl(tool_input, cwd, session="s1", event="PreToolUse", tool="Read", source=None):
+def pl(tool_input, cwd, session="s1", event="PreToolUse", tool="Read", source=None,
+       transcript=None):
     p = {"hook_event_name": event, "tool_name": tool,
          "tool_input": tool_input, "cwd": cwd, "session_id": session}
     if source is not None:
         p["source"] = source
+    if transcript is not None:
+        p["transcript_path"] = transcript
     return p
 
 
@@ -78,6 +81,31 @@ def check(name, cond, detail=""):
 def blocked(rc, err):
     low = err.lower()
     return rc == 2 and "blocked" in low and "worktree" in low
+
+
+def warned(rc, out):
+    """A NON-BLOCKING warning: exit 0 + stdout JSON whose systemMessage onboards to
+    a worktree (a PreToolUse hook's stderr is ignored on exit 0)."""
+    if rc != 0 or not out.strip():
+        return False
+    try:
+        j = json.loads(out)
+    except ValueError:
+        return False
+    msg = (j.get("systemMessage") or "").lower()
+    return ("worktree" in msg) and ("another session" in msg)
+
+
+def silent(rc, out):
+    """Allowed with NO warning: exit 0 and no systemMessage on stdout."""
+    if rc != 0:
+        return False
+    if not out.strip():
+        return True
+    try:
+        return not json.loads(out).get("systemMessage")
+    except ValueError:
+        return True
 
 
 def _strip_extended(path):
@@ -110,6 +138,27 @@ def new_worktree(repo, name="wt-a"):
     with open(os.path.join(wt, ".git"), "w") as f:
         f.write("gitdir: /dev/null\n")
     return wt
+
+
+def make_transcript(bucket, name, age_seconds):
+    """Create a fake session transcript <bucket>/<name> with mtime = now-age."""
+    os.makedirs(bucket, exist_ok=True)
+    path = os.path.join(bucket, name)
+    with open(path, "w") as f:
+        f.write("{}\n")
+    t = time.time() - age_seconds
+    os.utime(path, (t, t))
+    return path
+
+
+def bucket_with(specs):
+    """Fresh temp transcript-bucket dir holding transcripts: specs is a list of
+    (filename, age_seconds). Mirrors a `projects/<cwd-key>/` dir. Returns its path."""
+    b = tempfile.mkdtemp(prefix="guardb_bkt_")
+    _TMPDIRS.append(b)
+    for name, age in specs:
+        make_transcript(b, name, age)
+    return b
 
 
 def read_map(repo):
@@ -167,19 +216,18 @@ check("worktree: blocked B did NOT steal ownership",
       (owner_of(wt, repo) or {}).get("session_id") == "A", read_map(repo))
 
 # =====================================================================
-# 2. Scope: the MAIN checkout is TRACKED but NEVER blocked. A long single session
-#    churns its session_id (compaction/wakeups/resume each mint a new ID), and a
-#    dead predecessor id's still-fresh claim was locking the live user out of their
-#    OWN main tree. With no stable per-terminal identity to tell churn from a real
-#    2nd terminal, a session_id-keyed main-checkout block is a net-harmful false
-#    positive. Only actual worktrees block now. (user report + fix, 2026-06-17)
+# 2. Scope: the OWNER MAP never blocks the MAIN checkout (session_id churn would
+#    false-block a single session's own successor — see section 14 for how main
+#    concurrency is actually caught, via transcript liveness). A payload with NO
+#    transcript_path therefore never blocks the main checkout here. The main tree
+#    is still CLAIMED for tracking. (owner-map churn fix 2026-06-17)
 # =====================================================================
 repo2 = new_main_tree()
 rc, _, _ = run(pl({"file_path": os.path.join(repo2, "f.py")}, repo2, session="A"))
 check("main checkout: first session A allowed", rc == 0, f"rc={rc}")
 
 rc, _, err = run(pl({"file_path": os.path.join(repo2, "f.py")}, repo2, session="B"))
-check("main checkout: second session B is NOT blocked (main tracked, never blocks)",
+check("main checkout: 2nd session NOT blocked via owner map (no transcript provided)",
       rc == 0, f"rc={rc} err={err[:80]}")
 check("main checkout: B becomes owner (still claimed for tracking)",
       (owner_of(repo2) or {}).get("session_id") == "B", read_map(repo2))
@@ -412,6 +460,72 @@ if os.name == "nt":
     rc, _, err = run(pl({"file_path": "a"}, ext, session="B"))
     check("\\\\?\\ extended-length spelling of same tree -> 2nd session blocked",
           blocked(rc, err), f"rc={rc}")
+
+# =====================================================================
+# 14. MAIN-checkout concurrent-session detection -> NON-BLOCKING WARNING.
+#     Main BLOCKING is unsound (a churned/ghost transcript is indistinguishable
+#     from a real peer by mtime -- auditor 2026-06-18), so the hook WARNS instead:
+#     exit 0 + a JSON systemMessage on stdout. A false warning is harmless, which is
+#     why this is sound where a block was not. newer-than-mine is only a NOISE
+#     reducer. Worktree/owner-map logic is untouched (sections 1-13 pass no
+#     transcript_path, so this path stays inert for them).
+# =====================================================================
+repo_m = new_main_tree()
+
+
+def main_call(bucket, sid="S", mine="MINE.jsonl", env_extra=None):
+    return run(pl({"file_path": os.path.join(repo_m, "f")}, repo_m,
+                  session=sid, transcript=os.path.join(bucket, mine)),
+               env_extra=env_extra)
+
+
+# (b) genuine concurrent peer (newer than mine, in window) -> WARN, never block
+b = bucket_with([("MINE.jsonl", 60), ("PEER.jsonl", 8)])
+rc, out, _ = main_call(b)
+check("main: concurrent live peer -> WARNS (exit 0 + systemMessage onboarding to a worktree)",
+      warned(rc, out), f"rc={rc} out={out[:140]}")
+
+# (SAFETY) the case the BLOCK version got wrong (auditor finding 2): my OWN churned
+# ghost is NEWER than my current transcript (trailing write / un-flushed new). A
+# block SELF-LOCKED here; warn-only must NEVER exit 2 -- a harmless warning is fine.
+b = bucket_with([("MINE.jsonl", 30), ("MY_GHOST.jsonl", 5)])  # ghost newer than mine
+rc, out, err = main_call(b)
+check("main: own ghost NEWER than mine -> NOT blocked (no self-lockout)", rc == 0, f"rc={rc} err={err[:80]}")
+
+# (a/d) older sibling (own older ghost / idle peer I'm ahead of) -> silent (noise filter)
+b = bucket_with([("MINE.jsonl", 60), ("OLDID.jsonl", 120)])
+rc, out, _ = main_call(b)
+check("main: older sibling -> silent allow (no warning noise)", silent(rc, out), f"rc={rc} out={out[:140]}")
+
+# (e) window bound: newer-than-mine but beyond the window -> silent
+b = bucket_with([("MINE.jsonl", 1200), ("DEAD.jsonl", 600)])
+rc, out, _ = main_call(b)
+check("main: newer-but-stale peer (beyond window) -> silent allow", silent(rc, out), f"rc={rc}")
+
+# (g) only my own transcript present -> silent
+b = bucket_with([("MINE.jsonl", 5)])
+rc, out, _ = main_call(b)
+check("main: only my own transcript -> silent allow", silent(rc, out), f"rc={rc}")
+
+# (c) fail-open: transcript_path present but its dir does not exist -> silent (never
+#     warn because of the guard's OWN failure)
+rc, out, _ = run(pl({"file_path": os.path.join(repo_m, "f")}, repo_m, session="S",
+                    transcript=os.path.join(tempfile.gettempdir(), "guardb_no_such_dir_zzz", "x.jsonl")))
+check("main: unreadable transcript dir -> silent allow (fail-safe)", silent(rc, out), f"rc={rc}")
+
+# (h) hatch short-circuits before detection -> silent even with a live peer present
+b = bucket_with([("MINE.jsonl", 60), ("PEER.jsonl", 8)])
+rc, out, _ = main_call(b, env_extra={"HARNESS_ALLOW_MULTI_SESSION": "1"})
+check("main: HARNESS_ALLOW_MULTI_SESSION=1 -> silent allow (no warning)", silent(rc, out), f"rc={rc}")
+
+# (i) a WORKTREE is unaffected by transcript detection (it blocks via the owner map,
+#     not transcripts): a fresh peer transcript must not change a worktree's own
+#     first-session-allowed behavior.
+repo_w = new_main_tree(); wt_w = new_worktree(repo_w, "wt")
+bw = bucket_with([("MINE.jsonl", 5), ("PEER.jsonl", 2)])
+rc, _, _ = run(pl({"file_path": os.path.join(wt_w, "a")}, wt_w, session="W",
+                  transcript=os.path.join(bw, "MINE.jsonl")))
+check("worktree: transcript detection does NOT apply (first session still allowed)", rc == 0, f"rc={rc}")
 
 for d in _TMPDIRS:
     shutil.rmtree(d, ignore_errors=True)
