@@ -76,7 +76,11 @@ collide, make it.
   **`.worktreeinclude`** (gitignore-syntax; only files that are *also*
   gitignored get copied) listing `.claude/settings.local.json`, so plugin
   enablement *and* the project permission allowlist ride into every new
-  worktree. Add lines there as a product grows gitignored config it needs.
+  worktree. (That propagates already-granted `permissions.allow` entries
+  without re-prompting — intentional here, since worktrees are
+  same-user/same-machine on one repo; drop the include line if you'd rather
+  re-consent per worktree.) Add lines there as a product grows gitignored
+  config it needs.
   Caveat: a custom `WorktreeCreate` hook replaces git creation and **skips**
   `.worktreeinclude` (this repo configures none). (Verified 2026-06-18 — live
   docs + an empirical subagent-worktree test: the copied `settings.local.json`
