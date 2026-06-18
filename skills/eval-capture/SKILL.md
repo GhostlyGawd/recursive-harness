@@ -18,7 +18,7 @@ Skip: one-offs, secrets/proprietary data (sanitize or skip), pure lookups.
 ## Case anatomy: evals/corpus/<slug>/
 
 - `task.md` — the request, verbatim enough to be re-runnable, with any needed
-  fixtures alongside (small!).
+  fixtures alongside.
 - exactly one grader:
   - `check.py` — objective: gets the output dir as argv[1], exits 0/1.
     Prefer this whenever checkable; it's free to run forever.

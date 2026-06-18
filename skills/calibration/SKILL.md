@@ -31,7 +31,9 @@ is. The SessionStart banner shows your unscored count; keep it near zero.
 
 ## Reading your own stats
 
-`harness stats` buckets claimed confidence vs. actual hit rate:
+`harness stats` reports two lenses on the same scored log — confidence buckets
+(claimed vs. actual hit rate, auto-flagged on large drift) and a per-category
+hit-rate breakdown (no flag; it always prints both):
 
 - **Overconfident in a category** → before acting in that category, list two
   ways you could be wrong and check one. Note persistent drift in

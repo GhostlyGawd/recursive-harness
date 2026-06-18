@@ -34,10 +34,10 @@ date. Updates = re-vendor (re-clone, re-slim), never hand-edit the body — or y
 lose the ability to track upstream.
 
 ## When SKILL.md exceeds the B3 body cap (200 lines)
-Do NOT gut the upstream file to fit. Add the skill PATH to a human-gated allowlist
-in `lint/lint_harness.py` (the `VENDORED_SKILLS` set — create it if it does not
-exist yet). That is an enforcement-layer edit, so go via /harness-pr (HUMAN_APPROVED
-marker → harness-auditor → /run-evals → human merge). The waiver is path-gated;
+Do NOT gut the upstream file to fit. Add the skill PATH to the human-gated `VENDORED_SKILLS`
+allowlist (the B3 waiver) in `lint/lint_harness.py` — create it if it does not
+exist yet. That is an enforcement-layer edit, so go via /harness-pr (HUMAN_APPROVED
+marker → harness-auditor → /run-evals → human merge). The allowlist is path-gated;
 never a self-asserted frontmatter flag (see skill harness-authoring).
 
 ## Flag the gaps, don't recite them
