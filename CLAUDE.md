@@ -43,7 +43,10 @@ consult skill `routing-learnings` and file it properly.
 - agents/    fresh-context roles (critic must NEVER share your working context)
 - commands/  user-initiated workflows
 - hooks/     mechanical enforcement (locked)
-- memory/    versioned cold knowledge: user-model, decisions/, calibration rollups
+- memory/    versioned cold knowledge: user-model, decisions/, calibration rollups.
+  This dir (`recursive-harness/memory/`) IS the harness memory — read it on demand. Ignore
+  the base prompt's per-cwd "file-memory" bucket (`<config-dir>/projects/<cwd-key>/memory/`,
+  gitignored + empty by design): that is the forbidden auto-memory (ADR 0001), not this.
 - state/     machine-local hot logs (gitignored): predictions, corrections, skill usage
 - evals/     regression corpus — the only proof that harness vN+1 beats vN
 

@@ -8,7 +8,7 @@ stale entries. This file is read on demand, never auto-loaded.
 ## Preferences
 
 - wants the harness itself versioned and shippable to GitHub, rejects opaque auto-memory as an anti-pattern (evidence: 1, last: 2026-06-12, source: stated)
-- prefers full builds over plans-about-plans; "I want it built" (evidence: 1, last: 2026-06-12, source: stated)
+- values planning/design before building; planning is important and shouldn't be cut to rush into code (replaces a prior "builds over plans-about-plans" bullet the user retracted 2026-06-18) (evidence: 1, last: 2026-06-18, source: corrections)
 - follow-ups overload them; every session ending with a "next steps" list is too much. Capture deferred items silently (harness followup) and surface only on pull (/followups), never recite at task-end (evidence: 1, last: 2026-06-13, source: stated)
 
 - everything must run on ordinary subscription CLI auth; API-key dependencies are rejected outright (evidence: 2, last: 2026-06-12, source: corrections)
