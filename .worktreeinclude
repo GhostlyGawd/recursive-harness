@@ -1,0 +1,10 @@
+# Gitignored files to copy into worktrees Claude Code creates (--worktree,
+# EnterWorktree, subagent worktrees, desktop sessions). Gitignore-syntax; only
+# files that ALSO match .gitignore are copied (tracked files are never duped).
+# Docs: https://code.claude.com/docs/en/worktrees#copy-gitignored-files-into-worktrees
+#
+# settings.local.json carries plugin enablement (enabledPlugins) AND the
+# project permission allowlist. Without this line a fresh worktree starts with
+# installed plugins OFF and prompts for permissions already granted on main.
+# See skills/worktree/SKILL.md §2.
+.claude/settings.local.json
