@@ -36,6 +36,20 @@ FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active
 APPROVALS = os.path.join(STATE, "approvals.jsonl")
 MARKER = os.path.join(ROOT, "HUMAN_APPROVED")
 
+# --- feature flags (ADR 0008) -------------------------------------------------
+FEATURES = os.path.join(ROOT, "features.json")
+FEATURES_LOCAL = os.path.join(STATE, "features.local.json")
+# Mirror of hooks/harness_features.LOCKED: keys that weaken a guard. `features set`
+# refuses them, so a SOFT override can never disable a safety guard; they live only in
+# the committed, enforcement-PROTECTED features.json (human-gated). Kept inline here
+# because bin/ is not on the hooks/ import path.
+LOCKED_FEATURES = {
+    "guards.worktree_isolation.block",
+    "guards.worktree_isolation.bash_scanner",
+    "guards.worktree_session.block",
+    "guards.worktree_session.ttl_seconds",
+}
+
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
@@ -66,6 +80,56 @@ def _write_all(path: str, recs: list) -> None:
     with open(path, "w", encoding="utf-8") as f:
         for r in recs:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+# --- feature-flag readers (mirror hooks/harness_features; bin/ is off that path) ---
+def _load_json(path: str) -> dict:
+    """Plain JSON object -> dict; {} on missing/corrupt/non-object."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _flatten_features(d: dict, prefix: str = "") -> dict:
+    out: dict = {}
+    for k, v in d.items():
+        if isinstance(k, str) and k.startswith("_"):
+            continue
+        key = f"{prefix}{k}"
+        if isinstance(v, dict):
+            out.update(_flatten_features(v, key + "."))
+        else:
+            out[key] = v
+    return out
+
+
+def _feature(key: str, default):
+    """Effective SOFT feature value (local over committed over caller default); a LOCKED
+    key reads from the committed file only. Fail-safe -> default; never raises."""
+    try:
+        defaults = _flatten_features(_load_json(FEATURES))
+        if key in LOCKED_FEATURES:
+            return defaults.get(key, default)
+        loc = _flatten_features(_load_json(FEATURES_LOCAL))
+        return loc.get(key, defaults.get(key, default))
+    except Exception:
+        return default
+
+
+def _coerce_feature(raw: str):
+    """Parse a CLI value string into bool / int / float / None / str."""
+    low = raw.strip().lower()
+    if low in ("true", "false"):
+        return low == "true"
+    if low in ("null", "none"):
+        return None
+    try:
+        return float(raw) if "." in raw else int(raw)
+    except ValueError:
+        return raw
 
 
 # ---------------------------------------------------------------- predict
@@ -248,7 +312,15 @@ def _followup_active(r: dict, cutoff: dt.datetime) -> bool:
 
 
 def cmd_followup(args) -> int:
-    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=FOLLOWUP_TTL_DAYS)
+    # SOFT flag (ADR 0008): the decay window is tunable; FOLLOWUP_TTL_DAYS is the default.
+    ttl_days = _feature("workflow.followup_ttl_days", FOLLOWUP_TTL_DAYS)
+    try:
+        ttl_days = float(ttl_days)
+        if ttl_days <= 0:
+            ttl_days = FOLLOWUP_TTL_DAYS
+    except (TypeError, ValueError):
+        ttl_days = FOLLOWUP_TTL_DAYS
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=ttl_days)
     if args.action == "add":
         if not args.arg.strip():
             print("nothing to log (give the follow-up text)", file=sys.stderr)
@@ -335,6 +407,77 @@ def cmd_approve(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------- features
+# provenance: 2026-06-18, session 44bdfc6f — view/set harness feature flags (ADR 0008).
+def cmd_features(args) -> int:
+    """View or set harness feature flags. SOFT keys write to state/features.local.json;
+    LOCKED safety keys are read-only here (edit the committed features.json by hand)."""
+    action = args.action or "list"
+    defaults = _flatten_features(_load_json(FEATURES))
+    if not defaults:
+        print(f"no features.json found at {FEATURES} — nothing to configure.", file=sys.stderr)
+        return 1
+    local = _load_json(FEATURES_LOCAL)
+    flat_local = _flatten_features(local)
+
+    if action == "list":
+        for k in sorted(defaults):
+            if k in LOCKED_FEATURES:
+                val, src, note = defaults[k], "locked", "  [edit features.json]"
+            elif k in flat_local:
+                val, src, note = flat_local[k], "local", ""
+            else:
+                val, src, note = defaults[k], "default", ""
+            print(f"  {k:46s} {json.dumps(val):>10}  ({src}){note}")
+        return 0
+
+    if action == "get":
+        if not args.key:
+            print("usage: harness features get <key>", file=sys.stderr)
+            return 1
+        print(json.dumps(_feature(args.key, None)))
+        return 0
+
+    if action == "set":
+        if not args.key or args.value == "":
+            print("usage: harness features set <key> <value>", file=sys.stderr)
+            return 1
+        if args.key in LOCKED_FEATURES:
+            print(f"'{args.key}' is a LOCKED safety key — set it in the committed "
+                  f"features.json (human-gated), not the local override. See ADR 0008.",
+                  file=sys.stderr)
+            return 1
+        if args.key not in defaults:
+            print(f"unknown feature key '{args.key}'. Run `harness features` to list keys.",
+                  file=sys.stderr)
+            return 1
+        local[args.key] = _coerce_feature(args.value)  # stored flat; the reader flattens both
+        os.makedirs(os.path.dirname(FEATURES_LOCAL), exist_ok=True)
+        with open(FEATURES_LOCAL, "w", encoding="utf-8") as f:
+            json.dump(local, f, indent=2)
+            f.write("\n")
+        print(f"set {args.key} = {json.dumps(local[args.key])}  "
+              f"(local override -> state/features.local.json)")
+        return 0
+
+    if action == "unset":
+        if not args.key:
+            print("usage: harness features unset <key>", file=sys.stderr)
+            return 1
+        if args.key in local:
+            del local[args.key]
+            with open(FEATURES_LOCAL, "w", encoding="utf-8") as f:
+                json.dump(local, f, indent=2)
+                f.write("\n")
+            print(f"unset {args.key} (reverted to committed default)")
+        else:
+            print(f"{args.key} had no local override.")
+        return 0
+
+    print(f"unknown action {action!r} (list|get|set|unset)", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -390,6 +533,13 @@ def main() -> int:
     sp = sub.add_parser("gc")
     sp.add_argument("--days", type=int, default=30)
     sp.set_defaults(fn=cmd_gc)
+
+    sp = sub.add_parser("features", help="view/set harness feature flags (ADR 0008)")
+    sp.add_argument("action", nargs="?", default="list",
+                    choices=["list", "get", "set", "unset"])
+    sp.add_argument("key", nargs="?", default="")
+    sp.add_argument("value", nargs="?", default="")
+    sp.set_defaults(fn=cmd_features)
 
     args = p.parse_args()
     return args.fn(args)

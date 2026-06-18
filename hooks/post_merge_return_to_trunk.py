@@ -33,6 +33,12 @@ import re
 import subprocess
 import sys
 
+try:
+    from harness_features import flag
+except Exception:  # never let a config-reader import brick the hook
+    def flag(key, default=None):
+        return default
+
 # Deliberately a BROAD match (it fires even on an inert mention like
 # `echo "gh pr merge"`). For a SAFETY reminder a benign over-fire is cheaper than
 # a miss: a false negative — a real merge that slips past — reintroduces the very
@@ -67,6 +73,9 @@ def _default_branch(cwd):
 
 
 def main() -> int:
+    # SOFT flag (ADR 0008): suppress the post-merge return-to-trunk reminder.
+    if not flag("workflow.post_merge_return_to_trunk", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except Exception:

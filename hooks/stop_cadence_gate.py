@@ -17,6 +17,15 @@ import os
 import subprocess
 import sys
 
+try:
+    from harness_features import flag, num
+except Exception:  # never let a config-reader import brick the hook
+    def flag(key, default=None):
+        return default
+
+    def num(key, default):
+        return float(default)
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(HARNESS_ROOT, "state")
 SESSIONS_SINCE_RETRO_THRESHOLD = 5
@@ -77,6 +86,9 @@ def _sessions_since(epoch) -> int:
 
 
 def main() -> int:
+    # SOFT flag (ADR 0008): disable the multi-session retro cadence nudge.
+    if not flag("nudges.cadence_gate", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
@@ -87,17 +99,19 @@ def main() -> int:
     # Don't double-nudge: if the per-session correction gate already fired, skip.
     if os.path.exists(os.path.join(STATE, f"retro_gate_{session}")):
         return 0
-    flag = os.path.join(STATE, f"cadence_gate_{session}")
-    if os.path.exists(flag):
+    gate_flag = os.path.join(STATE, f"cadence_gate_{session}")  # not `flag`: that name is the feature reader
+    if os.path.exists(gate_flag):
         return 0
     ref = _last_retro_epoch()
     if ref is None:
         return 0  # can't determine the last retro -> fail open (no nudge)
     n = _sessions_since(ref)
-    if n >= SESSIONS_SINCE_RETRO_THRESHOLD:
+    # SOFT flag (ADR 0008): how many sessions without a retro before the nudge fires.
+    threshold = int(num("nudges.retro_cadence_sessions", SESSIONS_SINCE_RETRO_THRESHOLD))
+    if n >= threshold:
         try:
             os.makedirs(STATE, exist_ok=True)
-            with open(flag, "w", encoding="utf-8") as f:
+            with open(gate_flag, "w", encoding="utf-8") as f:
                 f.write("nudged\n")
         except OSError:
             return 0  # if we cannot record the once-per-session flag, do not nudge

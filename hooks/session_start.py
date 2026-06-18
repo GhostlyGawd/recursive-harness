@@ -10,6 +10,15 @@ import os
 import subprocess
 import sys
 
+try:
+    from harness_features import flag, active_overrides
+except Exception:  # never let a config-reader import brick the banner
+    def flag(key, default=None):
+        return default
+
+    def active_overrides():
+        return {}
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(HARNESS_ROOT, "state")
 
@@ -104,9 +113,16 @@ def main() -> int:
                              if s.get("ts", "9999")[:10] > last.isoformat())
         except ValueError:
             pass
-    # Quiet open-follow-up count (mirrors `harness followup count`: open AND
-    # within the 30-day TTL). Shown only when >0 so a clean ledger stays silent.
-    fu_cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=30)
+    # Quiet open-follow-up count (mirrors `harness followup count`: open AND within
+    # the TTL). Shown only when >0 so a clean ledger stays silent. SOFT flag (ADR 0008):
+    # same tunable decay window the harness CLI uses; default 30 if unset/garbage.
+    try:
+        _ttl_days = float(flag("workflow.followup_ttl_days", 30))
+        if _ttl_days <= 0:
+            _ttl_days = 30
+    except (TypeError, ValueError):
+        _ttl_days = 30
+    fu_cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=_ttl_days)
 
     def _fu_open(r):
         if r.get("status") != "open":
@@ -117,10 +133,25 @@ def main() -> int:
             return True  # never silently drop an unparseable follow-up
     open_fu = sum(1 for r in _jsonl("followups.jsonl") if _fu_open(r))
     fu = f" | {open_fu} open follow-ups (/followups)" if open_fu else ""
-    print(f"[harness] {calib} | {pending} unscored predictions"
-          f" | {since_meta} sessions since last /meta-retro"
-          f" | learnings route to artifacts, not memory (routing-learnings skill)"
-          f"{fu}")
+    # SOFT flag (ADR 0008): banner verbosity. "off" suppresses the status summary;
+    # the stranded-branch safety warning below is independent and always prints.
+    banner = flag("observability.session_banner", "full")
+    if banner == "minimal":
+        print(f"[harness] {calib} | {pending} unscored predictions{fu}")
+    elif banner != "off":
+        print(f"[harness] {calib} | {pending} unscored predictions"
+              f" | {since_meta} sessions since last /meta-retro"
+              f" | learnings route to artifacts, not memory (routing-learnings skill)"
+              f"{fu}")
+    if banner != "off":
+        # Extra surfacing (ADR 0008): one line whenever the local override file
+        # diverges from defaults, so a flipped flag is never silently forgotten.
+        ov = active_overrides()
+        if ov:
+            keys = ", ".join(sorted(ov)[:4])
+            more = "" if len(ov) <= 4 else f" +{len(ov) - 4} more"
+            print(f"[harness] features: {len(ov)} override(s) active "
+                  f"({keys}{more}; `harness features`)")
     warn = _branch_warning(cwd)
     if warn:
         print(warn)

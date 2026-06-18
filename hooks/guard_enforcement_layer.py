@@ -21,7 +21,11 @@ HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MARKER = os.path.join(HARNESS_ROOT, "HUMAN_APPROVED")
 # bin/ is protected because bin/harness mints the HUMAN_APPROVED unlock (cmd_approve);
 # leaving it editable would let an agent silently weaken the grant requirement (followup 5384ed).
-PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates")
+# features.json is the COMMITTED home of the LOCKED feature flags (guards.*.block,
+# bash_scanner, ttl_seconds). It is protected here so an agent cannot self-weaken a
+# guard by editing it; the gitignored state/features.local.json (SOFT keys only) is
+# deliberately NOT protected. (ADR 0008)
+PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates", "features.json")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 # Bash patterns that can mutate files; reads are fine. The verb arm now also
 # covers non-redirect writers the old regex missed (followup 1b1ddc): `dd` (of=),
