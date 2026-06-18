@@ -1,7 +1,6 @@
 # Language Catalog — the repository
 
-> provenance: 2026-06-17 · companion to SKILL.md `language-selection`. The SKILL
-> body holds the decision procedure; this file is the reference data it points to.
+<!-- provenance: 2026-06-17 · session 01S8mkwDJ8qjWH5aRDQafnv9 · companion to SKILL.md `language-selection`; the SKILL body holds the decision procedure, this file is the reference data it points to. -->
 
 How to use: the SKILL's procedure narrows you to a domain and a hard-constraint
 set. Come here for the candidate cards in the relevant family, read **pick-when /
@@ -54,7 +53,7 @@ Card legend:
 **Ada / SPARK** — safety-critical, provable.
 - Typing: static, very strong, range/contract types. Runtime: compiled native. Concurrency: built-in tasking/rendezvous.
 - Best for: avionics, rail, defense, medical — anywhere certification (DO-178C) and formal proof (SPARK) are required.
-- Pick when: a regulator or safety case demands it. Avoid when: those constraints are absent — the ecosystem and hiring pool are narrow.
+- Pick when: a regulator or safety case demands it. Avoid when: those constraints are absent — the ecosystem is narrow.
 
 **Assembly** — not a project language; reach for it only for the inner loop a compiler can't optimize, bootstrapping, or reverse engineering. Inline it, don't build in it.
 
@@ -65,7 +64,7 @@ Card legend:
 **Java** — the enterprise workhorse; JVM maturity is its moat.
 - Typing: static, strong, verbose-but-improving. Runtime: JVM (JIT), GC. Concurrency: threads, java.util.concurrent, **virtual threads** (Loom) for cheap massive concurrency.
 - Perf: JIT (excellent steady-state). Killer ecosystem: Spring, the entire JVM library universe, Kafka/Spark/Hadoop, best-in-class profilers.
-- Best for: large long-lived enterprise systems, big-data backends, Android (legacy), anything needing a deep hiring pool.
+- Best for: large long-lived enterprise systems, big-data backends, Android (legacy), anything needing broad library + operational-tooling support.
 - Pick when: large team, long maintenance horizon, you need mature libraries and operational tooling, or you're already on the JVM.
 - Avoid when: cold-start-sensitive serverless (use GraalVM native-image or a lighter lang) or tiny scripts.
 
@@ -250,7 +249,7 @@ Card legend:
 - Pitch: type safety + Erlang/Elixir's concurrency and fault tolerance. Pick when: you want BEAM reliability WITH a sound static type system. Avoid when: you need a mature library set.
 
 **Nim** — Python-like syntax, compiles to C/C++/JS, native speed.
-- Pick when: you want native performance with high-level ergonomics and metaprogramming. Avoid when: ecosystem maturity and hiring pool matter — both are small.
+- Pick when: you want native performance with high-level ergonomics and metaprogramming. Avoid when: ecosystem maturity and community size matter — both are small.
 
 **Roc** — fast, friendly pure-functional successor-in-spirit to Elm, general-purpose. Early; pick only to experiment.
 
@@ -278,7 +277,7 @@ Card legend:
 
 ## Cross-cutting tie-breakers (when two candidates survive the procedure)
 
-- **Hiring pool & onboarding speed** — can you staff and replace people? Go/Python/JS hire fast; OCaml/Haskell/Zig do not.
+- **Ubiquity & ecosystem depth** — mainstream languages (Go, Python, JS/TS, Java) carry deeper libraries, more documentation, and more battle-tested patterns than niche ones (OCaml, Haskell, Zig); weigh that support against the niche language's specific edge.
 - **Library for THE specific feature** — one missing mature library (a payment SDK, a protocol client, a GPU binding) can outweigh every other factor.
 - **Deployment & ops story** — a single static binary (Go, Rust) vs a runtime+deps to ship (Python, JVM, Node) changes your operational burden daily.
 - **Cold-start / footprint** — matters for serverless and edge: native AOT (Go, Rust, Swift, .NET AOT, GraalVM) beats JVM/Node warm-up.

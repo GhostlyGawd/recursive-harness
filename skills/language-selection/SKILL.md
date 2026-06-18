@@ -1,17 +1,17 @@
 ---
 name: language-selection
-description: Catalog + decision procedure for choosing a programming language. TRIGGER whenever you are about to pick, default, recommend, or assume a language for new work — a greenfield project/service/script/CLI/library, a component in a polyglot system, a rewrite or port, or when a user asks "what should I build this in". Also when weighing two stacks, or judging whether an existing language still fits a new requirement. Don't default to Python/JS from habit: consult the catalog (references/index.md) so the pick is matched to domain, hard constraints, team, and ecosystem — with tradeoffs stated.
+description: Catalog + decision procedure for choosing a programming language. TRIGGER whenever you are about to pick, default, recommend, or assume a language for new work — a greenfield project/service/script/CLI/library, a component in a polyglot system, a rewrite or port, or when a user asks "what should I build this in". Also when weighing two stacks, or judging whether an existing language still fits a new requirement. Don't default to Python/JS from habit: consult the catalog (references/index.md) so the pick is matched to domain, hard constraints, stack, and ecosystem — with tradeoffs stated.
 ---
 
 # Language Selection
 
-> provenance: 2026-06-17 · session 01S8mkwDJ8qjWH5aRDQafnv9 · trigger: user asked for a "massive language repository" skill the model invokes whenever it makes a programming-language decision. Body is the decision procedure; the catalog lives in references/index.md.
-
-A language choice is an architecture decision with a long tail: it sets the
-hiring pool, the deploy target, the failure modes, and what the next person
-inherits. Make it deliberately, not by reflex. The full catalog is in
-`references/index.md` — read it before recommending anything outside the quick
-table below.
+This skill exists to push a language choice past your default priors. Picking a
+language is a consequential, hard-to-reverse decision — it sets the deploy
+target, the performance ceiling, the libraries within reach, and the failure
+modes you live with. Reason from the task's actual requirements instead of
+reaching for whatever language is most probable by default (Python, JavaScript).
+The full catalog is in `references/index.md` — read it before recommending
+anything outside the quick table below.
 
 ## The procedure
 
@@ -25,12 +25,13 @@ table below.
      or just assumed to be? Demand a number before letting this drive the choice.
    - Certification / safety: safety-critical → Ada/SPARK, MISRA-C, DO-178C lanes.
 2. **Surface SOFT factors** — these trade off, weighted to THIS project:
-   - Team's existing fluency + hiring pool. Usually the biggest real-world
-     multiplier on a greenfield build — do not undervalue it.
+   - Existing codebase / current stack. Reusing what's already in place — its
+     build, deploy, and libraries — usually beats adding a second language;
+     weigh it unless a hard constraint forbids.
    - Ecosystem maturity *for this domain*. The right library beats language
      elegance; a missing one sinks an elegant choice.
    - Iteration speed vs runtime performance for the project's current phase.
-   - Maintenance horizon: who inherits it, and for how long.
+   - Long-term maintainability and readability of the result.
 3. **Map domain → candidate set** (quick table below; full catalog in references).
 4. **Intersect candidates with the hard constraints** → shortlist 2–3.
 5. **Break ties with soft factors.** Recommend ONE. Name the runner-up. State
@@ -41,17 +42,19 @@ table below.
 
 ## Falsifiable rules (the habits this skill exists to break)
 
-- Don't default to your most-used language from reflex. "We already know Python"
-  is a legitimate SOFT factor — name it as one, don't disguise it as a domain match.
-- Team fluency usually dominates a greenfield pick *unless a hard constraint
-  forbids the familiar language*. An unfamiliar stack's cost is real and front-loaded.
+- Don't reach for the language that's merely most probable by default. Fitting an
+  existing codebase IS a legitimate SOFT factor — name it as one; don't dress a
+  default up as a domain match.
+- Fitting an existing codebase usually beats a greenfield-optimal pick *unless a
+  hard constraint forbids it* — introducing a new language carries real,
+  front-loaded cost (build, deploy, interop).
 - "Rewrite it in Rust/Go" needs a hard-constraint justification (perf floor,
   memory safety, deploy target) — not aesthetics. A rewrite discards working code
   and the edge-case knowledge baked into it.
 - Prefer boring/proven for load-bearing systems. Reserve emerging languages
   (Zig, Mojo, Gleam, Roc) for where their specific edge IS the point and you can
   absorb the ecosystem gaps.
-- Every added language in a polyglot system is a tax: build/CI, hiring,
+- Every added language in a polyglot system is a tax: build/CI, interop,
   context-switching. Justify each one; "right tool for the job" is not a free pass.
 - Performance intuition is unreliable. A "slow" language with the right library
   (NumPy, the JVM JIT, V8) often beats a hand-rolled fast-language path. Measure
@@ -88,3 +91,6 @@ paradigm, typing, runtime, concurrency model, performance tier, killer ecosystem
 best-fit domains, and explicit **pick-when / avoid-when**. Read the relevant
 family before committing to anything beyond the quick table — especially for
 unfamiliar domains, niche targets, or when a hard constraint is in play.
+
+<!-- provenance: 2026-06-17 · session 01S8mkwDJ8qjWH5aRDQafnv9 · trigger: user requested a language-selection reference skill the model consults when choosing a language; 2026-06-18 reframed from a human-org lens (hiring/team) to Claude choosing the best language for the task beyond default priors. -->
+
