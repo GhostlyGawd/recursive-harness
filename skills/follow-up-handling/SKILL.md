@@ -15,7 +15,7 @@ When you finish and notice deferred items — "next steps", "you could also", "w
 me to…", an unfixed nit, anything parked for later — DO NOT list them in chat.
 For each, instead:
 
-    python3 bin/harness followup add "specific, self-contained, actionable one-liner"
+    harness followup add "specific, self-contained, actionable one-liner"
 
 Then end your message with at most ONE line, only if count > 0:
 
@@ -42,7 +42,7 @@ parenthetical in hooks/guard_enforcement_layer.py" is actionable.
 
 Open follow-ups older than 30 days drop out of the active count automatically
 (`harness followup`, TTL). The ledger is a holding pen, not a debt you owe. The
-user closes items freely (`followup done <id>`) — doing them is optional. Never
+user closes items freely (`harness followup done <id>`) — doing them is optional. Never
 nag about open follow-ups; the count line and `/followups` are the only surfacing.
 
 ## Surfacing is pull-only

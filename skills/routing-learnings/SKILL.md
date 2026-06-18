@@ -36,7 +36,7 @@ Walk the tree top-down; first match wins.
    → that project's CLAUDE.md, one line. If you later see it in a second
    project, promote it upstream (it was a #2 or #5 all along).
 
-7. **None of the above** → discard. Most observations should die here.
+7. **None of the above** → discard. Most candidate learnings should die here.
    Hoarding is the failure mode this tree exists to prevent.
 
 ## Hard rules
