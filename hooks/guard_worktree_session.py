@@ -84,7 +84,13 @@ on the shared trunk. A first transcript-mtime BLOCK attempt was harness-auditor-
 rejected (it reintroduces the 2026-06-17 self-lockout: a churned/ghost transcript is
 indistinguishable from a real peer by mtime), so it was downgraded to a NON-BLOCKING
 WARNING (sound because a false warning is harmless). Sound blocking needs a stable
-per-terminal identity — tracked as a follow-up.
+per-terminal identity; the spike for one (follow-up ef975c) returned NEGATIVE — none
+is exposed to a hook and the ctypes claude-PID anchor is undocumented/unstable across
+clear+resume (ADR 0007). Warn-only is the ceiling until upstream exposes such an id.
+
+2026-06-18, session d7de6b55 — added the warn-throttle cooldown (auditor 6a /
+follow-up 10fc0b): a live peer now warns at most once per _WARN_COOLDOWN_SECONDS via
+last_warn_ts in the owner map, instead of one systemMessage per PreToolUse.
 """
 import json
 import math
@@ -125,6 +131,15 @@ _REPLACE_RETRIES = 4       # Windows: os.replace fails if the file is open elsew
 # Deliberately NOT env-overridable (same self-assertable-bypass reasoning as
 # _TTL_SECONDS).
 _CONCURRENT_WINDOW_SECONDS = 180
+
+# Warn-throttle cooldown (auditor finding 6a / follow-up 10fc0b): a still-live peer
+# is re-detected on EVERY PreToolUse, so an un-throttled warn spams one systemMessage
+# per tool call. We instead warn at most once per cooldown, stamping last_warn_ts in
+# the owner map and suppressing repeats within the window (the warn is non-blocking,
+# so a missed repeat is harmless; the cooldown only trims noise). Tied to the
+# detection window by design — re-surfacing the reminder on the same cadence the peer
+# is considered "live" — and likewise NOT env-overridable.
+_WARN_COOLDOWN_SECONDS = _CONCURRENT_WINDOW_SECONDS
 
 
 def _hatch_enabled() -> bool:
@@ -287,10 +302,31 @@ def _is_stale(entry: dict, now: float) -> bool:
     return (now - t) > _ttl_seconds()
 
 
-def _claim(m: dict, tree: str, sid: str) -> None:
+def _my_last_warn(owner, sid: str) -> float:
+    """My own last-warn timestamp from the existing owner entry, or 0.0 if the entry
+    is not mine / absent / carries a non-finite stamp. Drives the warn cooldown
+    (auditor 6a) so a live peer surfaces at most one systemMessage per
+    _WARN_COOLDOWN_SECONDS instead of one per PreToolUse. Reading it off MY OWN entry
+    (session-matched) means a session_id churn or a fresh terminal correctly resets
+    the cooldown and re-warns once — exactly the moments a reminder is wanted."""
+    if not isinstance(owner, dict) or owner.get("session_id") != sid:
+        return 0.0
+    try:
+        t = float(owner.get("last_warn_ts", 0))
+    except Exception:
+        return 0.0
+    return t if math.isfinite(t) else 0.0
+
+
+def _claim(m: dict, tree: str, sid: str, last_warn_ts: float = 0.0) -> None:
     """Claim `tree` for `sid` and release every OTHER tree `sid` owned (the session
-    moved — ownership follows the cwd, one tree at a time)."""
-    m[tree] = {"session_id": sid, "ts": time.time(), "pid": os.getpid()}
+    moved — ownership follows the cwd, one tree at a time). A finite, positive
+    `last_warn_ts` is persisted so the warn cooldown survives the heartbeat rewrite
+    (this function replaces the whole entry every call); 0.0 omits the key."""
+    entry = {"session_id": sid, "ts": time.time(), "pid": os.getpid()}
+    if last_warn_ts and math.isfinite(last_warn_ts):
+        entry["last_warn_ts"] = last_warn_ts
+    m[tree] = entry
     for k in [k for k, v in m.items()
               if k != tree and isinstance(v, dict) and v.get("session_id") == sid]:
         del m[k]
@@ -322,7 +358,8 @@ def _concurrent_live_session(data, now):
     result is a non-blocking WARNING -- a false warning is harmless noise. It is
     exactly why main-checkout BLOCKING was rejected (a false block would self-lock a
     session out of its own trunk, the 2026-06-17 regression) and we warn instead.
-    Sound blocking would need a stable per-terminal identity; tracked as a follow-up.
+    Sound blocking would need a stable per-terminal identity; the spike for one
+    (ef975c) was NEGATIVE — none is exposed to a hook (ADR 0007).
 
     Fails SAFE (returns None -> no warning) on any missing field, unreadable path,
     or error.
@@ -364,10 +401,11 @@ def _warn_concurrent(peer) -> None:
     """Emit a NON-BLOCKING warning (the caller exits 0). A PreToolUse hook's stderr
     is IGNORED on exit 0, so the message must go out as JSON on stdout:
     `systemMessage` is shown to the user; `additionalContext` informs the model;
-    permissionDecision=allow makes the non-blocking intent explicit."""
-    # NOTE: intentionally un-throttled for now -- re-warns on each PreToolUse while a
-    # peer stays live (non-blocking, so this is spam, not a lockout). A cooldown
-    # (stamp last_warn_ts in the owner map) is a tracked follow-up.
+    permissionDecision=allow makes the non-blocking intent explicit.
+
+    Throttled by the caller (see main + _my_last_warn): emitted at most once per
+    _WARN_COOLDOWN_SECONDS per session via last_warn_ts in the owner map, so a peer
+    that stays live does not respam one systemMessage per PreToolUse (auditor 6a)."""
     name, age = peer
     sid = name[:-6] if name.endswith(".jsonl") else name  # <session_id>.jsonl
     msg = (
@@ -483,11 +521,16 @@ def main() -> int:
         # self-lock me out of my own trunk (the 2026-06-17 regression). A WARNING is
         # sound because a false positive is just harmless noise. Worktree owner-map
         # blocking above is unchanged; this runs only for the main checkout.
+        # Carry my prior warn timestamp forward so the cooldown persists across the
+        # heartbeat rewrite in _claim. 0.0 if the entry isn't mine yet (first claim /
+        # post-churn) -> the next peer detection warns once, then the cooldown holds.
+        warn_ts = _my_last_warn(owner, sid)
         if not _worktree_root(tree):
             peer = _concurrent_live_session(data, now)
-            if peer is not None:
-                _warn_concurrent(peer)   # non-blocking: warn, then claim + exit 0
-        _claim(m, tree, sid)
+            if peer is not None and (now - warn_ts) >= _WARN_COOLDOWN_SECONDS:
+                _warn_concurrent(peer)   # non-blocking: warn (throttled), then claim
+                warn_ts = now
+        _claim(m, tree, sid, last_warn_ts=warn_ts)
         _save_map(repo, m)
         return 0
     except Exception:
