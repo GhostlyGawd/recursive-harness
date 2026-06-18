@@ -527,6 +527,51 @@ rc, _, _ = run(pl({"file_path": os.path.join(wt_w, "a")}, wt_w, session="W",
                   transcript=os.path.join(bw, "MINE.jsonl")))
 check("worktree: transcript detection does NOT apply (first session still allowed)", rc == 0, f"rc={rc}")
 
+# =====================================================================
+# 15. Warn-throttle cooldown (auditor 6a / follow-up 10fc0b): a live peer must WARN
+#     at most once per _WARN_COOLDOWN_SECONDS, not on every PreToolUse. The hook
+#     stamps last_warn_ts in the owner map on warn, suppresses re-warns within the
+#     window, and resumes once it lapses. (Buckets are rebuilt each call so PEER
+#     stays in-window & newer-than-mine against the live clock; only the cooldown,
+#     not peer liveness, changes the outcome between calls.)
+# =====================================================================
+repo_th = new_main_tree()
+TH_COOLDOWN = 180  # mirrors _WARN_COOLDOWN_SECONDS (== _CONCURRENT_WINDOW_SECONDS)
+
+
+def th_call(sid="TH"):
+    bkt = bucket_with([("MINE.jsonl", 60), ("PEER.jsonl", 8)])  # peer fresh & newer
+    return run(pl({"file_path": os.path.join(repo_th, "f")}, repo_th,
+                  session=sid, transcript=os.path.join(bkt, "MINE.jsonl")))
+
+
+rc, out, _ = th_call()
+check("throttle: first peer encounter WARNS", warned(rc, out), f"rc={rc} out={out[:120]}")
+check("throttle: last_warn_ts stamped in the owner map on warn",
+      isinstance((owner_of(repo_th) or {}).get("last_warn_ts"), (int, float)),
+      read_map(repo_th))
+
+rc, out, _ = th_call()
+check("throttle: re-warn WITHIN cooldown is suppressed (silent)", silent(rc, out),
+      f"rc={rc} out={out[:120]}")
+check("throttle: suppressed call keeps the same owner (still claimed)",
+      (owner_of(repo_th) or {}).get("session_id") == "TH", read_map(repo_th))
+
+# Age the stamped last_warn_ts past the cooldown -> the next live peer WARNS again.
+_m = read_map(repo_th)
+_m[_key(repo_th)]["last_warn_ts"] = time.time() - (TH_COOLDOWN + 10)
+with open(os.path.join(repo_th, MAP_REL), "w") as f:
+    json.dump(_m, f)
+rc, out, _ = th_call()
+check("throttle: re-warn AFTER cooldown lapses fires again", warned(rc, out),
+      f"rc={rc} out={out[:120]}")
+
+# A churned session_id (its own entry no longer session-matches) resets the cooldown
+# -> warns once immediately rather than inheriting the predecessor's clock.
+rc, out, _ = th_call(sid="TH_NEW")
+check("throttle: a churned/new session_id re-warns once (cooldown reset)",
+      warned(rc, out), f"rc={rc} out={out[:120]}")
+
 for d in _TMPDIRS:
     shutil.rmtree(d, ignore_errors=True)
 
