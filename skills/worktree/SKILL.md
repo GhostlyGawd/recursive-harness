@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: Create + manage git worktrees in this harness — when to isolate vs when one is overhead, how to EnterWorktree/ExitWorktree (they live at .claude/worktrees/<name>), and the gotchas that bite here: results don't auto-merge to main; state/ is gitignored so `harness` writes in a worktree miss the main ledger; committed memory/ rides in; shared DB/ports aren't isolated; the guard protects the trunk, not a worktree's own copies. Use whenever a second session opens, independent tasks fan out, or file-mutating agents run beside other work — the user never asks for a worktree or recites a gotcha.
-provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially.
+provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test.
 ---
 
 # Worktree — isolate parallel work without clobbering
@@ -68,8 +68,19 @@ collide, make it.
   enforcement/config changes via `/harness-pr`; never treat the guard as a
   backstop for a worktree-local edit.
 - **`node_modules`, build artifacts, gitignored config** (`.env`,
-  `settings.local.json`) are NOT copied. If a product grows them, add a root
-  `.worktreeinclude` (gitignore-syntax) to copy the needed gitignored files.
+  `settings.local.json`) are NOT copied into a fresh worktree. **Plugin
+  enablement is a case of this:** `/plugin` writes a plugin's *code* to the
+  machine-global account cache (present everywhere), but records its *enable
+  flag* in `.claude/settings.local.json` — gitignored, so a Claude-created
+  worktree starts with installed plugins OFF. This repo ships a root
+  **`.worktreeinclude`** (gitignore-syntax; only files that are *also*
+  gitignored get copied) listing `.claude/settings.local.json`, so plugin
+  enablement *and* the project permission allowlist ride into every new
+  worktree. Add lines there as a product grows gitignored config it needs.
+  Caveat: a custom `WorktreeCreate` hook replaces git creation and **skips**
+  `.worktreeinclude` (this repo configures none). (Verified 2026-06-18 — live
+  docs + an empirical subagent-worktree test: the copied `settings.local.json`
+  arrived with its `enabledPlugins` block intact.)
   `worktree.symlinkDirectories` exists for heavy dirs but has **known bugs**
   (cleanup can silently fail; a write can replace the symlink with a regular
   file) — prefer `.worktreeinclude`, use symlinks only knowingly.
