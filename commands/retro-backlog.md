@@ -72,7 +72,7 @@ Default (no args): this harness repo's sessions from the last 14 days, capped at
     backlog / events kept / PR links — one line each. If nothing met the signal
     bar, SAY SO. Empty backlog-retros are honest.
 
-11. **Return to trunk:** `git -C "$HARNESS" checkout main` (branch-hygiene; this
+11. **Return to trunk AND refresh it:** `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main` (branch-hygiene + don't rot local trunk: a bare `checkout main` leaves a STALE local main once a PR merges on GitHub; this
     flow branches in-place like /retro, so ending on `retro/*` would strand the
     next session).
 
