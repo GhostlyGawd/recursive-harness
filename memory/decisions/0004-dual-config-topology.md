@@ -3,11 +3,13 @@
 date: 2026-06-13
 status: accepted
 provenance: session 56295237 (fleet-silo setup) routed in 61f58113 /retro, 2026-06-13 — user verified the fleet launcher does not rewrite the silo settings.json (followup f210e7) and asked to bank the topology before it decayed. Filesystem-verified, not recalled.
+corrected: 2026-06-19 (/retro-backlog, sessions 5191f317 + 43e917be) — the active silo is `accounts/rhen/`; this ADR previously named the stale `accounts/wraith/`. Re-verified on disk: `CLAUDE_CONFIG_DIR` points at `accounts/rhen/`, whose `hooks/` is a real symlink → the trunk.
 
 ## The topology
 This Windows machine runs TWO independent Claude config homes:
 
-1. **Account silo** `.claude-private/accounts/wraith/` — THIS harness. Its
+1. **Account silo** `.claude-private/accounts/rhen/` — THIS harness (the active
+   silo; the topology applies to any per-account silo `accounts/<name>/`). Its
    `skills/ hooks/ commands/ agents/` are real symlinks → the trunk
    `D:\GitHub Projects\recursive-harness\...`. It has its own `settings.json`
    (HUD + hooks, ~2 KB) and `.claude.json` (runtime state). The fleet launcher

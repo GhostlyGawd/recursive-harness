@@ -28,5 +28,11 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    NEVER propose this for `enforcement`; the lint will reject it anyway.
 6. **Kernel pressure**: is CLAUDE.md near its 60-line budget? Demote anything
    that could be a skill. The kernel earns its always-loaded cost or shrinks.
-7. Write `date +%F > "$HARNESS/state/last_meta_retro"`. Output: what was pruned, fixed,
+7. **Decision-record drift**: for each `memory/decisions/*.md` ADR, re-verify its
+   load-bearing claims against disk (account/silo names, paths, topology) AND against
+   the sibling artifacts it governs (the commands/skills it cites). On mismatch FIX or
+   supersede the ADR — never append a contradicting sibling (skill: harness-authoring).
+   (2026-06-19: ADR 0004 named the stale `accounts/wraith/` silo while the active one is
+   `accounts/rhen/` — drifted undetected because no audit step re-checked it.)
+8. Write `date +%F > "$HARNESS/state/last_meta_retro"`. Output: what was pruned, fixed,
    graduated; PRs opened. Falsifiable sentences only.
