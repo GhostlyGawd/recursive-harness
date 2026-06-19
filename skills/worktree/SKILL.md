@@ -146,6 +146,35 @@ Claude Code changes under us, and stale worktree knowledge is dangerous. So:
   skill in the same motion** (branch + PR) so the next session inherits the
   correction. A skill that silently drifts is worse than no skill.
 
+## 6. Sessions: launch, resume, and the guard hatches
+
+(empirical, dated — re-verify against live docs if behavior surprises you)
+- **Launch the harness against a foreign repo** by opening a terminal IN that
+  repo and starting `CLAUDE_CONFIG_DIR=<harness>/.claude-private/accounts/<name>
+  claude`; a plain `claude` loads the default global config, NOT the harness (ADR
+  0004). `/cd` CANNOT relocate a live session into another repo — it is disabled
+  under Remote Control (this harness ships `remoteControlAtStartup: true`) and
+  otherwise only persists within the project + `--add-dir` boundary. Start a
+  fresh rooted session instead. (session 5c6f78c0, 2026-06-18 — recipe + /cd
+  block re-derived live after twice proposing /cd as the fix.)
+- **A session "missing" from `/resume` is almost never data loss.** Two real
+  causes: (1) it is still OPEN in a live `claude` process — an in-use session is
+  withheld from the picker, so close that window or resume by id; (2) the picker
+  labels each session by its LATEST auto-generated title, so a re-titled session
+  looks gone. Escape hatch: `claude --resume <session-id>` opens it regardless of
+  the picker label. Prove integrity with the `.jsonl` byte-count, not reassurance
+  prose. (session 5191f317, 2026-06-16 — a session looked lost; the user panicked
+  before the by-id resume was offered.)
+- **The guard env hatches CANNOT be set mid-session.** Guard B's
+  `HARNESS_ALLOW_MULTI_SESSION=1` and Guard A's `HARNESS_ALLOW_CROSS_WORKTREE=1`
+  are PreToolUse hooks that read the PARENT process env, so `export VAR=1` inside
+  a Bash command fires too late and every tool (Read/Glob/Bash) stays blocked. In
+  session, your only options when blocked are `EnterWorktree` (own isolated tree)
+  or answering from knowledge; the env hatch is only for LAUNCHING a fresh session
+  (`HARNESS_ALLOW_MULTI_SESSION=1 claude …`). (session 2a9d8553, 2026-06-17 — 3
+  blocked calls spent discovering this; reconfirmed 2026-06-19/85bf58c5 when Guard
+  A blocked a Bash call whose quoted path contained a space.)
+
 ## Rules
 
 - The user never asks for a worktree and never recites the gotchas — that's this
