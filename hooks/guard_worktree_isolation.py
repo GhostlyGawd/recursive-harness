@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """PreToolUse guard (Guard A): worktree isolation.
 
-A session working in one git worktree (or the main checkout) must not reach
-into a SIBLING `.claude/worktrees/<name>` — that cross-worktree leakage is how
-parallel work silently clobbers itself. This hook blocks (exit 2) any
-file/search/shell tool — Read/Glob/Grep/Edit/Write/MultiEdit/NotebookEdit and
-BOTH shells (Bash + PowerShell, fix #2 2026-06-19) — whose target resolves inside
-a `.claude/worktrees/<X>` that differs from the worktree the session's `cwd`
-belongs to. A main checkout (cwd not inside any worktree) treats EVERY worktree
-target as foreign.
+A session working in one git worktree (or the main checkout) must not MUTATE a
+SIBLING `.claude/worktrees/<name>` — that cross-worktree leakage is how parallel
+work silently clobbers itself. This hook blocks (exit 2) any MUTATING file tool —
+Edit/Write/MultiEdit/NotebookEdit — and BOTH shells (Bash + PowerShell, fix #2
+2026-06-19) whose target resolves inside a `.claude/worktrees/<X>` that differs
+from the worktree the session's `cwd` belongs to. A main checkout (cwd not inside
+any worktree) treats EVERY worktree target as foreign.
+
+READ-ONLY tools — Read/Glob/Grep — are ALLOWED cross-worktree (fix #4 2026-06-19,
+per a user correction): a read cannot clobber parallel work, only a write can, so
+gating reads over-blocked beyond this guard's own rationale. Inspecting a sibling
+worktree's files is now friction-free. Shells (Bash/PowerShell) STILL require the
+HARNESS_ALLOW_CROSS_WORKTREE hatch even for a read, because a shell command can
+write and cannot be statically proven read-only (the fail-safe Bash policy below).
 
 Critical anchoring rule: a relative path is resolved against the SESSION cwd
 (the payload `cwd` field), NOT the hook process's own cwd. The real Read/Edit/
@@ -16,7 +22,8 @@ Glob/Bash tool resolves relative paths against the session cwd, so the guard
 must use the same base or a relative `..\\sibling` traversal would slip past.
 
 Allowed (exit 0): same-worktree access; any path with no `.claude/worktrees/`
-segment; tools with no path; unknown tools; the HARNESS_ALLOW_CROSS_WORKTREE
+segment; tools with no path; unknown tools; READ-ONLY tools (Read/Glob/Grep) into
+ANY worktree (fix #4 2026-06-19); the HARNESS_ALLOW_CROSS_WORKTREE
 escape hatch — both the env var AND a LEADING inline `HARNESS_...=1` command
 prefix (fix #1 2026-06-19; the env hatch alone is unreachable from one in-session
 tool call, since a PreToolUse hook reads its own env); and a foreign target that
@@ -131,9 +138,19 @@ def _foreign(path_str: str, session_wt: str | None, base: str) -> str | None:
     return target_wt
 
 
+# Read-only tools cannot mutate a sibling worktree, so they cannot clobber the
+# parallel work this guard protects — they are ALLOWED cross-worktree (fix #4,
+# 2026-06-19, per user correction). main() short-circuits them BEFORE the
+# _target_paths scan below; their entries there are retained for reference (and in
+# case the policy ever tightens again), not because they are still gated.
+_READ_ONLY_TOOLS = ("Read", "Glob", "Grep")
+
+
 def _target_paths(tool: str, ti: dict, cwd: str):
     """Yield candidate target path strings for the given (non-Bash) tool. Each
-    yielded string is resolved against the SESSION cwd by the caller.
+    yielded string is resolved against the SESSION cwd by the caller. NOTE: the
+    Read/Glob/Grep arms are dead for BLOCKING purposes — main() allows those as
+    read-only (fix #4) before this is called; they are kept for documentation/reuse.
     """
     if tool in ("Read", "Edit", "Write", "MultiEdit"):
         yield ti.get("file_path", "")
@@ -579,6 +596,13 @@ def main() -> int:
                     return 2
             return 0
 
+        # Read-only tools (Read/Glob/Grep) cannot clobber parallel work, so they
+        # are allowed into ANY worktree (fix #4 2026-06-19). Only MUTATING file
+        # tools fall through to the cross-worktree block below; shells were handled
+        # above and stay gated (a shell command can write).
+        if tool in _READ_ONLY_TOOLS:
+            return 0
+
         for raw in _target_paths(tool, ti, cwd):
             if not raw or not isinstance(raw, str):
                 continue
@@ -608,8 +632,9 @@ def _block(target_wt: str, session_wt: str | None) -> None:
         f"BLOCKED by harness guard: worktree isolation. This session is in "
         f"{where}, but the tool targets a different worktree "
         f"('{target_wt}').\n"
-        "Cross-worktree access lets parallel work clobber itself. Operate only "
-        "on your own worktree's files (or the trunk).\n"
+        "Cross-worktree WRITES let parallel work clobber itself (reads can't, so "
+        "Read/Glob/Grep are allowed cross-worktree). Write only to your own "
+        "worktree's files (or the trunk).\n"
         "If this is intentional, prefix the command with the escape hatch (a bare "
         "`export`/`set` will NOT reach this hook — it must be on the same command):\n"
         "  Bash:        HARNESS_ALLOW_CROSS_WORKTREE=1 <your command>\n"
