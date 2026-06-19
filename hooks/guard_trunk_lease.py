@@ -168,16 +168,29 @@ def _is_worktree(path: str) -> bool:
     return bool(path) and bool(_WT_RE.search(path.replace("\\", "/")))
 
 
+def _under_state(chunk: str) -> bool:
+    """True if a porcelain `-z` entry refers to a path under state/ (the machine-
+    local ledger). Entries are 'XY <path>'; rename-origin chunks are bare paths."""
+    if not chunk:
+        return False
+    path = chunk[3:] if len(chunk) > 3 and chunk[2] == " " else chunk
+    p = path.replace("\\", "/").lstrip("/")
+    return p == "state" or p.startswith("state/")
+
+
 def _fingerprint(cwd):
-    """Observable trunk state: {head_sym, head_oid, dirty}. None if git is
-    unusable. `dirty` is a hash of `git status --porcelain=v1 -z`; state/ is
-    gitignored, so writing the lease never perturbs it (regression-tested)."""
+    """Observable trunk state: {head_sym, head_oid, dirty}. None if git is unusable.
+    `dirty` hashes `git status --porcelain=v1 -z` with state/ entries STRIPPED: the
+    machine-local ledger's churn is not a trunk change, and excluding it makes the
+    fingerprint immune to whether state/ is gitignored -- so a lease write can never
+    self-perturb the fingerprint and brick the checkout (auditor FIX-B, 2026-06-19)."""
     head_oid = _git(["rev-parse", "HEAD"], cwd)
     status = _git(["status", "--porcelain=v1", "-z"], cwd)
     if head_oid is None and status is None:
         return None  # git wholly unusable -> fail open
     head_sym = _git(["symbolic-ref", "-q", "HEAD"], cwd)
-    dirty = hashlib.sha1((status or "").encode("utf-8", "replace")).hexdigest()
+    kept = [c for c in (status or "").split("\0") if not _under_state(c)]
+    dirty = hashlib.sha1("\0".join(kept).encode("utf-8", "replace")).hexdigest()
     return {"head_sym": head_sym or "DETACHED",
             "head_oid": head_oid or "NONE",
             "dirty": dirty}

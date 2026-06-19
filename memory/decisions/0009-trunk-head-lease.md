@@ -69,8 +69,10 @@ not needing to know.
    not re-stamped, so my next checked op can block against my own change — recoverable
    with one `HARNESS_TRUNK_LEASE_OK=1` op. File tools are always classified mutating, so
    tool-made edits never hit this.
-3. **state/ must stay gitignored** (it is): otherwise lease writes would perturb the
-   dirty fingerprint and cause constant self-mismatch. Regression-tested.
+3. **state/ churn is excluded from the fingerprint** (auditor FIX-B): the dirty hash
+   STRIPS `state/` entries, so the guard is immune to whether state/ is gitignored --
+   a lease write can never self-perturb the fingerprint or brick the checkout.
+   Regression-tested both ways (state/ gitignored and not).
 
 ## Alternatives rejected
 - **A better warning (the prior path).** Warnings are ignored; that is the recurrence

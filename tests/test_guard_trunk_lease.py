@@ -205,6 +205,14 @@ try:
     rc, _, err = run(pl("Edit", EDIT(r), r, sid="B"))          # B still at X -> BLOCK
     check("bidirectional: B blocked after A moved HEAD", blocked(rc, err), f"rc={rc}")
 
+    # --- 13. FIX-B: even when state/ is NOT gitignored, a lease write must NOT
+    #         self-perturb the fingerprint -> no constant self-block (state/ is
+    #         stripped from the dirty hash). Without the fix this bricks. ---
+    r = fresh(gitignore_state=False)
+    stamp(r, "A")                                 # writes a lease into the non-ignored state/
+    rc, _, _ = run(pl("Edit", EDIT(r), r, sid="A"))
+    check("non-gitignored state/ does NOT self-brick (FIX-B)", rc == 0, f"rc={rc}")
+
 finally:
     for d in REPOS:
         try:
