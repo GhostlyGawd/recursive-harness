@@ -189,15 +189,22 @@ Claude Code changes under us, and stale worktree knowledge is dangerous. So:
   the picker label. Prove integrity with the `.jsonl` byte-count, not reassurance
   prose. (session 5191f317, 2026-06-16 — a session looked lost; the user panicked
   before the by-id resume was offered.)
-- **The guard env hatches CANNOT be set mid-session.** Guard B's
-  `HARNESS_ALLOW_MULTI_SESSION=1` and Guard A's `HARNESS_ALLOW_CROSS_WORKTREE=1`
-  are PreToolUse hooks that read the PARENT process env, so `export VAR=1` inside
-  a Bash command fires too late and every tool (Read/Glob/Bash) stays blocked. In
-  session, your only options when blocked are `EnterWorktree` (own isolated tree)
-  or answering from knowledge; the env hatch is only for LAUNCHING a fresh session
-  (`HARNESS_ALLOW_MULTI_SESSION=1 claude …`). (session 2a9d8553, 2026-06-17 — 3
-  blocked calls spent discovering this; reconfirmed 2026-06-19/85bf58c5 when Guard
-  A blocked a Bash call whose quoted path contained a space.)
+- **Guard A allows cross-worktree READS; for writes, the env hatch can't be set
+  mid-session but the inline prefix can.** Read/Glob/Grep into ANOTHER worktree are
+  ALLOWED (fix #4, 2026-06-19, per a user correction) — a read can't clobber
+  parallel work, so just read the sibling's files directly. Only MUTATING file
+  tools (Edit/Write/MultiEdit/NotebookEdit) and shells (Bash/PowerShell) are gated
+  cross-worktree. For those: the *env-var* hatch CANNOT be set mid-session — Guard
+  A's `HARNESS_ALLOW_CROSS_WORKTREE=1` and Guard B's `HARNESS_ALLOW_MULTI_SESSION=1`
+  are PreToolUse hooks reading the PARENT process env, so `export VAR=1` inside a
+  Bash command fires too late. BUT a LEADING inline prefix on the same command DOES
+  reach Guard A and works in-session (fix #1): `HARNESS_ALLOW_CROSS_WORKTREE=1 <cmd>`
+  (bash) / `$env:HARNESS_ALLOW_CROSS_WORKTREE='1'; <cmd>` (powershell) — verified
+  this session (a prefixed cross-worktree read succeeded). Guard B's env hatch
+  remains LAUNCH-only (`HARNESS_ALLOW_MULTI_SESSION=1 claude …`). (session 2a9d8553,
+  2026-06-17; corrected 2026-06-19 — prior text wrongly said every tool incl.
+  Read/Glob stays blocked and that EnterWorktree/knowledge were the only in-session
+  options.)
 
 ## Rules
 

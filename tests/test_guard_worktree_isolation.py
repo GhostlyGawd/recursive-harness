@@ -7,12 +7,14 @@ in, exit code + stderr out.
 
 Contract under test (hooks/guard_worktree_isolation.py, a PreToolUse hook):
   Input JSON: {tool_name, tool_input, cwd, session_id}
-  BLOCKS (exit 2 + stderr containing 'worktree') any file/search/bash tool whose
-  target resolves inside a `.claude/worktrees/<X>` that is NOT the worktree the
-  session's `cwd` belongs to. Same-worktree access and ordinary (non-worktree)
-  paths are ALLOWED (exit 0). Honors env HARNESS_ALLOW_CROSS_WORKTREE=1 escape
-  hatch. Fails OPEN (exit 0) on malformed input — a guard must never brick a
-  session.
+  BLOCKS (exit 2 + stderr containing 'worktree') any MUTATING file tool
+  (Edit/Write/MultiEdit/NotebookEdit) or shell (Bash/PowerShell) whose target
+  resolves inside a `.claude/worktrees/<X>` that is NOT the worktree the session's
+  `cwd` belongs to. READ-ONLY tools (Read/Glob/Grep) are ALLOWED into ANY worktree
+  (fix #4 2026-06-19): a read cannot clobber parallel work, so gating it over-blocked.
+  Same-worktree access and ordinary (non-worktree) paths are ALLOWED (exit 0).
+  Honors env HARNESS_ALLOW_CROSS_WORKTREE=1 escape hatch. Fails OPEN (exit 0) on
+  malformed input — a guard must never brick a session.
 
   Bash is FAIL-SAFE (decision A, 2026-06-17): the command scanner cannot tell an
   inert quoted MENTION of a worktree path from a quoted file OPERAND, so it
@@ -66,9 +68,9 @@ def blocked(rc, err):
     return rc == 2 and "blocked" in low and "worktree" in low
 
 
-# --- 1. main checkout -> sibling worktree: the exact failure from this session ---
-rc, _, err = run(pl("Read", {"file_path": os.path.join(WT_A, "skills", "x.py")}, ROOT))
-check("main->worktree Read blocked", blocked(rc, err), f"rc={rc} err={err[:60]}")
+# --- 1. main checkout -> sibling worktree: WRITES block, READS now allowed (fix #4) ---
+rc, _, _ = run(pl("Read", {"file_path": os.path.join(WT_A, "skills", "x.py")}, ROOT))
+check("main->worktree Read ALLOWED (read-only exempt, fix #4)", rc == 0, f"rc={rc}")
 
 rc, _, err = run(pl("Edit", {"file_path": os.path.join(WT_A, "x.py")}, ROOT))
 check("main->worktree Edit blocked", blocked(rc, err), f"rc={rc}")
@@ -83,8 +85,8 @@ check("main->worktree NotebookEdit blocked", blocked(rc, err), f"rc={rc}")
 rc, _, _ = run(pl("Read", {"file_path": os.path.join(WT_A, "skills", "x.py")}, WT_A))
 check("worktree->own Read allowed", rc == 0, f"rc={rc}")
 
-rc, _, err = run(pl("Read", {"file_path": os.path.join(WT_B, "x.py")}, WT_A))
-check("worktree->sibling Read blocked", blocked(rc, err), f"rc={rc}")
+rc, _, _ = run(pl("Read", {"file_path": os.path.join(WT_B, "x.py")}, WT_A))
+check("worktree->sibling Read ALLOWED (read-only exempt, fix #4)", rc == 0, f"rc={rc}")
 
 # --- 3. ordinary (non-worktree) paths always allowed ---
 rc, _, _ = run(pl("Read", {"file_path": TRUNK_FILE}, ROOT))
@@ -93,12 +95,13 @@ check("main->trunk file Read allowed", rc == 0, f"rc={rc}")
 rc, _, _ = run(pl("Read", {"file_path": TRUNK_FILE}, WT_A))
 check("worktree->trunk file Read allowed (v1 scope)", rc == 0, f"rc={rc}")
 
-# --- 4. search tools: targeted into another worktree blocked; normal search allowed ---
-rc, _, err = run(pl("Glob", {"pattern": "**/*.py", "path": WT_A}, ROOT))
-check("main->worktree Glob blocked", blocked(rc, err), f"rc={rc}")
+# --- 4. search tools: READ-ONLY, so now ALLOWED into any worktree (fix #4); a
+#         normal in-scope search is of course still allowed too ---
+rc, _, _ = run(pl("Glob", {"pattern": "**/*.py", "path": WT_A}, ROOT))
+check("main->worktree Glob ALLOWED (read-only exempt, fix #4)", rc == 0, f"rc={rc}")
 
-rc, _, err = run(pl("Grep", {"pattern": "secret", "path": WT_B}, WT_A))
-check("worktree->sibling Grep blocked", blocked(rc, err), f"rc={rc}")
+rc, _, _ = run(pl("Grep", {"pattern": "secret", "path": WT_B}, WT_A))
+check("worktree->sibling Grep ALLOWED (read-only exempt, fix #4)", rc == 0, f"rc={rc}")
 
 rc, _, _ = run(pl("Glob", {"pattern": "**/*.md", "path": ROOT}, ROOT))
 check("main->trunk Glob allowed (no over-block)", rc == 0, f"rc={rc}")
@@ -113,19 +116,20 @@ check("Bash without worktree ref allowed", rc == 0, f"rc={rc}")
 rc, _, _ = run(pl("Bash", {"command": f"cat {os.path.join(WT_A, 'x.py')}"}, WT_A))
 check("Bash own-worktree ref allowed from inside it", rc == 0, f"rc={rc}")
 
-# --- 6. escape hatch ---
-rc, _, _ = run(pl("Read", {"file_path": os.path.join(WT_A, "x.py")}, ROOT),
+# --- 6. escape hatch (tested on a MUTATING tool now that reads bypass anyway) ---
+rc, _, _ = run(pl("Write", {"file_path": os.path.join(WT_A, "x.py")}, ROOT),
                env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "1"})
-check("escape hatch allows cross-worktree", rc == 0, f"rc={rc}")
+check("escape hatch allows cross-worktree write", rc == 0, f"rc={rc}")
 
-# --- 7. windows backslash form + case variance (red-team seeds) ---
+# --- 7. windows backslash form + case variance (red-team seeds) — on a MUTATING
+#         tool (Edit), since reads now bypass; the path-normalization is unchanged ---
 bs = os.path.join(WT_A, "x.py").replace("/", "\\")
-rc, _, err = run(pl("Read", {"file_path": bs}, ROOT))
-check("backslash path form blocked", blocked(rc, err), f"rc={rc}")
+rc, _, err = run(pl("Edit", {"file_path": bs}, ROOT))
+check("backslash path form blocked (Edit)", blocked(rc, err), f"rc={rc}")
 
 variant = os.path.join(ROOT, ".claude", "Worktrees", "wt-a", "x.py")
-rc, _, err = run(pl("Read", {"file_path": variant}, ROOT))
-check("case-variant .claude/Worktrees blocked", blocked(rc, err), f"rc={rc}")
+rc, _, err = run(pl("Edit", {"file_path": variant}, ROOT))
+check("case-variant .claude/Worktrees blocked (Edit)", blocked(rc, err), f"rc={rc}")
 
 # --- 8. unknown / non-path tool allowed ---
 rc, _, _ = run(pl("WebFetch", {"url": "https://example.com"}, ROOT))
@@ -143,19 +147,22 @@ check("fails open on garbage stdin", p.returncode == 0, f"rc={p.returncode}")
 # --- 10. CRITICAL: relative path must resolve against the SESSION cwd, not the
 #         hook process cwd. A session in wt-a issuing "..\wt-b\secret" reaches
 #         the sibling wt-b at runtime; the guard must block it. ---
-rc, _, err = run(pl("Read", {"file_path": "..\\wt-b\\secret"}, WT_A))
+# Tested on a MUTATING tool (Edit): reads are exempt now (fix #4), but the
+# relative-path resolution these red-team cases exercise is identical for the
+# still-blocked tools.
+rc, _, err = run(pl("Edit", {"file_path": "..\\wt-b\\secret"}, WT_A))
 check("rel path file_path resolved vs session cwd blocked (redteam crit)",
       blocked(rc, err), f"rc={rc} err={err[:60]}")
 
-rc, _, err = run(pl("Read", {"file_path": "../wt-b/secret"}, WT_A))
+rc, _, err = run(pl("Edit", {"file_path": "../wt-b/secret"}, WT_A))
 check("rel path (fwd slash) file_path blocked", blocked(rc, err), f"rc={rc}")
 
 # A relative path that stays inside the SAME worktree must remain allowed.
-rc, _, _ = run(pl("Read", {"file_path": "skills/x.py"}, WT_A))
+rc, _, _ = run(pl("Edit", {"file_path": "skills/x.py"}, WT_A))
 check("rel path within own worktree allowed (no over-block)", rc == 0, f"rc={rc}")
 
 # A relative path from trunk that does NOT enter any worktree stays allowed.
-rc, _, _ = run(pl("Read", {"file_path": "skills/example.md"}, ROOT))
+rc, _, _ = run(pl("Edit", {"file_path": "skills/example.md"}, ROOT))
 check("rel trunk path allowed (no over-block)", rc == 0, f"rc={rc}")
 
 # --- 11. HIGH: Bash relative ../sibling traversal from inside a worktree ---
@@ -187,14 +194,15 @@ check("bash dot-segment worktree ref blocked", blocked(rc, err), f"rc={rc}")
 rc, _, err = run(pl("Bash", {"command": "p=.claude/worktrees/wt-a; cat $p/x"}, ROOT))
 check("bash contiguous var-assign worktree ref blocked", blocked(rc, err), f"rc={rc}")
 
-# --- 13. HIGH: Glob pattern + Grep glob fields reach a foreign worktree ---
-rc, _, err = run(pl("Glob",
-                    {"pattern": ".claude/worktrees/wt-a/**", "path": ROOT}, ROOT))
-check("glob pattern into foreign worktree blocked", blocked(rc, err), f"rc={rc}")
+# --- 13. Glob pattern + Grep glob fields reach a foreign worktree: now ALLOWED
+#         (read-only exempt, fix #4) — they are search/read tools and cannot clobber. ---
+rc, _, _ = run(pl("Glob",
+                  {"pattern": ".claude/worktrees/wt-a/**", "path": ROOT}, ROOT))
+check("glob pattern into foreign worktree ALLOWED (read-only, fix #4)", rc == 0, f"rc={rc}")
 
-rc, _, err = run(pl("Grep",
-                    {"pattern": "secret", "glob": ".claude/worktrees/wt-a/**", "path": ROOT}, ROOT))
-check("grep glob filter into foreign worktree blocked", blocked(rc, err), f"rc={rc}")
+rc, _, _ = run(pl("Grep",
+                  {"pattern": "secret", "glob": ".claude/worktrees/wt-a/**", "path": ROOT}, ROOT))
+check("grep glob filter into foreign worktree ALLOWED (read-only, fix #4)", rc == 0, f"rc={rc}")
 
 # Grep 'pattern' is a CONTENT regex, not a path: a worktree-looking regex with a
 # benign path must NOT over-block.
@@ -309,23 +317,25 @@ check("git -C into foreign worktree blocked", blocked(rc, err), f"rc={rc}")
 # --- 17. LOW: HARNESS_ALLOW_CROSS_WORKTREE is a value-gated escape hatch, NOT a
 #         presence check. Setting it to '0' / 'false' / 'no' (intending to DISABLE
 #         the hatch) must NOT silently bypass the guard. Only truthy values in
-#         {1,true,yes,on} enable it. (redteam) ---
+#         {1,true,yes,on} enable it. (redteam) Tested on a MUTATING tool (Write):
+#         reads bypass the guard entirely now (fix #4), so the hatch's value-gating
+#         must be exercised on a still-blocked tool. ---
 foreign = {"file_path": os.path.join(WT_A, "x.py")}
-rc, _, err = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "0"})
+rc, _, err = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "0"})
 check("escape hatch =0 does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
-rc, _, err = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "false"})
+rc, _, err = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "false"})
 check("escape hatch =false does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
-rc, _, err = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "no"})
+rc, _, err = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "no"})
 check("escape hatch =no does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
 # Truthy values still enable the hatch.
-rc, _, _ = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "1"})
+rc, _, _ = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "1"})
 check("escape hatch =1 enables bypass", rc == 0, f"rc={rc}")
-rc, _, _ = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "true"})
+rc, _, _ = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "true"})
 check("escape hatch =true enables bypass", rc == 0, f"rc={rc}")
-rc, _, _ = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "YES"})
+rc, _, _ = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": "YES"})
 check("escape hatch =YES (case-insensitive) enables bypass", rc == 0, f"rc={rc}")
 # Empty string must NOT bypass (already the case; lock it in).
-rc, _, err = run(pl("Read", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": ""})
+rc, _, err = run(pl("Write", foreign, ROOT), env_extra={"HARNESS_ALLOW_CROSS_WORKTREE": ""})
 check("escape hatch ='' does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
 
 # --- 18. CRITICAL (red-team round 3): a STANDALONE fully-quoted path is a real
@@ -425,10 +435,12 @@ rc, _, _ = run(pl("PowerShell", {"command": "git worktree remove .claude/worktre
 check("powershell git worktree remove allowed (mgmt exempt)", rc == 0, f"rc={rc}")
 
 # --- 22. FIX #3: a STALE/orphaned worktree (git no longer registers it) is safe to
-#         clean via file tools; a LIVE registered worktree stays protected. The
-#         signature: <root>/.git is a FILE whose gitdir admin dir is gone (stale)
-#         vs present (live). Built as real on-disk fixtures. FAIL-SAFE: no .git, or
-#         any uncertainty, still BLOCKS. ---
+#         clean via file tools; a LIVE registered worktree stays protected from
+#         WRITES. The signature: <root>/.git is a FILE whose gitdir admin dir is gone
+#         (stale) vs present (live). Built as real on-disk fixtures. FAIL-SAFE: no
+#         .git, or any uncertainty, still BLOCKS writes. (Post-fix-#4, Read/Glob/Grep
+#         are allowed into ANY worktree regardless, so the live/stale distinction is
+#         exercised here with MUTATING tools.) ---
 import tempfile as _tf, shutil as _sh
 _T = _tf.mkdtemp(prefix="wtguard-")
 try:
@@ -450,8 +462,8 @@ try:
     os.makedirs(os.path.join(_T, ".git", "worktrees", "rellive"))
     with open(os.path.join(_rellive, ".git"), "w") as _f:
         _f.write("gitdir: " + os.path.relpath(os.path.join(_T, ".git", "worktrees", "rellive"), _rellive) + "\n")
-    rc, _, err = run(pl("Read", {"file_path": os.path.join(_rellive, "x.py")}, _T))
-    check("LIVE worktree w/ RELATIVE gitdir still BLOCKED (auditor F1)", blocked(rc, err), f"rc={rc} err={err[:60]}")
+    rc, _, err = run(pl("Edit", {"file_path": os.path.join(_rellive, "x.py")}, _T))
+    check("LIVE worktree w/ RELATIVE gitdir still BLOCKED (auditor F1, Edit)", blocked(rc, err), f"rc={rc} err={err[:60]}")
 
     rc, _, _ = run(pl("Read", {"file_path": os.path.join(_stale, "x.py")}, _T))
     check("stale worktree file Read ALLOWED (cleanup)", rc == 0, f"rc={rc}")
@@ -459,15 +471,16 @@ try:
     rc, _, _ = run(pl("Write", {"file_path": os.path.join(_stale, "x.py")}, _T))
     check("stale worktree Write ALLOWED (cleanup)", rc == 0, f"rc={rc}")
 
-    rc, _, err = run(pl("Read", {"file_path": os.path.join(_live, "x.py")}, _T))
-    check("LIVE worktree file Read still BLOCKED", blocked(rc, err), f"rc={rc} err={err[:60]}")
+    rc, _, _ = run(pl("Read", {"file_path": os.path.join(_live, "x.py")}, _T))
+    check("LIVE worktree file Read ALLOWED (read-only exempt, fix #4)", rc == 0, f"rc={rc}")
 
     rc, _, err = run(pl("Edit", {"file_path": os.path.join(_live, "x.py")}, _T))
     check("LIVE worktree Edit still BLOCKED", blocked(rc, err), f"rc={rc}")
 
-    # FAIL-SAFE: a worktree path with NO .git is not a confirmed stale worktree -> BLOCK.
-    rc, _, err = run(pl("Read", {"file_path": os.path.join(_ghost, "x.py")}, _T))
-    check("no-.git worktree path still BLOCKED (fail-safe)", blocked(rc, err), f"rc={rc}")
+    # FAIL-SAFE: a worktree path with NO .git is not a confirmed stale worktree -> BLOCK
+    # (tested via Write — reads are exempt now, so the fail-safe matters for writes).
+    rc, _, err = run(pl("Write", {"file_path": os.path.join(_ghost, "x.py")}, _T))
+    check("no-.git worktree path still BLOCKED (fail-safe, Write)", blocked(rc, err), f"rc={rc}")
 
     # #3 is FILE-TOOLS ONLY: a Bash op into the stale worktree still blocks (use the
     # #1 hatch for shell cleanup), confirming the scope boundary.
