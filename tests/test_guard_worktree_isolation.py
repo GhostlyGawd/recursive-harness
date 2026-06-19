@@ -373,6 +373,113 @@ check(".claude-backup sibling not over-blocked", rc == 0, f"rc={rc}")
 rc, _, err = run(pl("Bash", {"command": "cat .claude/worktrees/wt-b/x"}, ROOT))
 check("real .claude/worktrees still blocked (regression)", blocked(rc, err), f"rc={rc}")
 
+# =====================================================================
+# FIX ROUND 2026-06-19: the three guard fixes (this session).
+# =====================================================================
+
+# --- 20. FIX #1: the inline HARNESS_ALLOW_CROSS_WORKTREE prefix. The env hatch is
+#         unreachable from a single in-session tool call (a PreToolUse hook reads
+#         its OWN env), so a LEADING inline prefix must enable the bypass — but
+#         ONLY leading, never an inert/quoted/mid-command mention. ---
+foreignq = '"' + os.path.join(WT_A, "src") + '"'
+rc, _, _ = run(pl("Bash", {"command": "HARNESS_ALLOW_CROSS_WORKTREE=1 rm -rf " + foreignq}, ROOT))
+check("inline hatch (bash, leading) enables bypass", rc == 0, f"rc={rc}")
+
+rc, _, _ = run(pl("Bash", {"command": "FOO=bar HARNESS_ALLOW_CROSS_WORKTREE=1 cat " + foreignq}, ROOT))
+check("inline hatch after other leading assignment enables bypass", rc == 0, f"rc={rc}")
+
+rc, _, err = run(pl("Bash", {"command": "HARNESS_ALLOW_CROSS_WORKTREE=0 cat " + foreignq}, ROOT))
+check("inline hatch =0 does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
+
+# inert/quoted mention must NOT enable the hatch (the security boundary).
+rc, _, err = run(pl("Bash", {"command": 'echo "HARNESS_ALLOW_CROSS_WORKTREE=1"; cat ' + foreignq}, ROOT))
+check("quoted/inert mention of hatch does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
+
+# mid-command (non-leading) assignment must NOT enable the hatch.
+rc, _, err = run(pl("Bash", {"command": "cat " + foreignq + " HARNESS_ALLOW_CROSS_WORKTREE=1"}, ROOT))
+check("non-leading hatch token does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
+
+# powershell leading $env: prefix enables the bypass.
+rc, _, _ = run(pl("PowerShell", {"command": "$env:HARNESS_ALLOW_CROSS_WORKTREE='1'; Remove-Item " + foreignq}, ROOT))
+check("inline hatch (powershell, leading) enables bypass", rc == 0, f"rc={rc}")
+
+rc, _, err = run(pl("PowerShell", {"command": "$env:HARNESS_ALLOW_CROSS_WORKTREE='0'; Remove-Item " + foreignq}, ROOT))
+check("inline hatch (powershell) =0 does NOT bypass (still blocks)", blocked(rc, err), f"rc={rc}")
+
+# --- 21. FIX #2: the PowerShell tool was a blind spot. It must get the same
+#         scanning as Bash: foreign worktree refs block; own/trunk/git-worktree-mgmt
+#         are allowed. ---
+rc, _, err = run(pl("PowerShell", {"command": 'Remove-Item -Recurse -Force "' + os.path.join(WT_A, "x") + '"'}, ROOT))
+check("powershell Remove-Item into foreign worktree blocked", blocked(rc, err), f"rc={rc} err={err[:60]}")
+
+rc, _, err = run(pl("PowerShell", {"command": 'Set-Content "' + os.path.join(WT_B, "f") + '" pwned'}, WT_A))
+check("powershell Set-Content into sibling worktree blocked", blocked(rc, err), f"rc={rc}")
+
+rc, _, _ = run(pl("PowerShell", {"command": 'Get-Content "' + os.path.join(WT_A, "x") + '"'}, WT_A))
+check("powershell own-worktree ref allowed from inside (no over-block)", rc == 0, f"rc={rc}")
+
+rc, _, _ = run(pl("PowerShell", {"command": 'Get-Content "' + TRUNK_FILE + '"'}, ROOT))
+check("powershell trunk path allowed (no over-block)", rc == 0, f"rc={rc}")
+
+rc, _, _ = run(pl("PowerShell", {"command": "git worktree remove .claude/worktrees/old"}, ROOT))
+check("powershell git worktree remove allowed (mgmt exempt)", rc == 0, f"rc={rc}")
+
+# --- 22. FIX #3: a STALE/orphaned worktree (git no longer registers it) is safe to
+#         clean via file tools; a LIVE registered worktree stays protected. The
+#         signature: <root>/.git is a FILE whose gitdir admin dir is gone (stale)
+#         vs present (live). Built as real on-disk fixtures. FAIL-SAFE: no .git, or
+#         any uncertainty, still BLOCKS. ---
+import tempfile as _tf, shutil as _sh
+_T = _tf.mkdtemp(prefix="wtguard-")
+try:
+    _live = os.path.join(_T, ".claude", "worktrees", "live")
+    _stale = os.path.join(_T, ".claude", "worktrees", "stale")
+    _ghost = os.path.join(_T, ".claude", "worktrees", "ghost")  # no .git at all
+    os.makedirs(_live); os.makedirs(_stale); os.makedirs(_ghost)
+    os.makedirs(os.path.join(_T, ".git", "worktrees", "live"))   # admin EXISTS -> live
+    # admin for 'stale' deliberately NOT created -> deregistered/stale
+    with open(os.path.join(_live, ".git"), "w") as _f:
+        _f.write("gitdir: " + os.path.join(_T, ".git", "worktrees", "live") + "\n")
+    with open(os.path.join(_stale, ".git"), "w") as _f:
+        _f.write("gitdir: " + os.path.join(_T, ".git", "worktrees", "stale") + "\n")
+    # LIVE worktree but with a RELATIVE gitdir pointer (auditor F1, 2026-06-19):
+    # admin dir EXISTS; the pointer is relative to the worktree root. It MUST
+    # resolve to the present admin and stay BLOCKED — pre-fix this read as stale.
+    _rellive = os.path.join(_T, ".claude", "worktrees", "rellive")
+    os.makedirs(_rellive)
+    os.makedirs(os.path.join(_T, ".git", "worktrees", "rellive"))
+    with open(os.path.join(_rellive, ".git"), "w") as _f:
+        _f.write("gitdir: " + os.path.relpath(os.path.join(_T, ".git", "worktrees", "rellive"), _rellive) + "\n")
+    rc, _, err = run(pl("Read", {"file_path": os.path.join(_rellive, "x.py")}, _T))
+    check("LIVE worktree w/ RELATIVE gitdir still BLOCKED (auditor F1)", blocked(rc, err), f"rc={rc} err={err[:60]}")
+
+    rc, _, _ = run(pl("Read", {"file_path": os.path.join(_stale, "x.py")}, _T))
+    check("stale worktree file Read ALLOWED (cleanup)", rc == 0, f"rc={rc}")
+
+    rc, _, _ = run(pl("Write", {"file_path": os.path.join(_stale, "x.py")}, _T))
+    check("stale worktree Write ALLOWED (cleanup)", rc == 0, f"rc={rc}")
+
+    rc, _, err = run(pl("Read", {"file_path": os.path.join(_live, "x.py")}, _T))
+    check("LIVE worktree file Read still BLOCKED", blocked(rc, err), f"rc={rc} err={err[:60]}")
+
+    rc, _, err = run(pl("Edit", {"file_path": os.path.join(_live, "x.py")}, _T))
+    check("LIVE worktree Edit still BLOCKED", blocked(rc, err), f"rc={rc}")
+
+    # FAIL-SAFE: a worktree path with NO .git is not a confirmed stale worktree -> BLOCK.
+    rc, _, err = run(pl("Read", {"file_path": os.path.join(_ghost, "x.py")}, _T))
+    check("no-.git worktree path still BLOCKED (fail-safe)", blocked(rc, err), f"rc={rc}")
+
+    # #3 is FILE-TOOLS ONLY: a Bash op into the stale worktree still blocks (use the
+    # #1 hatch for shell cleanup), confirming the scope boundary.
+    rc, _, err = run(pl("Bash", {"command": 'cat "' + os.path.join(_stale, "x.py") + '"'}, _T))
+    check("Bash into stale worktree still blocked (#3 scoped to file tools)", blocked(rc, err), f"rc={rc}")
+    # ...and the #1 hatch cleans it from Bash.
+    rc, _, _ = run(pl("Bash", {"command": 'HARNESS_ALLOW_CROSS_WORKTREE=1 rm -rf "' + _stale + '"'}, _T))
+    check("Bash stale cleanup via inline hatch allowed", rc == 0, f"rc={rc}")
+finally:
+    try: _sh.rmtree(_T, ignore_errors=True)
+    except Exception: pass
+
 print(f"\n{'ALL TESTS PASS' if not FAILURES else str(len(FAILURES)) + ' FAILURES: ' + ', '.join(FAILURES)}")
 
 
