@@ -11,9 +11,21 @@ Walk the tree top-down; first match wins.
 ## The decision tree
 
 1. **Can it be enforced mechanically?** ("never X", "always Y before Z")
-   → **hook**. Code that blocks beats prose that suggests, and costs zero context.
-   Hooks are enforcement-layer: draft the script + settings entry, open a PR via
-   /harness-pr, human merges. Never edit hooks/ directly.
+   → **hook** — but only after the weight gate below. Code that blocks beats
+   prose that suggests, and costs zero context. Hooks are enforcement-layer:
+   draft the script + settings entry, open a PR via /harness-pr, human merges.
+   Never edit hooks/ directly.
+   **Weight gate — net hook count must not grow by reflex.** Before adding a NEW
+   hook, in order: (a) can you fix the ROOT CAUSE so the problem can't arise?
+   (b) does an EXISTING guard already cover this trigger — strengthen/repurpose it?
+   (c) do overlapping guards exist to CONSOLIDATE instead? (d) can you make the
+   correct action the easy default? A new hook is justified only when all four
+   fail. Reflexively answering every papercut with "always/never → new hook" is
+   hook-bloat, not improvement — more enforcement surface makes the harness HARDER
+   to follow, which causes more mistakes. That case routes to /meta-retro
+   (audit / consolidate / prune), NOT /harness-pr (add). The user named hook
+   proliferation as the anti-pattern itself (session b7488db6, 2026-06-19: "we
+   already have so many fucking hooks... we gotta stop bandaid fixing this").
 
 2. **Is it a multi-step procedure you (Claude) will repeat across tasks?**
    → **skill**. Loaded only on trigger, so cost is ~its description.
@@ -46,3 +58,12 @@ Walk the tree top-down; first match wins.
 - One learning, one artifact. If it seems to need two, it is two learnings.
 - A decision with alternatives that were rejected → also write a short ADR in
   memory/decisions/NNNN-slug.md so future-you doesn't relitigate it.
+
+<!-- provenance: /retro-backlog 2026-06-19, session b7488db6 — after the agent
+reflexively proposed "add a hook+skill" for a recurring git-base papercut, the
+user pushed back hard ("we already have so many fucking hooks... stop bandaid
+fixing this"). The hook step had no restraint; added the weight gate so net
+enforcement surface doesn't grow by reflex. Paired with the /meta-retro guard-
+friction audit (audit/consolidate/prune existing); a companion /retro-backlog PR
+records the same taste in memory/user-model.md. -->
+
