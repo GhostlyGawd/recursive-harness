@@ -134,7 +134,11 @@ def guard_a_tests():
     # mask the block. The guard resolves worktree identity purely lexically, so the
     # base need not exist on disk.
     wt = os.path.join(tempfile.mkdtemp(), ".claude", "worktrees")
-    cross = {"tool_name": "Read", "tool_input": {"file_path": os.path.join(wt, "wt-b", "x.py")},
+    # A cross-worktree WRITE. Reads (Read/Glob/Grep) are allowed cross-worktree since
+    # PR #61 ("allow cross-worktree reads") -- only writes can clobber -- so the block
+    # tests must use a write tool, else the guard correctly returns 0 and these fail
+    # (the stale-Read fixture is what broke test_features after #61 -> red CI).
+    cross = {"tool_name": "Write", "tool_input": {"file_path": os.path.join(wt, "wt-b", "x.py")},
              "cwd": os.path.join(wt, "wt-a"), "session_id": "s1"}
     # A quote-split path that ONLY the strict scrubber rejoins into a worktree literal.
     qsplit = {"tool_name": "Bash", "tool_input": {"command": 'cat ".claude/worktrees/"wt-b/x'},
