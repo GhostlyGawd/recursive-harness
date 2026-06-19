@@ -13,6 +13,9 @@
       "warn_cooldown_seconds": 180,
       "ttl_seconds": 900
     },
+    "trunk_lease": {
+      "block": true
+    },
     "branch_first": {
       "warn": true
     }

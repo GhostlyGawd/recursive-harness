@@ -54,6 +54,7 @@ LOCKED = frozenset({
     "guards.worktree_isolation.bash_scanner",
     "guards.worktree_session.block",
     "guards.worktree_session.ttl_seconds",
+    "guards.trunk_lease.block",
     # CONVENTION (enforce by hand -- this set is explicit keys, NOT a pattern):
     # any NEW feature key an agent could flip via the gitignored local file to
     # WEAKEN a guard MUST be added here -- notably any `guards.*.block`, or a guard
