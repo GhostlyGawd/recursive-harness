@@ -54,6 +54,7 @@ LOCKED_FEATURES = {
     "guards.worktree_isolation.bash_scanner",
     "guards.worktree_session.block",
     "guards.worktree_session.ttl_seconds",
+    "guards.trunk_lease.block",
 }
 
 
