@@ -63,6 +63,14 @@ def _normalize(path: str, base: str = "") -> str:
     """
     if not path:
         return ""
+    # Normalize Windows-style separators BEFORE resolving. On a POSIX CI runner
+    # '\\' is an ordinary character, so a relative "..\\sibling" traversal would
+    # otherwise stay one literal component INSIDE the session's own worktree and
+    # never resolve to the sibling — the cross-worktree hop this guard exists to
+    # block (redteam-crit, test 10). Mirrors _deglob() and guard_enforcement_
+    # layer's cmd normalization; on Windows os.path handles '/' natively, so this
+    # is safe there too.
+    path = path.replace("\\", "/")
     expanded = os.path.expanduser(path)
     if not os.path.isabs(expanded):
         # Anchor relative paths to the session cwd, not os.getcwd(). os.path.join
