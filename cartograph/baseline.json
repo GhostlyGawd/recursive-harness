@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Grandfathered structural-rot fingerprints accepted by the cartograph gate (cartograph/extract.py --check). A warning whose fingerprint is NOT listed here blocks. Remove an entry once its rot is fixed; regenerate with `extract.py --write-baseline`.",
+  "accepted": []
+}
