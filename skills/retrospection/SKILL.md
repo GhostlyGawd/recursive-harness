@@ -37,7 +37,13 @@ A retro that produces prose produced nothing. The output unit is a DIFF.
    template (commands/harness-pr.md). Auto-merge only if autonomy.json says
    this category has graduated — check, don't assume.
 
-8. Mark done: `touch state/retro_gate_<session_id>` (silences the Stop gate).
+8. Mark done — TWO records (resolve `$HARNESS` per /retro step 1):
+   - ephemeral Stop-gate flag (silences this session's nudge; deleted at session end):
+     `touch "$HARNESS/state/retro_gate_<session_id>"` — use the ABSOLUTE trunk path; a
+     relative `state/...` lands in the active worktree's CWD, not the trunk, so the
+     flag (and any backlog tracking) silently misses (forensic finding, session 9856a41f).
+   - durable completion ledger (persists; /retro-backlog reads it to skip done sessions):
+     `"$HARNESS/bin/harness" retro-done add <session_id> --slug <slug>`.
 
 ## What good output looks like
 

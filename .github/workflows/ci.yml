@@ -24,5 +24,7 @@ jobs:
           python3 tests/test_guard_worktree_session.py
       - name: Feature-flag layer tests (ADR 0008)
         run: python3 tests/test_features.py
+      - name: Retro-completion ledger tests
+        run: python3 tests/test_retro_done.py
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run

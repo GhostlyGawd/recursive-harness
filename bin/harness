@@ -12,6 +12,8 @@ Subcommands:
                so it can't rot into a guilt pile). Captured silently; pulled via /followups.
   approve      Record a human's enforcement-layer approval (verbal/remote OK) and
                place the HUMAN_APPROVED marker; --revoke removes it; --status shows it.
+  retro-done   add | list | has — DURABLE ledger of retro'd sessions (persists past
+               session end, unlike the ephemeral retro_gate_* flag); feeds /retro-backlog.
   gc           Roll hot state older than N days into versioned monthly summaries.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
@@ -34,6 +36,10 @@ SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
 FOLLOWUPS = os.path.join(STATE, "followups.jsonl")
 FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active view (decay)
 APPROVALS = os.path.join(STATE, "approvals.jsonl")
+# Durable retro-completion ledger: which sessions have been retro'd. PERSISTS (it is
+# NOT a retro_gate_* name, so hooks/session_end.py's per-session cleanup never deletes
+# it). /retro writes it; /retro-backlog reads it to skip already-mined sessions.
+RETRO_LOG = os.path.join(STATE, "retro_log.jsonl")
 MARKER = os.path.join(ROOT, "HUMAN_APPROVED")
 
 # --- feature flags (ADR 0008) -------------------------------------------------
@@ -362,6 +368,49 @@ def cmd_followup(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------- retro-done
+# provenance: session 9856a41f, 2026-06-19 — added a DURABLE retro-completion ledger.
+# A forensic sweep (workflow wf_8058e958) found the harness had NO persistent record of
+# which sessions were retro'd: the only marker, state/retro_gate_<id>, is an ephemeral
+# Stop-nudge flag that hooks/session_end.py deletes at session end. So /retro could not be
+# swept over a backlog. This ledger persists; /retro-backlog reads it to skip done sessions.
+def cmd_retro_done(args) -> int:
+    """Durable ledger of sessions that have been retro'd (state/retro_log.jsonl).
+
+    Unlike the ephemeral state/retro_gate_<id> Stop-nudge flag (deleted by
+    hooks/session_end.py at session end), this PERSISTS so /retro-backlog can skip
+    sessions already mined. `add` is idempotent on session_id.
+    """
+    recs = _read(RETRO_LOG)
+    sid = (args.arg or "").strip()
+    if args.action == "list":
+        if not recs:
+            print("(no sessions recorded as retro'd yet)", file=sys.stderr)
+            return 0
+        for r in recs:
+            print(f"{r.get('session_id', '?')}\t{r.get('ts', '')[:10]}\t{r.get('slug', '')}")
+        return 0
+    if args.action == "has":
+        if not sid:
+            print("retro-done has needs a <session_id>", file=sys.stderr)
+            return 1
+        if any(r.get("session_id") == sid for r in recs):
+            print("retro'd")
+            return 0
+        print("not retro'd")
+        return 1
+    # add (idempotent)
+    if not sid:
+        print("retro-done add needs a <session_id>", file=sys.stderr)
+        return 1
+    if any(r.get("session_id") == sid for r in recs):
+        print(f"already recorded: {sid}")
+        return 0
+    _append(RETRO_LOG, {"session_id": sid, "slug": (args.slug or "").strip(), "ts": _now()})
+    print(f"recorded retro'd session: {sid}")
+    return 0
+
+
 # ------------------------------------------------------------- approve
 # provenance: session 9147f304, 2026-06-14 — added so a remote/voice human can grant
 # enforcement-layer approval without a shell `touch`; logs the verbatim grant for audit.
@@ -521,6 +570,12 @@ def main() -> int:
     sp.add_argument("--task", default="")
     sp.add_argument("--all", action="store_true", help="include done + stale entries")
     sp.set_defaults(fn=cmd_followup)
+
+    sp = sub.add_parser("retro-done", help="durable ledger of retro'd sessions (feeds /retro-backlog)")
+    sp.add_argument("action", choices=["add", "list", "has"])
+    sp.add_argument("arg", nargs="?", default="", help="session_id (for add/has)")
+    sp.add_argument("--slug", default="", help="the retro slug, for context")
+    sp.set_defaults(fn=cmd_retro_done)
 
     sp = sub.add_parser("approve")
     sp.add_argument("--scope", default="", help="what the edit is (e.g. 'autonomy ledger reconciliation')")

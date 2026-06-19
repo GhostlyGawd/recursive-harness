@@ -29,9 +29,14 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    - else → `git -C "$HARNESS" push -u origin <branch>` then
      `(cd "$HARNESS" && gh pr create --title "retro: <slug>" --body-file <(provenance
      template from commands/harness-pr.md))`; record `proposed+1`.
-7. `touch "$HARNESS/state/retro_gate_<session_id>"`; report to the user: events found,
-   routes chosen, PR links. One line each. If nothing met the signal bar,
-   SAY SO and stop — empty retros are honest; padded ones poison the trunk.
+7. Mark this session done with BOTH records:
+   - ephemeral Stop-gate flag (silences THIS session's retro nudge; deleted at
+     session end by hooks/session_end.py): `touch "$HARNESS/state/retro_gate_<session_id>"`.
+   - durable completion ledger (PERSISTS; /retro-backlog reads it to skip done
+     sessions): `"$HARNESS/bin/harness" retro-done add <session_id> --slug <slug>`.
+   Then report to the user: events found, routes chosen, PR links. One line each.
+   If nothing met the signal bar, SAY SO and stop — empty retros are honest;
+   padded ones poison the trunk.
 8. **Return to trunk: `git -C "$HARNESS" checkout main`** (branch-hygiene). /retro branches
    in-place on `retro/<date>-<slug>`; ending the session still on it strands the
    NEXT session on a dead branch (the SessionStart banner flags this, but don't
