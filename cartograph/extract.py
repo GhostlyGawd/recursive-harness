@@ -1,0 +1,803 @@
+#!/usr/bin/env python3
+"""cartograph/extract.py — read-only cartograph extractor for the harness.
+
+Phase 0 of the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
+cartograph.md). This script DERIVES the harness's connectivity graph from
+machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
+to the enforcement layer (hooks/, lint/, evals/, bin/, .github/, autonomy.json,
+settings.json, templates/ are all write-locked). It only reads them.
+
+It lives in cartograph/ (NOT bin/, which is locked) precisely so Phase 0 needs no
+human review. Promoting it into a `bin/harness map` subcommand later is a
+locked-layer change and must go through /harness-pr.
+
+Nodes  = artifacts (skills, commands, agents, hooks, ADRs, CLI subcommands,
+         config, kernel, lifecycle events, state ledgers, sessions).
+Edges  = real relations harvested from the repo's own conventions:
+  1. fires_on      hook  -> lifecycle event      (settings.json wiring)
+  2. born_in       artifact -> session           (provenance: frontmatter)
+  3. cites         artifact -> skill             (skill: name / `name` refs)
+  4. invokes       artifact -> CLI subcommand    (harness <subcmd> calls)
+  5. spawns        artifact -> agent             (agent-name refs in bodies)
+  6. references    artifact -> ADR               (ADR NNNN / ADR-NNNN refs)
+  7. touches       artifact -> state ledger      (state/*.jsonl refs)
+
+Usage:
+  python cartograph/extract.py            # print the graph as text
+  python cartograph/extract.py --json     # also write cartograph/map.json
+  python cartograph/extract.py --json P   # write the json to P instead
+
+The biological ROLE (nucleus/enzyme/ribosome/...) and the 3-LOOP assignment are
+curated overlays from the design synthesis, not machine-truth — they are flagged
+as such in the output so they are never mistaken for extracted facts.
+"""
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def read(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except (OSError, UnicodeError):
+        return ""
+
+
+def rel(path):
+    try:
+        return os.path.relpath(path, ROOT).replace("\\", "/")
+    except ValueError:
+        # different drive on Windows (e.g. output to C:\Temp, repo on D:) — relpath
+        # raises; the absolute path is a fine fallback for a status message.
+        return path.replace("\\", "/")
+
+
+def listfiles(subdir, ext):
+    d = os.path.join(ROOT, subdir)
+    if not os.path.isdir(d):
+        return []
+    return sorted(
+        os.path.join(d, f) for f in os.listdir(d)
+        if f.endswith(ext) and os.path.isfile(os.path.join(d, f))
+    )
+
+
+# --- curated overlays (design choices, NOT extracted truth) -------------------
+ROLE_BY_TYPE = {
+    "skill": "ribosome",        # translate trigger-signals into procedure
+    "command": "receptor",      # user-initiated pathway entry points
+    "agent": "organelle",       # membrane-bound isolated context
+    "hook": "enzyme",           # catalyze reactions at lifecycle membranes
+    "adr": "nucleus",           # conserved genes (decisions)
+    "cli": "transporter",       # bin/harness moves metabolites in/out
+    "config": "regulatory",     # which enzyme docks at which membrane
+    "kernel": "nucleus",        # CLAUDE.md — the genome
+    "event": "membrane",        # lifecycle checkpoints
+    "state": "cytoplasm",       # the live metabolite pool
+    "session": "lineage",       # provenance ancestry
+    "lint": "checkpoint",       # allosteric inhibitor
+    "evals": "selection",       # only survivors propagate
+}
+
+LOOP_HINTS = {
+    # inner loop — predict / act / score
+    "cli:predict": "inner", "cli:outcome": "inner", "cli:stats": "inner",
+    "skill:calibration": "inner", "command:calibrate": "inner",
+    "state:predictions": "inner", "hook:stop_cadence_gate": "inner",
+    # middle loop — /retro: correction -> route -> PR -> merged artifact
+    "command:retro": "middle", "skill:retrospection": "middle",
+    "skill:routing-learnings": "middle", "skill:harness-authoring": "middle",
+    "skill:follow-up-handling": "middle", "skill:eval-capture": "middle",
+    "skill:stuck-detection": "middle", "agent:retro-miner": "middle",
+    "agent:harness-auditor": "middle", "agent:critic": "middle",
+    "hook:log_correction": "middle", "hook:stop_retro_gate": "middle",
+    "cli:corrections": "middle", "state:corrections": "middle",
+    "command:harness-pr": "middle", "command:capture-eval": "middle",
+    "command:followups": "middle", "cli:followup": "middle",
+    "state:followups": "middle",
+    # outer loop — /meta-retro: audit / prune / update autonomy
+    "command:meta-retro": "outer", "command:gc": "outer",
+    "command:run-evals": "outer", "command:standup": "outer",
+    "cli:gc": "outer", "cli:skill-stats": "outer",
+    "config:autonomy.json": "outer", "state:skill_usage": "outer",
+    "hook:log_skill_use": "outer",
+}
+
+
+def loop_of(node_id, ntype, role):
+    if node_id in LOOP_HINTS:
+        return LOOP_HINTS[node_id]
+    if role in ("nucleus", "regulatory"):
+        return "kernel"
+    if ntype in ("event",) or role == "enzyme":
+        return "enforcement"
+    return "support"
+
+
+class Graph:
+    def __init__(self):
+        self.nodes = {}
+        self.edges = []
+
+    def node(self, nid, ntype, label, file=None, **meta):
+        if nid not in self.nodes:
+            role = ROLE_BY_TYPE.get(ntype, "?")
+            self.nodes[nid] = {
+                "id": nid, "type": ntype, "label": label, "role": role,
+                "loop": loop_of(nid, ntype, role),
+                "file": file, **meta,
+            }
+        elif file and not self.nodes[nid].get("file"):
+            self.nodes[nid]["file"] = file
+        return nid
+
+    def edge(self, src, tgt, etype, **attrs):
+        self.edges.append({"source": src, "target": tgt, "type": etype, **attrs})
+
+
+def frontmatter(text):
+    """Return the YAML-ish frontmatter block (between leading --- fences), or ''."""
+    m = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
+    return m.group(1) if m else ""
+
+
+SESSION_RE = re.compile(r"session\s+([0-9a-f]{8}-[0-9a-f-]{20,})", re.I)
+DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+ADR_RE = re.compile(r"ADR[\s-]?(\d{3,4})")
+
+
+def build():
+    g = Graph()
+
+    # --- discover artifact nodes + the "known name" sets we match against -----
+    skill_files = {}
+    skills_dir = os.path.join(ROOT, "skills")
+    for d in (sorted(os.listdir(skills_dir)) if os.path.isdir(skills_dir) else []):
+        sk = os.path.join(skills_dir, d, "SKILL.md")
+        if os.path.isfile(sk):
+            fm = frontmatter(read(sk))
+            m = re.search(r"^name:\s*(\S+)", fm, re.M)
+            name = m.group(1) if m else d
+            skill_files[name] = sk
+            g.node(f"skill:{name}", "skill", name, rel(sk))
+
+    cmd_files = {}
+    for f in listfiles("commands", ".md"):
+        name = os.path.splitext(os.path.basename(f))[0]
+        cmd_files[name] = f
+        g.node(f"command:{name}", "command", f"/{name}", rel(f))
+
+    agent_files = {}
+    for f in listfiles("agents", ".md"):
+        name = os.path.splitext(os.path.basename(f))[0]
+        agent_files[name] = f
+        g.node(f"agent:{name}", "agent", name, rel(f))
+
+    hook_files = {}
+    for f in listfiles("hooks", ".py"):
+        name = os.path.splitext(os.path.basename(f))[0]
+        hook_files[name] = f
+        g.node(f"hook:{name}", "hook", f"{name}.py", rel(f))
+
+    # ADRs (files = real; references to missing ones get flagged later)
+    adr_files = {}
+    for f in listfiles("memory/decisions", ".md"):
+        m = re.match(r"(\d{3,4})", os.path.basename(f))
+        if m:
+            num = m.group(1).zfill(4)
+            adr_files[num] = f
+            g.node(f"adr:{num}", "adr",
+                   os.path.splitext(os.path.basename(f))[0], rel(f))
+
+    # CLI subcommands from bin/harness (argparse add_parser)
+    harness_src = read(os.path.join(ROOT, "bin", "harness"))
+    cli_subcmds = set(re.findall(r"add_parser\(\s*[\"']([a-z][a-z-]+)[\"']", harness_src))
+    if not cli_subcmds:  # fallback to the docstring's Subcommands: block
+        cli_subcmds = {"predict", "outcome", "stats", "corrections", "skill-fired",
+                       "skill-stats", "followup", "approve", "gc"}
+    for sc in sorted(cli_subcmds):
+        g.node(f"cli:{sc}", "cli", f"harness {sc}", "bin/harness")
+
+    # config + kernel + lint + evals
+    for cfg in ("settings.json", "autonomy.json", "features.json"):
+        if os.path.isfile(os.path.join(ROOT, cfg)):
+            g.node(f"config:{cfg}", "config", cfg, cfg)
+    g.node("kernel:CLAUDE.md", "kernel", "CLAUDE.md (kernel)", "CLAUDE.md")
+    if os.path.isfile(os.path.join(ROOT, "lint", "lint_harness.py")):
+        g.node("lint:lint_harness", "lint", "lint_harness.py", "lint/lint_harness.py")
+    if os.path.isdir(os.path.join(ROOT, "evals")):
+        g.node("evals:corpus", "evals", "evals/ (regression corpus)", "evals")
+
+    # known state ledgers (from bin/harness constants + literal refs)
+    state_files = set(re.findall(r"([a-z_]+)\.jsonl", harness_src))
+    for name in ("predictions", "corrections", "skill_usage", "followups", "approvals"):
+        state_files.add(name)
+
+    # ---- iterate every text artifact, harvest edges -------------------------
+    def scan(node_id, path):
+        text = read(path)
+        fm = frontmatter(text)
+        body = text[len(fm):] if fm else text
+        self_name = node_id.split(":", 1)[-1]
+
+        # (2) born_in — provenance lineage
+        prov_blob = fm if "provenance" in fm else (text[:1500] if "provenance:" in text[:1500] else "")
+        sm = SESSION_RE.search(prov_blob)
+        if sm:
+            short = sm.group(1)[:8]
+            dm = DATE_RE.search(prov_blob)
+            g.node(f"session:{short}", "session",
+                   f"{short} ({dm.group(1) if dm else '?'})",
+                   date=(dm.group(1) if dm else None))
+            g.edge(node_id, f"session:{short}", "born_in")
+
+        # (3) cites — skill references (matched against known skill names)
+        for name in skill_files:
+            if name == self_name:
+                continue
+            pat = r"(?:skills?:?\s+`?{0}`?|`{0}`|skills/{0}\b)".format(re.escape(name))
+            if re.search(pat, body):
+                g.edge(node_id, f"skill:{name}", "cites")
+
+        # (4) invokes — CLI subcommands (harness <subcmd>)
+        for sc in cli_subcmds:
+            if re.search(r"harness[\"']?\s+" + re.escape(sc) + r"\b", body):
+                g.edge(node_id, f"cli:{sc}", "invokes")
+
+        # (5) spawns — agent references (word-boundary, known agents only)
+        for name in agent_files:
+            if name == self_name:
+                continue
+            if re.search(r"\b" + re.escape(name) + r"\b", body):
+                g.edge(node_id, f"agent:{name}", "spawns")
+
+        # (6) references — ADRs
+        for num in set(m.zfill(4) for m in ADR_RE.findall(body)):
+            if f"adr:{num}" not in g.nodes:
+                g.node(f"adr:{num}", "adr", f"ADR-{num} (referenced, no file)", missing=True)
+            g.edge(node_id, f"adr:{num}", "references")
+
+        # (7) touches — state ledgers (hooks + CLI + kernel only)
+        if node_id.startswith(("hook:", "cli:")) or node_id == "kernel:CLAUDE.md":
+            for st in state_files:
+                if re.search(re.escape(st) + r"\.jsonl", text):
+                    g.node(f"state:{st}", "state", f"{st}.jsonl", file=f"state/{st}.jsonl")
+                    g.edge(node_id, f"state:{st}", "touches")
+
+    for name, f in skill_files.items():
+        scan(f"skill:{name}", f)
+    for name, f in cmd_files.items():
+        scan(f"command:{name}", f)
+    for name, f in agent_files.items():
+        scan(f"agent:{name}", f)
+    for name, f in hook_files.items():
+        scan(f"hook:{name}", f)
+    scan("kernel:CLAUDE.md", os.path.join(ROOT, "CLAUDE.md"))
+
+    # (1) fires_on — settings.json hook -> lifecycle event wiring
+    try:
+        settings = json.loads(read(os.path.join(ROOT, "settings.json")))
+    except json.JSONDecodeError:
+        settings = {}
+    wired = set()
+    for event, groups in (settings.get("hooks") or {}).items():
+        g.node(f"event:{event}", "event", event)
+        for grp in groups:
+            matcher = grp.get("matcher", "*")
+            for h in grp.get("hooks", []):
+                m = re.search(r"([a-zA-Z0-9_]+)\.py", h.get("command", ""))
+                if not m:
+                    continue
+                hname = m.group(1)
+                wired.add(hname)
+                if f"hook:{hname}" not in g.nodes:
+                    g.node(f"hook:{hname}", "hook", f"{hname}.py")
+                g.edge(f"hook:{hname}", f"event:{event}", "fires_on", matcher=matcher)
+
+    # ---- consistency report (the winner's stated risk: silent edge drops) ----
+    warnings = []
+    for hname in hook_files:
+        if hname not in wired and not hname.startswith("__"):
+            warnings.append(f"hook {hname}.py exists but is NOT wired in settings.json "
+                            f"(library/imported, or dead)")
+    for nid, node in g.nodes.items():
+        if nid.startswith("adr:") and node.get("missing"):
+            warnings.append(f"{nid.split(':')[1]} is referenced but has no file in memory/decisions/")
+
+    return g, warnings, wired
+
+
+# --------------------------------------------------------------------- text render
+def render_text(g, warnings, wired):
+    out = []
+    P = out.append
+    nodes, edges = g.nodes, g.edges
+
+    by_type = {}
+    for n in nodes.values():
+        by_type.setdefault(n["type"], []).append(n)
+    by_etype = {}
+    for e in edges:
+        by_etype.setdefault(e["type"], []).append(e)
+
+    P("=" * 70)
+    P("  THE LIVING HARNESS CARTOGRAPH - Phase 0 (machine-truth graph)")
+    P("=" * 70)
+    P(f"  {len(nodes)} nodes   {len(edges)} edges")
+    P("  nodes by type : " + ", ".join(f"{t}={len(v)}" for t, v in sorted(by_type.items())))
+    P("  edges by type : " + ", ".join(f"{t}={len(v)}" for t, v in sorted(by_etype.items())))
+    P("")
+
+    # nodes grouped by the (curated) 3-loop layout
+    P("-" * 70)
+    P("  NODES BY LOOP  [curated overlay - loop/role are design, not extracted]")
+    P("-" * 70)
+    loop_order = ["inner", "middle", "outer", "kernel", "enforcement", "support"]
+    loop_label = {
+        "inner": "INNER loop  . predict -> act -> score",
+        "middle": "MIDDLE loop . /retro: correction -> route -> PR -> artifact",
+        "outer": "OUTER loop  . /meta-retro: audit -> prune -> autonomy",
+        "kernel": "KERNEL      . genome / regulatory DNA",
+        "enforcement": "ENFORCEMENT . enzymes & lifecycle membranes",
+        "support": "SUPPORT     . referenced lineage & misc",
+    }
+    for lp in loop_order:
+        members = sorted((n for n in nodes.values() if n["loop"] == lp), key=lambda n: n["id"])
+        if not members:
+            continue
+        P(f"\n  [{loop_label[lp]}]  ({len(members)})")
+        for n in members:
+            P(f"      {n['role']:<11} {n['label']}")
+
+    # edges grouped by relation type
+    P("")
+    P("-" * 70)
+    P("  EDGES BY RELATION  [extracted from machine-truth]")
+    P("-" * 70)
+    etype_label = {
+        "fires_on": "fires_on    hook -> lifecycle event   (settings.json)",
+        "born_in": "born_in     artifact -> session        (provenance:)",
+        "cites": "cites       artifact -> skill          (skill refs)",
+        "invokes": "invokes     artifact -> CLI subcommand  (harness <cmd>)",
+        "spawns": "spawns      artifact -> agent          (agent refs)",
+        "references": "references  artifact -> ADR            (ADR NNNN)",
+        "touches": "touches     artifact -> state ledger    (state/*.jsonl)",
+    }
+    for et in ["fires_on", "born_in", "cites", "invokes", "spawns", "references", "touches"]:
+        es = by_etype.get(et, [])
+        if not es:
+            continue
+        P(f"\n  [{etype_label.get(et, et)}]  ({len(es)})")
+        for e in sorted(es, key=lambda e: (e["source"], e["target"])):
+            extra = f"  ({e['matcher']})" if e.get("matcher") and e["matcher"] != "*" else ""
+            P(f"      {e['source']:<28} -> {e['target']}{extra}")
+
+    # consistency report
+    P("")
+    P("-" * 70)
+    P(f"  CONSISTENCY REPORT  ({len(warnings)} warnings)")
+    P("-" * 70)
+    if warnings:
+        for w in warnings:
+            P(f"      ! {w}")
+    else:
+        P("      (clean - every hook wired, every ADR resolved)")
+    P("")
+    return "\n".join(out)
+
+
+# --------------------------------------------------------------- Phase 2: live overlay
+def read_jsonl(path):
+    rows = []
+    if not os.path.isfile(path):
+        return rows
+    for line in read(path).splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return rows
+
+
+def compute_overlay(g):
+    """Read the gitignored state/ hot logs and project them onto the graph.
+
+    Returns a summary dict AND tags skill/command nodes with a `fires` count.
+    Everything here is live machine-state, not structure — the renderer shows
+    it as a toggleable overlay so it never masquerades as topology.
+    """
+    state = os.path.join(ROOT, "state")
+    usage = read_jsonl(os.path.join(state, "skill_usage.jsonl"))
+    fires = {}
+    for rec in usage:
+        s = rec.get("skill")
+        if s:
+            fires[s] = fires.get(s, 0) + 1
+
+    preds = read_jsonl(os.path.join(state, "predictions.jsonl"))
+    hit = miss = unscored = 0
+    by_cat = {}
+    for p in preds:
+        r = p.get("result")
+        c = by_cat.setdefault(p.get("category", "?"), {"hit": 0, "miss": 0, "open": 0})
+        if r == "hit":
+            hit += 1; c["hit"] += 1
+        elif r == "miss":
+            miss += 1; c["miss"] += 1
+        else:
+            unscored += 1; c["open"] += 1
+
+    corrections = read_jsonl(os.path.join(state, "corrections.jsonl"))
+    followups = read_jsonl(os.path.join(state, "followups.jsonl"))
+    open_fu = sum(1 for f in followups if f.get("status") != "done")
+
+    # tag nodes (skill_usage logs skills AND commands run via the Skill tool)
+    for n in g.nodes.values():
+        name = n["id"].split(":", 1)[-1]
+        if n["type"] in ("skill", "command") and name in fires:
+            n["fires"] = fires[name]
+
+    return {
+        "skill_fires": dict(sorted(fires.items(), key=lambda kv: -kv[1])),
+        "predictions": {
+            "total": len(preds), "hit": hit, "miss": miss, "unscored": unscored,
+            "hit_rate": round(hit / (hit + miss), 3) if (hit + miss) else None,
+            "by_category": by_cat,
+        },
+        "corrections_total": len(corrections),
+        "followups_open": open_fu,
+    }
+
+
+# ----------------------------------------------------------- Phase 3: git birth dates
+def attach_git_dates(g):
+    """Tag each node with the date its backing file was first ADDED to git, so the
+    renderer's time-slider can replay the harness growing. One git pass, no checkout.
+    Scaffolding without a file (events, loop parents) inherits the earliest date so
+    it never disappears from the animation."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", ROOT, "log", "--diff-filter=A", "--reverse",
+             "--name-only", "--date=short", "--format=__C__%ad"],
+            capture_output=True, text=True, timeout=60).stdout
+    except (OSError, subprocess.SubprocessError):
+        out = ""
+    first = {}
+    cur = None
+    for line in out.splitlines():
+        if line.startswith("__C__"):
+            cur = line[5:].strip()
+        elif line.strip() and cur:
+            p = line.strip()
+            first.setdefault(p, cur)
+    dates = [d for d in first.values() if d]
+    earliest = min(dates) if dates else "2026-01-01"
+    for n in g.nodes.values():
+        f = n.get("file")
+        if f and f in first:
+            n["added"] = first[f]
+        elif n["type"] == "session" and n.get("date"):
+            n["added"] = n["date"]
+        else:
+            n["added"] = earliest
+    all_dates = sorted({n.get("added") for n in g.nodes.values() if n.get("added")})
+    return all_dates
+
+
+# ------------------------------------------------------------- Phase 1-3: HTML render
+ROLE_COLORS = {
+    "nucleus": "#b15cff", "enzyme": "#ff5c5c", "cytoplasm": "#f2d65c",
+    "ribosome": "#4fcf6b", "organelle": "#4f9bff", "receptor": "#2fd0c8",
+    "transporter": "#ff9f43", "checkpoint": "#ff3b6b", "selection": "#9aa7b5",
+    "regulatory": "#c08457", "membrane": "#8893a5", "lineage": "#6d7b8d", "?": "#888888",
+}
+EDGE_COLORS = {
+    "fires_on": "#ff5c5c", "born_in": "#6d7b8d", "cites": "#4fcf6b",
+    "invokes": "#ff9f43", "spawns": "#4f9bff", "references": "#b15cff", "touches": "#f2d65c",
+}
+LOOP_LABEL = {
+    "inner": "INNER · predict→act→score", "middle": "MIDDLE · /retro",
+    "outer": "OUTER · /meta-retro", "kernel": "KERNEL · genome",
+    "enforcement": "ENFORCEMENT · hooks+membranes", "support": "SUPPORT",
+}
+
+
+def render_html(g, overlay, dates):
+    payload = {
+        "nodes": list(g.nodes.values()),
+        "edges": g.edges,
+        "overlay": overlay,
+        "dates": dates,
+        "root": ROOT.replace("\\", "/"),
+        "roleColors": ROLE_COLORS,
+        "edgeColors": EDGE_COLORS,
+        "loopLabel": LOOP_LABEL,
+    }
+    data_json = json.dumps(payload).replace("</", "<\\/")
+    head = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Living Harness Cartograph</title>
+<style>
+  :root{--bg:#0c1016;--panel:#141b24;--line:#26303d;--ink:#cdd6e0;--mut:#7f8ea3;}
+  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);
+    color:var(--ink);font:13px/1.4 "Segoe UI",system-ui,sans-serif}
+  #app{display:flex;flex-direction:column;height:100vh}
+  #bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 12px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  #bar h1{font-size:14px;margin:0 12px 0 0;font-weight:700;letter-spacing:.3px}
+  #bar .grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    padding:3px 8px;border:1px solid var(--line);border-radius:6px}
+  #bar label{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;color:var(--mut)}
+  #bar .sw{width:9px;height:9px;border-radius:2px;display:inline-block}
+  #bar button{background:#1d2733;color:var(--ink);border:1px solid var(--line);
+    border-radius:5px;padding:3px 9px;cursor:pointer;font-size:11px}
+  #bar button:hover{background:#27333f}
+  #bar input[type=search]{background:#0c1016;border:1px solid var(--line);color:var(--ink);
+    border-radius:5px;padding:3px 7px;font-size:11px;width:140px}
+  #bar input[type=range]{width:150px}
+  #slabel{font-size:11px;color:var(--mut);min-width:74px;display:inline-block}
+  #main{flex:1;display:flex;min-height:0}
+  #cy{flex:1;min-width:0}
+  #side{width:330px;background:var(--panel);border-left:1px solid var(--line);
+    overflow:auto;padding:12px;font-size:12px}
+  #side h2{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);
+    margin:14px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
+  #side h2:first-child{margin-top:0}
+  #detail .k{color:var(--mut);display:inline-block;width:64px}
+  #detail .edge{padding:2px 0;border-bottom:1px dotted var(--line);font-size:11px}
+  #detail a,#side a{color:#5db0ff;text-decoration:none;word-break:break-all}
+  .pill{display:inline-block;padding:1px 6px;border-radius:9px;font-size:10px;color:#0c1016;font-weight:700}
+  .legrow{display:flex;align-items:center;gap:6px;padding:1px 0;font-size:11px;color:var(--mut)}
+  .legrow .sw{width:11px;height:11px;border-radius:3px}
+  .stat{display:flex;justify-content:space-between;padding:1px 0}
+  .stat b{color:#fff}
+  .muted{color:var(--mut)}
+  #warn{color:#ffb454}
+</style></head><body><div id="app">
+<div id="bar">
+  <h1>🧫 Living Harness Cartograph</h1>
+  <div class="grp" id="edgefilters"></div>
+  <div class="grp"><label><input type="checkbox" id="ov"> live overlay</label></div>
+  <div class="grp">⏱ <input type="range" id="slider"><span id="slabel"></span>
+    <button id="play">▶ grow</button></div>
+  <input type="search" id="search" placeholder="find node…">
+  <button id="fit">fit</button>
+</div>
+<div id="main"><div id="cy"></div><div id="side">
+  <div id="detail"><span class="muted">Click any node to inspect it.</span></div>
+  <h2>Legend · role</h2><div id="legend"></div>
+  <h2>Stats · live state</h2><div id="stats"></div>
+</div></div></div>
+"""
+    scripts = ('<script src="vendor/cytoscape.min.js"></script>'
+               '<script src="vendor/layout-base.js"></script>'
+               '<script src="vendor/cose-base.js"></script>'
+               '<script src="vendor/cytoscape-fcose.js"></script>')
+    data = "<script>const DATA = " + data_json + ";</script>"
+    app = r"""<script>
+if (typeof cytoscape === 'undefined') {
+  document.getElementById('cy').innerHTML =
+    '<p style="color:#ff6b6b;padding:20px">Cytoscape failed to load. '+
+    'Re-run: python cartograph/extract.py --html (needs cartograph/vendor/*.js).</p>';
+} else {
+try { if (window.cytoscapeFcose) cytoscape.use(window.cytoscapeFcose); } catch(e){}
+const RC = DATA.roleColors, EC = DATA.edgeColors, LL = DATA.loopLabel;
+const NODE = {}; DATA.nodes.forEach(n => NODE[n.id] = n);
+
+const loops = {}; DATA.nodes.forEach(n => loops[n.loop] = true);
+const els = [];
+Object.keys(loops).forEach(lp => els.push({data:{id:'loop:'+lp, label:(LL[lp]||lp), isLoop:1, loop:lp}}));
+DATA.nodes.forEach(n => els.push({data:{
+  id:n.id, label:n.label, type:n.type, role:n.role, loop:n.loop,
+  file:n.file||'', fires:n.fires||0, added:n.added||'', parent:'loop:'+n.loop}}));
+DATA.edges.forEach((e,i) => els.push({data:{
+  id:'e'+i, source:e.source, target:e.target, etype:e.type, matcher:e.matcher||''}}));
+
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  elements: els,
+  wheelSensitivity: 0.25,
+  style: [
+    {selector:'node[?isLoop]', style:{
+      'background-opacity':0.05,'background-color':'#9fb0c3','shape':'round-rectangle',
+      'border-width':1,'border-color':'#2b3645','border-style':'dashed','label':'data(label)',
+      'text-valign':'top','text-halign':'center','color':'#6f7e93','font-size':13,
+      'font-weight':'bold','padding':'26px','text-margin-y':-3}},
+    {selector:'node[!isLoop]', style:{
+      'background-color': e => RC[e.data('role')]||'#888','label':'data(label)','font-size':9,
+      'color':'#c3ccd6','text-valign':'center','text-halign':'right','text-margin-x':3,
+      'width':17,'height':17,'border-width':1,'border-color':'#0c1016'}},
+    {selector:'node.fired', style:{'border-color':'#ffe680','border-width':3,
+      'width':25,'height':25,'font-size':10,'color':'#fff'}},
+    {selector:'edge', style:{'width':1,'curve-style':'bezier','opacity':0.5,
+      'line-color': e => EC[e.data('etype')]||'#556','target-arrow-shape':'triangle',
+      'target-arrow-color': e => EC[e.data('etype')]||'#556','arrow-scale':0.65}},
+    {selector:'.dim', style:{'opacity':0.07,'text-opacity':0.07}},
+    {selector:'node.hl', style:{'border-color':'#fff','border-width':2,'opacity':1,'text-opacity':1}},
+    {selector:'edge.hl', style:{'opacity':1,'width':2.5}}
+  ],
+  layout: {name:'grid'}
+});
+
+// Run the real layout after init, in a try/catch, so a missing/broken fcose
+// extension gracefully degrades (grid -> cose -> concentric) instead of blanking.
+function runLayout(){
+  const opts={animate:false,nodeRepulsion:9000,idealEdgeLength:70,nestingFactor:0.1,
+    padding:20,nodeSeparation:90,packComponents:true,randomize:true};
+  try { cy.layout(Object.assign({name:'fcose'},opts)).run(); }
+  catch(e){ try{ cy.layout({name:'cose',animate:false,padding:20}).run(); }
+            catch(e2){ cy.layout({name:'concentric',animate:false}).run(); } }
+  cy.fit(null,30);
+}
+runLayout();
+
+// --- edge-type filters ---
+const etypes = [...new Set(DATA.edges.map(e=>e.type))];
+const enabled = new Set(etypes);
+const ef = document.getElementById('edgefilters');
+etypes.forEach(t => {
+  const l = document.createElement('label');
+  l.innerHTML = '<input type="checkbox" checked data-t="'+t+'"><span class="sw" style="background:'+(EC[t]||'#556')+'"></span>'+t;
+  ef.appendChild(l);
+});
+ef.addEventListener('change', e => {
+  const t = e.target.getAttribute('data-t');
+  if (!t) return;
+  e.target.checked ? enabled.add(t) : enabled.delete(t);
+  applyFilters();
+});
+
+// --- time slider ---
+const slider = document.getElementById('slider'), slabel = document.getElementById('slabel');
+slider.min = 0; slider.max = Math.max(0, DATA.dates.length-1); slider.value = slider.max;
+function selDate(){ return DATA.dates[+slider.value] || DATA.dates[DATA.dates.length-1] || '9999'; }
+slider.addEventListener('input', ()=>{ slabel.textContent = '≤ '+selDate(); applyFilters(); });
+
+function applyFilters(){
+  const sel = selDate();
+  cy.batch(()=>{
+    cy.nodes('[!isLoop]').forEach(n=>{
+      const a = n.data('added');
+      n.style('display', (!a || a <= sel) ? 'element' : 'none');
+    });
+    cy.edges().forEach(e=>{
+      const ok = enabled.has(e.data('etype'))
+        && e.source().style('display')!=='none' && e.target().style('display')!=='none';
+      e.style('display', ok ? 'element':'none');
+    });
+  });
+}
+
+// --- play / grow animation ---
+let playing=null;
+document.getElementById('play').addEventListener('click', function(){
+  if(playing){clearInterval(playing);playing=null;this.textContent='▶ grow';return;}
+  this.textContent='⏸ pause'; slider.value=0; slabel.textContent='≤ '+selDate(); applyFilters();
+  const btn=this;
+  playing=setInterval(()=>{
+    if(+slider.value>=+slider.max){clearInterval(playing);playing=null;btn.textContent='▶ grow';return;}
+    slider.value=+slider.value+1; slabel.textContent='≤ '+selDate(); applyFilters();
+  },650);
+});
+
+// --- overlay (live state) ---
+document.getElementById('ov').addEventListener('change', e=>{
+  if(e.target.checked) cy.nodes('[!isLoop]').forEach(n=>{ if((n.data('fires')||0)>0) n.addClass('fired'); });
+  else cy.nodes().removeClass('fired');
+});
+
+// --- highlight + detail ---
+function clearHL(){ cy.elements().removeClass('dim hl'); }
+cy.on('tap','node', evt=>{
+  const n=evt.target; if(n.data('isLoop')) return;
+  cy.elements().addClass('dim'); n.closedNeighborhood().removeClass('dim').addClass('hl');
+  showDetail(n);
+});
+cy.on('tap', evt=>{ if(evt.target===cy){ clearHL(); } });
+
+function srcLink(file){
+  if(!file) return '<span class="muted">—</span>';
+  return '<a href="vscode://file/'+encodeURI(DATA.root+'/'+file)+'">'+file+'</a>';
+}
+function showDetail(n){
+  const d=n.data(); const node=NODE[d.id]||{};
+  let h='<h2>'+d.label+'</h2>';
+  h+='<div><span class="k">type</span><span class="pill" style="background:'+(RC[d.role]||'#888')+'">'+d.role+'</span> '+d.type+'</div>';
+  h+='<div><span class="k">loop</span>'+d.loop+'</div>';
+  h+='<div><span class="k">file</span>'+srcLink(d.file)+'</div>';
+  h+='<div><span class="k">added</span>'+(d.added||'—')+'</div>';
+  if((d.fires||0)>0) h+='<div><span class="k">fires</span><b>'+d.fires+'</b> this window</div>';
+  if(node.missing) h+='<div id="warn">⚠ referenced but no file on disk</div>';
+  const out=n.outgoers('edge'), inc=n.incomers('edge');
+  h+='<h2>out · '+out.length+'</h2>';
+  out.forEach(e=> h+='<div class="edge"><span class="sw" style="background:'+(EC[e.data('etype')]||'#556')+';display:inline-block;width:8px;height:8px;border-radius:2px"></span> '+e.data('etype')+' → '+(NODE[e.target().id()]?NODE[e.target().id()].label:e.target().id())+'</div>');
+  h+='<h2>in · '+inc.length+'</h2>';
+  inc.forEach(e=> h+='<div class="edge">'+(NODE[e.source().id()]?NODE[e.source().id()].label:e.source().id())+' '+e.data('etype')+' →</div>');
+  document.getElementById('detail').innerHTML=h;
+}
+
+// --- search ---
+document.getElementById('search').addEventListener('input', e=>{
+  const q=e.target.value.trim().toLowerCase(); clearHL();
+  if(!q) return;
+  const m=cy.nodes('[!isLoop]').filter(n=>(n.data('label')||'').toLowerCase().includes(q));
+  if(m.length){ cy.elements().addClass('dim'); m.removeClass('dim').addClass('hl'); cy.fit(m,80); }
+});
+document.getElementById('fit').addEventListener('click', ()=>{ clearHL(); cy.fit(null,30); });
+
+// --- legend + stats ---
+const seenRoles=[...new Set(DATA.nodes.map(n=>n.role))];
+document.getElementById('legend').innerHTML = seenRoles.map(r=>
+  '<div class="legrow"><span class="sw" style="background:'+(RC[r]||'#888')+'"></span>'+r+'</div>').join('');
+const ov=DATA.overlay, p=ov.predictions;
+let s='<div class="stat"><span>nodes / edges</span><b>'+DATA.nodes.length+' / '+DATA.edges.length+'</b></div>';
+s+='<div class="stat"><span>predictions</span><b>'+p.total+'</b></div>';
+s+='<div class="stat"><span>hit / miss / open</span><b>'+p.hit+' / '+p.miss+' / '+p.unscored+'</b></div>';
+s+='<div class="stat"><span>hit-rate</span><b>'+(p.hit_rate!=null?(p.hit_rate*100).toFixed(0)+'%':'—')+'</b></div>';
+s+='<div class="stat"><span>corrections</span><b>'+ov.corrections_total+'</b></div>';
+s+='<div class="stat"><span>open follow-ups</span><b>'+ov.followups_open+'</b></div>';
+const tops=Object.entries(ov.skill_fires).slice(0,6);
+if(tops.length){ s+='<h2>top fired</h2>'; tops.forEach(([k,v])=> s+='<div class="stat"><span>'+k+'</span><b>'+v+'</b></div>'); }
+document.getElementById('stats').innerHTML=s;
+
+slabel.textContent='≤ '+selDate();
+}
+</script></body></html>"""
+    return head + scripts + data + app
+
+
+def main():
+    ap = argparse.ArgumentParser(description="read-only cartograph extractor")
+    ap.add_argument("--json", nargs="?", const=os.path.join(ROOT, "cartograph", "map.json"),
+                    metavar="PATH", help="also write nodes+edges json (default cartograph/map.json)")
+    ap.add_argument("--html", nargs="?", const=os.path.join(ROOT, "cartograph", "index.html"),
+                    metavar="PATH", help="write the interactive page (default cartograph/index.html); "
+                                         "implies the live-state overlay + git time-slider")
+    ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
+    args = ap.parse_args()
+
+    g, warnings, wired = build()
+
+    # Phases 2-3 enrich the graph in place; only needed when rendering/exporting.
+    overlay, dates = None, None
+    if args.html or args.json:
+        overlay = compute_overlay(g)
+        dates = attach_git_dates(g)
+
+    if not args.quiet:
+        sys.stdout.write(render_text(g, warnings, wired))
+
+    if args.json:
+        os.makedirs(os.path.dirname(args.json), exist_ok=True)
+        payload = {
+            "nodes": list(g.nodes.values()),
+            "edges": g.edges,
+            "overlay": overlay,
+            "dates": dates,
+            "warnings": warnings,
+            "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges)},
+        }
+        with open(args.json, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+        sys.stderr.write(f"\nwrote {rel(args.json)} "
+                         f"({len(g.nodes)} nodes, {len(g.edges)} edges)\n")
+
+    if args.html:
+        os.makedirs(os.path.dirname(args.html), exist_ok=True)
+        with open(args.html, "w", encoding="utf-8") as fh:
+            fh.write(render_html(g, overlay, dates))
+        sys.stderr.write(f"\nwrote {rel(args.html)} "
+                         f"({len(g.nodes)} nodes, {len(g.edges)} edges, "
+                         f"{len(dates)} time-steps) - open it in a browser\n")
+
+
+if __name__ == "__main__":
+    main()

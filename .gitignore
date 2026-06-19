@@ -16,3 +16,10 @@ HUMAN_APPROVED
 # Ventures are outputs, not the harness brain — kept on disk, not in the trunk.
 # Each venture is its own repo (or untracked working dir) under products/<slug>/.
 products/
+# Living Harness Cartograph: generated + vendored build artifacts. Only the
+# source extractor (cartograph/extract.py) is tracked; regenerate the rest with
+# `python cartograph/extract.py --html`. map.json/index.html embed volatile live
+# state, and vendor/ is third-party JS — none belong in the trunk.
+cartograph/vendor/
+cartograph/index.html
+cartograph/map.json
