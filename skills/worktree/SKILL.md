@@ -36,9 +36,13 @@ collide, make it.
   there.
 - **Base ref:** new worktrees branch from **`origin/HEAD`** by default — a clean
   tree matching the remote, NOT your local uncommitted work. To carry unpushed
-  local commits instead, set `worktree.baseRef: "head"` in
-  `.claude/settings.json` (create that file; this repo currently sets no
-  `worktree.*` keys).
+  local commits instead, set `worktree.baseRef: "head"` (project-level
+  `.claude/settings.json`, or your account config). This repo's live account
+  config (`.claude-private/accounts/<name>/settings.json`, gitignored) sets
+  `worktree.baseRef: "fresh"` — the default (branch from `origin/<default-branch>`),
+  made explicit; the version-controlled `settings.json` template carries no
+  `worktree.*` block. (Verified 2026-06-18, session 01S8mkwD — live account config
+  contradicted the prior "sets no `worktree.*` keys" claim.)
 
 ## 2. The gotchas (this is why the skill exists)
 
