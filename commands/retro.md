@@ -7,6 +7,10 @@ Run the retrospection procedure (skill: retrospection). Concretely:
 1. Resolve the harness repo install-agnostically — never assume `~/.claude`; resolve it
    in each shell that needs it (shell state does not persist between Bash calls):
    `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
+   **Target the trunk explicitly in every git/file step** (`git -C "$HARNESS" …`,
+   `(cd "$HARNESS" && gh …)`, `"$HARNESS/<path>"`): from a foreign cwd a `cd` does not
+   persist across Bash calls, so a bare `git push` / `gh pr create` would hit the wrong
+   repo (Gap D — proposals/2026-06-18-harness-portability.md).
    Gather signal for THIS session:
    - `"$HARNESS/bin/harness" corrections list`
    - `"$HARNESS/bin/harness" stats` — note this session's unscored ids; score them now.
@@ -14,20 +18,21 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    lines. Take its <=3 events; veto only with a stated reason.
 3. For each accepted event, run the routing tree (skill: routing-learnings) and
    draft the artifact per skill: harness-authoring, on branch
-   `retro/$(date +%F)-<slug>` of the harness repo (`cd "$HARNESS"`).
+   `retro/$(date +%F)-<slug>` of the harness repo
+   (`git -C "$HARNESS" checkout -b retro/$(date +%F)-<slug> origin/main`).
    $ARGUMENTS may name a specific learning to prioritize.
-4. `python3 lint/lint_harness.py` — fix violations before proceeding.
+4. `python3 "$HARNESS/lint/lint_harness.py"` — fix violations before proceeding.
 5. Spawn the **harness-auditor** agent on the diff. Address every finding;
    `requires-human` and enforcement-layer changes stay as draft PRs.
 6. Check `autonomy.json` for each artifact's category:
    - `auto_merge: true` → merge to main, record `proposed+1, accepted+1`.
-   - else → `git push -u origin <branch>` then
-     `gh pr create --title "retro: <slug>" --body-file <(provenance template
-     from commands/harness-pr.md)`; record `proposed+1`.
-7. `touch state/retro_gate_<session_id>`; report to the user: events found,
+   - else → `git -C "$HARNESS" push -u origin <branch>` then
+     `(cd "$HARNESS" && gh pr create --title "retro: <slug>" --body-file <(provenance
+     template from commands/harness-pr.md))`; record `proposed+1`.
+7. `touch "$HARNESS/state/retro_gate_<session_id>"`; report to the user: events found,
    routes chosen, PR links. One line each. If nothing met the signal bar,
    SAY SO and stop — empty retros are honest; padded ones poison the trunk.
-8. **Return to trunk: `git checkout main`** (branch-hygiene). /retro branches
+8. **Return to trunk: `git -C "$HARNESS" checkout main`** (branch-hygiene). /retro branches
    in-place on `retro/<date>-<slug>`; ending the session still on it strands the
    NEXT session on a dead branch (the SessionStart banner flags this, but don't
    create the mess). The drafted work is safe on its pushed branch + PR. If the

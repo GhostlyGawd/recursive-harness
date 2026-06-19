@@ -4,13 +4,16 @@ description: Score pending predictions and review calibration stats. Run every ~
 
 1. Resolve the CLI install-agnostically (never assume `~/.claude`; resolve per shell):
    `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
+   This command operates entirely on the trunk: address every file as `"$HARNESS/<path>"`
+   (a relative path would misroute from a foreign project's cwd — Gap D,
+   proposals/2026-06-18-harness-portability.md).
    `"$HARNESS/bin/harness" stats` — list pending prediction ids.
 2. For each pending id you can still evaluate, score honestly:
    `"$HARNESS/bin/harness" outcome <id> --result hit|miss --notes "<what actually happened>"`.
    Can't reconstruct the outcome? Score it `miss --notes "unverifiable"` —
    unfalsifiable predictions failing-open teaches you to write checkable ones.
 3. Re-run `"$HARNESS/bin/harness" stats`. For any bucket or category flagged OVERCONFIDENT:
-   - append a dated line to memory/calibration/notes.md naming the category
+   - append a dated line to `"$HARNESS/memory/calibration/notes.md"` naming the category
      and the gap (claimed vs. actual);
    - adopt, for that category, the pre-mortem rule from skill: calibration
      (list two ways you could be wrong; check one before acting).

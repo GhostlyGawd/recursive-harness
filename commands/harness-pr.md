@@ -6,8 +6,10 @@ For the change described in $ARGUMENTS:
 
 1. Work in the harness repo — resolve it install-agnostically (never assume `~/.claude`;
    resolve in each shell, state does not persist):
-   `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"; cd "$HARNESS"`.
-   `git fetch origin` first and branch
+   `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
+   **Target the trunk EXPLICITLY** — from a foreign cwd `cd` doesn't persist between Bash calls,
+   so use `git -C "$HARNESS" …`, `(cd "$HARNESS" && gh …)`, files `"$HARNESS/<path>"` (Gap D).
+   `git -C "$HARNESS" fetch origin` first and branch
    `proposal/$(date +%F)-<slug>` off `origin/main`, NOT a possibly-stale local
    `main` — a stale base makes `gh pr merge`'s diffstat surface files already on
    the remote as if they were yours, reading as phantom scope-creep.
@@ -34,11 +36,13 @@ For the change described in $ARGUMENTS:
          never reaches the PR, so **quote the verbatim grant in the PR body**
          (`## Approval`) — that committed line is the only grant evidence the
          merging human and a fresh-context auditor can see.
-3. `python3 lint/lint_harness.py` — must be clean.
+3. `python3 "$HARNESS/lint/lint_harness.py"` — must be clean.
 4. Spawn **harness-auditor** on the diff; address findings. If the diff
    touches enforcement paths, also run /run-evals now and paste the report
    into the PR body — the regression gate is procedural (ADR 0003).
-5. Push and `gh pr create` with body:
+5. Push with `git -C "$HARNESS" push -u origin <branch>`, then create the PR inside a
+   single `(cd "$HARNESS" && gh pr create …)` invocation (so it targets the trunk's
+   remote, never a foreign cwd's), with body:
 
    ## What
    <one sentence>
@@ -57,7 +61,7 @@ For the change described in $ARGUMENTS:
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
    Otherwise leave for human review — and say so without grumbling.
-7. **Return to trunk: `git checkout main`** (branch-hygiene). This flow branches
+7. **Return to trunk: `git -C "$HARNESS" checkout main`** (branch-hygiene). This flow branches
    in-place in the MAIN checkout; if you end the session still on `proposal/*`,
    that branch persists across sessions and silently strands the NEXT session on
    a dead branch (the SessionStart banner now flags it, but don't create the

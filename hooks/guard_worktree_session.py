@@ -115,6 +115,7 @@ _WT_RE = re.compile(
     re.IGNORECASE,
 )
 
+HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _MAP_REL = ("state", "session_owners.json")
 # Fixed, deliberately NOT environment-overridable. A per-session env knob to
 # shorten the TTL would be a SELF-ASSERTABLE BYPASS: a second session sets it
@@ -490,6 +491,21 @@ def main() -> int:
             return 0  # no tree to scope to
         tree, repo = _resolve(cwd)
         if not tree or not repo:
+            return 0
+
+        # Scope: Guard B governs the HARNESS trunk + its OWN worktrees only. In any
+        # other repo (a foreign project reached via the fleet CLAUDE_CONFIG_DIR),
+        # _resolve(cwd) returns that repo as `repo`; acting there would write
+        # `<foreign-repo>/state/session_owners.json` into a project that is not ours
+        # (Gap B of the portability proposal). `repo` is the worktree-aware root (a
+        # harness `.claude/worktrees/<name>` strips back to HARNESS_ROOT in _resolve),
+        # so this no-ops outside the harness while leaving trunk + harness-worktree
+        # protection byte-for-byte unchanged. Deliberately NOT env-overridable: a
+        # HARNESS_ROOT env knob would be a self-assertable bypass (a session could
+        # point it elsewhere to disable Guard B for the real harness) -- the same
+        # anti-pattern barred for _TTL_SECONDS above. (Fix B, 2026-06-18, session
+        # d7de6b55; spec proposals/2026-06-18-harness-portability.md.)
+        if os.path.normcase(repo) != os.path.normcase(HARNESS_ROOT):
             return 0
 
         event = data.get("hook_event_name", "PreToolUse")

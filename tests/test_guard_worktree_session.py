@@ -36,6 +36,7 @@ Block-cases assert 'BLOCKED'+'worktree' in stderr so a MISSING hook (exit 2 with
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -43,10 +44,19 @@ import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOOK = os.environ.get(
+# The REAL hook (its HARNESS_ROOT == this repo). Used as a FALLBACK for payloads with
+# no resolvable repo copy -- garbage / no-cwd (fail open before the scope check) and a
+# FOREIGN repo with no copy (which exercises the real Fix-B scope no-op). Synthetic
+# repos from new_main_tree() install their OWN copy so the hook's HARNESS_ROOT == that
+# repo and Fix B's `repo == HARNESS_ROOT` check passes there. Without that, every
+# fixture's tempdir cwd would be != the real HARNESS_ROOT and the whole suite would
+# silently no-op (auditor F2, 2026-06-18).
+_HOOK_SRC = os.environ.get(
     "GUARD_B_HOOK", os.path.join(ROOT, "hooks", "guard_worktree_session.py")
 )
 MAP_REL = os.path.join("state", "session_owners.json")
+_WT_RE = re.compile(
+    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$", re.IGNORECASE)
 FAILURES = []
 _TMPDIRS = []
 
@@ -56,7 +66,18 @@ def run(payload, env_extra=None):
     env.pop("HARNESS_ALLOW_MULTI_SESSION", None)
     if env_extra:
         env.update(env_extra)
-    p = subprocess.run([sys.executable, HOOK], input=json.dumps(payload),
+    # Invoke the hook copy installed in the payload's OWN repo (so HARNESS_ROOT matches
+    # and Fix B's scope check passes). Fall back to the real hook when the cwd has no
+    # resolvable repo copy: garbage/no-cwd payloads (which fail open before the scope
+    # check) and FOREIGN repos with no copy (exactly the Fix-B no-op under test).
+    hook = _HOOK_SRC
+    cwd = payload.get("cwd") if isinstance(payload, dict) else None
+    if isinstance(cwd, str) and cwd.strip():
+        repo = _repo_root_for(cwd)
+        cand = os.path.join(repo, "hooks", "guard_worktree_session.py") if repo else ""
+        if cand and os.path.exists(cand):
+            hook = cand
+    p = subprocess.run([sys.executable, hook], input=json.dumps(payload),
                        capture_output=True, text=True, env=env)
     return p.returncode, p.stdout, p.stderr
 
@@ -123,11 +144,42 @@ def _key(tree):
     return os.path.normcase(os.path.normpath(os.path.abspath(p)))
 
 
+def _norm(p):
+    r"""Normalize a path for filesystem lookup of an installed hook copy (strip \\?\,
+    expanduser, abspath, normpath; NO normcase -- we only need a real path)."""
+    return os.path.normpath(os.path.abspath(_strip_extended(os.path.expanduser(p))))
+
+
+def _repo_root_for(cwd):
+    """Mirror the hook's repo resolution so run() can find which installed copy to
+    invoke: a `.claude/worktrees/<name>` cwd strips to the main checkout; else the
+    nearest ancestor with a `.git` entry; else the normalized cwd."""
+    norm = _norm(cwd)
+    m = _WT_RE.match(norm)
+    if m:
+        return os.path.dirname(os.path.dirname(os.path.dirname(m.group(1))))
+    d = norm
+    for _ in range(80):
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    return norm
+
+
 def new_main_tree():
-    """Fake main checkout: a temp dir holding a `.git` DIRECTORY."""
+    """Fake main checkout that doubles as its OWN HARNESS_ROOT: a temp dir with a `.git`
+    DIRECTORY and an installed byte-identical copy of Guard B at `<d>/hooks/`. The copy
+    computes HARNESS_ROOT == d, so Fix B's `repo == HARNESS_ROOT` scope check passes for
+    cwds inside d and its worktrees -- exercising the real guard logic in a sandbox
+    instead of silently no-opping."""
     d = tempfile.mkdtemp(prefix="guardb_main_")
     _TMPDIRS.append(d)
     os.mkdir(os.path.join(d, ".git"))
+    os.makedirs(os.path.join(d, "hooks"), exist_ok=True)
+    shutil.copyfile(_HOOK_SRC, os.path.join(d, "hooks", "guard_worktree_session.py"))
     return d
 
 
@@ -389,15 +441,15 @@ check("corrupt ts=Infinity (raw json token): newcomer allowed, no exit-1 crash",
 # 11. Fail OPEN: malformed / pathological / missing-id must NEVER brick (never
 #     exit anything but 0/2). Includes deeply-nested JSON -> RecursionError.
 # =====================================================================
-p = subprocess.run([sys.executable, HOOK], input="not json{{", capture_output=True, text=True)
+p = subprocess.run([sys.executable, _HOOK_SRC], input="not json{{", capture_output=True, text=True)
 check("fails open on garbage stdin", p.returncode == 0, f"rc={p.returncode}")
 
 deep = "[" * 6000 + "]" * 6000  # RecursionError in json.load — must still exit 0
-p = subprocess.run([sys.executable, HOOK], input=deep, capture_output=True, text=True)
+p = subprocess.run([sys.executable, _HOOK_SRC], input=deep, capture_output=True, text=True)
 check("deeply-nested JSON fails OPEN (exit 0, not 1)", p.returncode == 0, f"rc={p.returncode} err={p.stderr[:60]}")
 
 deep_payload = '{"session_id":"A","cwd":"/x","hook_event_name":"PreToolUse","tool_input":' + "[" * 6000 + "]" * 6000 + "}"
-p = subprocess.run([sys.executable, HOOK], input=deep_payload, capture_output=True, text=True)
+p = subprocess.run([sys.executable, _HOOK_SRC], input=deep_payload, capture_output=True, text=True)
 check("deeply-nested value inside a real payload fails OPEN (exit 0)", p.returncode == 0, f"rc={p.returncode}")
 
 repo7 = new_main_tree()
@@ -410,7 +462,7 @@ check("missing session_id did NOT write any owner", owner_of(repo7) is None, rea
 rc, _, _ = run(pl({"file_path": os.path.join(repo7, "a")}, repo7, session=""))
 check("blank session_id fails open (allowed)", rc == 0, f"rc={rc}")
 
-p = subprocess.run([sys.executable, HOOK], input='["a","b"]', capture_output=True, text=True)
+p = subprocess.run([sys.executable, _HOOK_SRC], input='["a","b"]', capture_output=True, text=True)
 check("non-dict json fails open", p.returncode == 0, f"rc={p.returncode}")
 rc, _, _ = run({"hook_event_name": "PreToolUse", "tool_name": "Read",
                 "tool_input": "oops", "cwd": repo7, "session_id": "Z"})
@@ -571,6 +623,23 @@ check("throttle: re-warn AFTER cooldown lapses fires again", warned(rc, out),
 rc, out, _ = th_call(sid="TH_NEW")
 check("throttle: a churned/new session_id re-warns once (cooldown reset)",
       warned(rc, out), f"rc={rc} out={out[:120]}")
+
+# =====================================================================
+# 16. Fix B (2026-06-18): Guard B no-ops in a FOREIGN repo (repo != HARNESS_ROOT) and
+#     writes NO state/ there. Uses the REAL hook (HARNESS_ROOT == this repo) against a
+#     cwd in an unrelated temp repo with no installed copy -> the production scope no-op.
+# =====================================================================
+_foreign = tempfile.mkdtemp(prefix="guardb_foreign_"); _TMPDIRS.append(_foreign)
+os.mkdir(os.path.join(_foreign, ".git"))  # a real repo, but NOT the harness; no hook copy
+rc, _out, err = run(pl({"file_path": os.path.join(_foreign, "x.py")}, _foreign, session="A"))
+check("foreign repo: Guard B scope no-op (exit 0)", rc == 0, f"rc={rc} err={err[:80]}")
+check("foreign repo: NO state/ written into the foreign tree (Gap B fixed)",
+      not os.path.exists(os.path.join(_foreign, "state")), os.listdir(_foreign))
+# SessionEnd / SessionStart in a foreign repo must also no-op (never write state/).
+run(pl({}, _foreign, session="A", event="SessionEnd", tool=""))
+run(pl({}, _foreign, session="B", event="SessionStart", tool="", source="startup"))
+check("foreign repo: SessionEnd/Start also write no state/",
+      not os.path.exists(os.path.join(_foreign, "state")), os.listdir(_foreign))
 
 for d in _TMPDIRS:
     shutil.rmtree(d, ignore_errors=True)
