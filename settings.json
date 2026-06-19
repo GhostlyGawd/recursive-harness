@@ -15,7 +15,9 @@
       {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_isolation.py"}]},
       {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]},
+      {"matcher": "Edit|Write|MultiEdit|NotebookEdit",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_branch_first.py"}]}
     ],
     "PostToolUse": [
       {"matcher": "Skill",

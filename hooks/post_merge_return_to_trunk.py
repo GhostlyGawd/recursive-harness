@@ -113,9 +113,12 @@ def main() -> int:
         else:
             print(
                 f"[harness] A PR was just merged and HEAD is on '{branch}', not "
-                f"'{default}'. Return to trunk now: `git switch {default}`.\n"
+                f"'{default}'. Return to trunk and refresh it now: "
+                f"`git switch {default} && git fetch origin && git merge --ff-only origin/{default}`.\n"
                 f"(ONE TRUNK: leaving HEAD on a merged/old branch silently strands "
-                f"the next session.)",
+                f"the next session; the just-merged PR is also NOT on your local "
+                f"{default} until you pull, so the --ff-only refresh stops the next "
+                f"session re-proposing already-merged work.)",
                 file=sys.stderr,
             )
         return 2

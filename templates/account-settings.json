@@ -74,6 +74,15 @@
             "command": "python3 \"{{REPO_ROOT}}/hooks/guard_worktree_session.py\""
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_branch_first.py\""
+          }
+        ]
       }
     ],
     "PostToolUse": [

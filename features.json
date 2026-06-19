@@ -12,6 +12,9 @@
       "warn_main_checkout": true,
       "warn_cooldown_seconds": 180,
       "ttl_seconds": 900
+    },
+    "branch_first": {
+      "warn": true
     }
   },
 

@@ -36,8 +36,11 @@ def _git(args, cwd):
 
 
 def _branch_warning(session_cwd):
-    """One banner line when this session sits on a non-main branch in the harness
-    MAIN checkout. Scoped via the SESSION's cwd (from the SessionStart payload),
+    """One banner line about the harness MAIN checkout's trunk state: a stranded-
+    branch warning when the session sits on a non-main branch, OR a stale-trunk
+    warning when it sits on main/master but local trunk is BEHIND origin (a
+    remotely-merged PR that was never pulled rots local main and lets the next
+    /retro re-propose already-merged work). Scoped via the SESSION's cwd (from the SessionStart payload),
     NOT this file's location — the active hook is always the trunk copy (wired by
     absolute path in settings), so keying off __file__ would report the trunk's
     branch no matter where the session actually is. Fires only when the git
@@ -57,8 +60,28 @@ def _branch_warning(session_cwd):
             os.path.normcase(os.path.normpath(HARNESS_ROOT)):
         return ""  # another repo, or a worktree checkout — non-main is fine there
     branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], session_cwd)
-    if not branch or branch in ("main", "master", "HEAD"):
+    if not branch or branch == "HEAD":
         return ""
+    if branch in ("main", "master"):
+        # On trunk: warn when local trunk is BEHIND origin (a PR merged on GitHub
+        # and never pulled). A stale local main mis-reports topology and lets the
+        # next /retro re-propose already-merged work (the 16-commit-drift incident).
+        # Uses the LOCAL origin ref only -- a SessionStart hook does NOT hit the
+        # network; returns '' when origin/<branch> is absent or already in sync.
+        behind = _git(["rev-list", "--count", f"{branch}..origin/{branch}"], session_cwd)
+        if not (behind and behind.isdigit() and int(behind) > 0):
+            return ""
+        ahead = _git(["rev-list", "--count", f"origin/{branch}..{branch}"], session_cwd)
+        # ASCII only: the banner prints to a cp1252 console here, where a non-ASCII
+        # glyph raises UnicodeEncodeError and crashes the hook (exit 1).
+        if ahead and ahead.isdigit() and int(ahead) > 0:
+            return (f"[harness] (!) local {branch} has DIVERGED from origin/{branch} "
+                    f"({behind} behind, {ahead} ahead) - reconcile before branching")
+        return (f"[harness] (!) local {branch} is {behind} commit(s) behind "
+                f"origin/{branch} (a PR likely merged on GitHub) - "
+                f"`git pull --ff-only` to refresh local trunk")
+    # A non-main branch: stranded-branch warning (the in-place retro/PR flows
+    # branch in place and may end the session without returning to trunk).
     try:
         merged = subprocess.run(
             ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],

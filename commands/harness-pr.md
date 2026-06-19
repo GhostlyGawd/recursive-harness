@@ -61,7 +61,7 @@ For the change described in $ARGUMENTS:
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
    Otherwise leave for human review — and say so without grumbling.
-7. **Return to trunk: `git -C "$HARNESS" checkout main`** (branch-hygiene). This flow branches
+7. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` leaves a STALE local main after the PR merges on GitHub; the `--ff-only` pull refreshes it. This flow branches
    in-place in the MAIN checkout; if you end the session still on `proposal/*`,
    that branch persists across sessions and silently strands the NEXT session on
    a dead branch (the SessionStart banner now flags it, but don't create the
