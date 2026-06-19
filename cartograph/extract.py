@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """cartograph/extract.py — read-only cartograph extractor for the harness.
 
-Phase 0 of the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
-cartograph.md). This script DERIVES the harness's connectivity graph from
-machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
+Implements the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
+cartograph.md) — Phases 0–4: a text dump, map.json, and an interactive --html page
+(live-state overlay + git time-slider). This script DERIVES the harness's connectivity
+graph from machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
 to the enforcement layer (hooks/, lint/, evals/, bin/, .github/, autonomy.json,
 settings.json, templates/ are all write-locked). It only reads them.
 
@@ -219,6 +220,8 @@ def build():
     for name in ("predictions", "corrections", "skill_usage", "followups", "approvals"):
         state_files.add(name)
 
+    foreign_adr = []  # (artifact, num) for ADR cites that resolve to a venture DECISIONS.md
+
     # ---- iterate every text artifact, harvest edges -------------------------
     def scan(node_id, path):
         text = read(path)
@@ -257,10 +260,27 @@ def build():
             if re.search(r"\b" + re.escape(name) + r"\b", body):
                 g.edge(node_id, f"agent:{name}", "spawns")
 
-        # (6) references — ADRs
-        for num in set(m.zfill(4) for m in ADR_RE.findall(body)):
-            if f"adr:{num}" not in g.nodes:
-                g.node(f"adr:{num}", "adr", f"ADR-{num} (referenced, no file)", missing=True)
+        # (6) references — ADRs. Harness ADRs are individual files in
+        # memory/decisions/. A reference whose number has NO such file is either a
+        # dangling harness decision (worth flagging) OR a citation of a VENTURE's
+        # decision log — ventures keep a monolithic DECISIONS.md (the harness never
+        # does), so an ADR number whose line names DECISIONS.md is a foreign cite,
+        # not a harness ADR. Skip those instead of inventing a missing harness node.
+        seen_adr = set()
+        for m in ADR_RE.finditer(body):
+            num = m.group(1).zfill(4)
+            if num in seen_adr:
+                continue
+            seen_adr.add(num)
+            if num not in adr_files:
+                ls = body.rfind("\n", 0, m.start()) + 1
+                le = body.find("\n", m.end())
+                line = body[ls:le if le != -1 else len(body)]
+                if re.search(r"DECISIONS\.md", line, re.I):
+                    foreign_adr.append((node_id, num))
+                    continue
+                if f"adr:{num}" not in g.nodes:
+                    g.node(f"adr:{num}", "adr", f"ADR-{num} (referenced, no file)", missing=True)
             g.edge(node_id, f"adr:{num}", "references")
 
         # (7) touches — state ledgers (hooks + CLI + kernel only)
@@ -301,20 +321,67 @@ def build():
                 g.edge(f"hook:{hname}", f"event:{event}", "fires_on", matcher=matcher)
 
     # ---- consistency report (the winner's stated risk: silent edge drops) ----
-    warnings = []
+    # A hook is only "dead" if it is wired NOWHERE. Two legitimate non-settings
+    # wirings exist and must not be mistaken for dead code:
+    #   library  — a shared module imported by other hooks (e.g. harness_features)
+    #   template — a portability hook wired in templates/*.json: inert in the trunk
+    #              but live once the harness is installed elsewhere (e.g. inject_kernel)
+    imported = set()
+    for hf in hook_files.values():
+        for m in re.finditer(r"^\s*(?:from|import)\s+([A-Za-z0-9_]+)", read(hf), re.M):
+            if m.group(1) in hook_files:
+                imported.add(m.group(1))
+    template_wired = set()
+    for tf in listfiles("templates", ".json"):
+        try:
+            tdata = json.loads(read(tf))
+        except json.JSONDecodeError:
+            continue
+        for groups in (tdata.get("hooks") or {}).values():
+            for grp in groups:
+                for h in grp.get("hooks", []):
+                    tm = re.search(r"([A-Za-z0-9_]+)\.py", h.get("command", ""))
+                    if tm:
+                        template_wired.add(tm.group(1))
+
+    warnings, notes = [], []
     for hname in hook_files:
-        if hname not in wired and not hname.startswith("__"):
-            warnings.append(f"hook {hname}.py exists but is NOT wired in settings.json "
-                            f"(library/imported, or dead)")
+        if hname.startswith("__"):
+            continue
+        if hname in wired:
+            wiring = "event"
+        elif hname in imported:
+            wiring = "library"
+        elif hname in template_wired:
+            wiring = "template"
+        else:
+            wiring = "orphan"
+        nid = f"hook:{hname}"
+        if nid in g.nodes:
+            g.nodes[nid]["wiring"] = wiring
+        if wiring == "orphan":
+            warnings.append(f"hook {hname}.py is wired nowhere - not in settings.json, "
+                            f"not imported by another hook, not in any template (likely dead)")
+        elif wiring == "library":
+            notes.append(f"hook {hname}.py is a shared library imported by other hooks "
+                         f"(not event-wired - expected, not dead)")
+        elif wiring == "template":
+            notes.append(f"hook {hname}.py is wired via templates/ - a portability hook, "
+                         f"inert in the trunk but live once installed elsewhere")
+
     for nid, node in g.nodes.items():
         if nid.startswith("adr:") and node.get("missing"):
-            warnings.append(f"{nid.split(':')[1]} is referenced but has no file in memory/decisions/")
+            warnings.append(f"ADR-{nid.split(':')[1]} is referenced but has no file in "
+                            f"memory/decisions/ (dangling harness decision)")
+    for src, num in foreign_adr:
+        notes.append(f"{src.split(':', 1)[1]} cites a venture decision log "
+                     f"(DECISIONS.md {num}), not a harness ADR - not counted as dangling")
 
-    return g, warnings, wired
+    return g, warnings, notes, wired
 
 
 # --------------------------------------------------------------------- text render
-def render_text(g, warnings, wired):
+def render_text(g, warnings, notes, wired):
     out = []
     P = out.append
     nodes, edges = g.nodes, g.edges
@@ -327,7 +394,7 @@ def render_text(g, warnings, wired):
         by_etype.setdefault(e["type"], []).append(e)
 
     P("=" * 70)
-    P("  THE LIVING HARNESS CARTOGRAPH - Phase 0 (machine-truth graph)")
+    P("  THE LIVING HARNESS CARTOGRAPH  (machine-truth graph)")
     P("=" * 70)
     P(f"  {len(nodes)} nodes   {len(edges)} edges")
     P("  nodes by type : " + ", ".join(f"{t}={len(v)}" for t, v in sorted(by_type.items())))
@@ -381,13 +448,18 @@ def render_text(g, warnings, wired):
     # consistency report
     P("")
     P("-" * 70)
-    P(f"  CONSISTENCY REPORT  ({len(warnings)} warnings)")
+    P(f"  CONSISTENCY REPORT  ({len(warnings)} warnings, {len(notes)} notes)")
     P("-" * 70)
     if warnings:
         for w in warnings:
             P(f"      ! {w}")
     else:
-        P("      (clean - every hook wired, every ADR resolved)")
+        P("      (clean - no orphaned hooks, no dangling harness ADRs)")
+    if notes:
+        P("")
+        P("      notes [benign - classified, not problems]:")
+        for n in notes:
+            P(f"      . {n}")
     P("")
     return "\n".join(out)
 
@@ -764,7 +836,7 @@ def main():
     ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
     args = ap.parse_args()
 
-    g, warnings, wired = build()
+    g, warnings, notes, wired = build()
 
     # Phases 2-3 enrich the graph in place; only needed when rendering/exporting.
     overlay, dates = None, None
@@ -773,7 +845,7 @@ def main():
         dates = attach_git_dates(g)
 
     if not args.quiet:
-        sys.stdout.write(render_text(g, warnings, wired))
+        sys.stdout.write(render_text(g, warnings, notes, wired))
 
     if args.json:
         os.makedirs(os.path.dirname(args.json), exist_ok=True)
@@ -783,6 +855,7 @@ def main():
             "overlay": overlay,
             "dates": dates,
             "warnings": warnings,
+            "notes": notes,
             "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges)},
         }
         with open(args.json, "w", encoding="utf-8") as fh:

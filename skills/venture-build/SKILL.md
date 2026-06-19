@@ -25,7 +25,7 @@ acquisition framing as adaptable starting points, not law; fit them to the chart
   local cache returns false-green; delete node_modules + .turbo + *.tsbuildinfo,
   install frozen, run CI's EXACT steps — and re-gate the exact pushed HEAD after
   adding any spec. A run where every OS job fails in ~2-3s is infra/billing, not
-  code: read the run annotation before debugging. (cross-Grove retro · ADR-0011/0012)
+  code: read the run annotation before debugging. (cross-Grove retro · Grove DECISIONS.md 0011/0012)
 - VALIDATE THE PATH YOUR DOCS PRESCRIBE, not a cleaner one. CI/validation that
   satisfies a dependency or install step one way can still be broken for the user
   your README tells to install it differently; make one CI lane (or live run)

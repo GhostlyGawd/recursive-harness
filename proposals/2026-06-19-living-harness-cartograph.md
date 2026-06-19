@@ -1,7 +1,10 @@
 # Proposal: The Living Harness Cartograph
 
 - **Date:** 2026-06-19
-- **Status:** Phase 0 built (read-only extractor + map.json). Phases 1–4 proposed.
+- **Status:** All phases (0–4) built and committed — read-only extractor → text /
+  `map.json` / interactive `--html` (3-loop layout, role-color, live-state overlay,
+  git time-slider), guarded by an eval-corpus case. (Originally scoped as Phase 0;
+  the rest landed in the same commit `0131936`.)
 - **Origin:** `/brainstorm` solution arena (ideation-methods diversity engine) →
   winner *Constraint-removal: Living Harness Cartograph* → *Synthesize* follow-up
   grafting the two runners-up's strengths onto the winner.
