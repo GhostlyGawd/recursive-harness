@@ -169,6 +169,15 @@ def guard_b_tests():
     repo = tempfile.mkdtemp()
     wt_dir = os.path.join(repo, ".claude", "worktrees", "wt-x")
     os.makedirs(wt_dir)
+    # Fix B (PR #46): Guard B no-ops unless the resolved repo == gB.HARNESS_ROOT
+    # (so it never writes session_owners.json into a foreign project). This fixture's
+    # repo is a tempdir != the real HARNESS_ROOT, so without this the scope check
+    # short-circuits and the owner-map BLOCK path below is never reached. Point
+    # HARNESS_ROOT at the fixture repo so the block path is actually exercised
+    # (mirrors how test_guard_worktree_session.py installs a hook copy whose
+    # HARNESS_ROOT == the fixture repo). Restored in finally.
+    orig_harness_root = gB.HARNESS_ROOT
+    gB.HARNESS_ROOT = repo
     tree_key = os.path.normcase(os.path.normpath(wt_dir))
     owners = os.path.join(repo, "state", "session_owners.json")
     payload = {"hook_event_name": "PreToolUse", "tool_name": "Read",
@@ -202,6 +211,7 @@ def guard_b_tests():
         check("Guard B: committed ttl_seconds shrinks the staleness window", _run_main(gB, payload) == 0)
     finally:
         hf.FEATURES_PATH, hf.LOCAL_PATH = orig
+        gB.HARNESS_ROOT = orig_harness_root
 
 
 def _load_cli_module():
