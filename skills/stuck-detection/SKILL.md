@@ -45,6 +45,20 @@ third patch.
 
 > provenance: 2026-06-16 cross-Grove retro; a @swarm/ui closed-overlay full-bleed quirk was worked around 3 separate times (B2 Dialog, W3 Sheet, a site consumer; transcript 6d93d19f) before one source fix (810c8b69). The Phase-6 source fix self-correcting the build is the evidence the rule is right; the two prior recurrences are what it cost.
 
+## A recurring failure? Search the record before re-fixing
+
+Before drafting ANY fix for a failure you recognize as recurring: (a) restate the
+core problem in one sentence, and (b) find where the recurrence is already
+documented — grep `memory/decisions/` for an ADR on it. If a prior ADR REJECTED a
+class of fix, the new fix must escape that wall by a DIFFERENT mechanism, not
+iterate on the rejected one. Skipping this re-proposes a smarter version of a fix
+that already failed.
+
+> provenance: 2026-06-19, session 2b5c4d70 — recurring trunk-HEAD collisions were
+> already documented in ADR 0007, which had rejected actor-identity blocking.
+> Naming that recurrence first led to a resource-state CAS lease (ADR 0009) instead
+> of another smarter warning that would have hit the same wall.
+
 ## Afterwards, always
 
 Log the prediction miss (`harness outcome <id> --result miss --notes ...`),

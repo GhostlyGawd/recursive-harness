@@ -12,6 +12,18 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    Zero-fire skills → propose pruning or a description rewrite (per
    skill-creator wisdom: skills under-trigger when descriptions aren't pushy).
    Confirm with the user before deleting anything with provenance < 90d old.
+   **Guard-friction audit** (same earns-its-friction test for enforcement HOOKS,
+   which have no usage counter): for each guard the user has flagged as noisy, or
+   with no logged real catch in 90d, spawn a fresh-context auditor that mines
+   state/corrections.jsonl + state/approvals.jsonl + state/predictions.jsonl for
+   (a) times it prevented a documented real failure vs (b) false-positive / bypass
+   events. Classify each real / miscalibrated / redundant. Miscalibrated → tighten
+   the EXISTING guard; redundant or overlapping (e.g. the git/worktree guard
+   cluster) → propose CONSOLIDATING; zero-real-catch + bypass-heavy → propose
+   pruning. Never add a sibling hook to fix a hook (routing-learnings weight gate).
+   (2026-06-19: session de0e3d65 ran exactly this fresh-context audit and found 2
+   guards miscalibrated; session b7488db6 — user named hook proliferation the
+   anti-pattern. Enforcement hooks had no earns-its-friction check until here.)
 2. **Override scan**: corrections that contradict an existing artifact mean
    the artifact is wrong. `"$HARNESS/bin/harness" corrections list --last 100`, grep against
    skills/ and user-model claims. Wrong artifact → fix or kill, don't append a

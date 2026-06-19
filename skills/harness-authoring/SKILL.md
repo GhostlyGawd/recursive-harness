@@ -92,6 +92,11 @@ itself enforcement-relevant — make it a constant, not env-readable.
   path-normalization change with a regression test before landing. (session
   c32fdd41, 2026-06-17: realpath adopted to close `\\?\`/8.3 aliases, reverted — it
   broke symlinked-worktree identity and didn't even strip `\\?\`; lexical was right.)
+  Any RE-EDIT of an enforcement guard made to address an auditor BLOCK must itself
+  be re-audited before push — the corrected-direction fix routinely opens a
+  DIFFERENT hole. (session 86f913c0, 2026-06-17: a fd-dup relaxation `>{1,2}(?!&)`
+  over-excluded `>&FILE`, leaving a real write into protected bin/; the round-2
+  auditor caught it empirically and `>{1,2}(?!&[0-9-])` was the verified fix.)
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
 
