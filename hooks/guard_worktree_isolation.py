@@ -4,9 +4,11 @@
 A session working in one git worktree (or the main checkout) must not reach
 into a SIBLING `.claude/worktrees/<name>` — that cross-worktree leakage is how
 parallel work silently clobbers itself. This hook blocks (exit 2) any
-file/search/Bash tool whose target resolves inside a `.claude/worktrees/<X>`
-that differs from the worktree the session's `cwd` belongs to. A main checkout
-(cwd not inside any worktree) treats EVERY worktree target as foreign.
+file/search/shell tool — Read/Glob/Grep/Edit/Write/MultiEdit/NotebookEdit and
+BOTH shells (Bash + PowerShell, fix #2 2026-06-19) — whose target resolves inside
+a `.claude/worktrees/<X>` that differs from the worktree the session's `cwd`
+belongs to. A main checkout (cwd not inside any worktree) treats EVERY worktree
+target as foreign.
 
 Critical anchoring rule: a relative path is resolved against the SESSION cwd
 (the payload `cwd` field), NOT the hook process's own cwd. The real Read/Edit/
@@ -14,9 +16,13 @@ Glob/Bash tool resolves relative paths against the session cwd, so the guard
 must use the same base or a relative `..\\sibling` traversal would slip past.
 
 Allowed (exit 0): same-worktree access; any path with no `.claude/worktrees/`
-segment; tools with no path; unknown tools; and the
-HARNESS_ALLOW_CROSS_WORKTREE escape hatch. Fails OPEN on any malformed input or
-unexpected error — a guard must never brick a session.
+segment; tools with no path; unknown tools; the HARNESS_ALLOW_CROSS_WORKTREE
+escape hatch — both the env var AND a LEADING inline `HARNESS_...=1` command
+prefix (fix #1 2026-06-19; the env hatch alone is unreachable from one in-session
+tool call, since a PreToolUse hook reads its own env); and a foreign target that
+is a STALE/orphaned worktree git no longer registers (fix #3 2026-06-19; file
+tools only, fail-safe to BLOCK on any uncertainty). Fails OPEN on any malformed
+input or unexpected error — a guard must never brick a session.
 
 Bash policy is FAIL-SAFE (decision A, 2026-06-17). The command-string scanner
 cannot tell an inert quoted MENTION of a worktree path (`echo "...worktrees..."`,
@@ -414,16 +420,114 @@ def _bash_tokens(command: str):
             yield t
 
 
-def _hatch_enabled() -> bool:
-    """The escape hatch is VALUE-gated, not a mere presence check. Only an
-    affirmative value enables it; '0'/'false'/'no'/'off'/'' (or unset) keep the
-    guard active. Otherwise a user setting HARNESS_ALLOW_CROSS_WORKTREE=0 to
-    DISABLE the hatch would footgun themselves into fully bypassing isolation.
-    """
-    val = os.environ.get("HARNESS_ALLOW_CROSS_WORKTREE")
+_TRUTHY = ("1", "true", "yes", "on")
+
+
+def _truthy(val) -> bool:
+    """Affirmative-value gate shared by the env hatch and the inline hatch. Only
+    {1,true,yes,on} (case-insensitive, quotes/space-stripped) enable; everything
+    else — including '0'/'false'/'no'/'off'/'' — does NOT, so setting the hatch to
+    a falsey value can never footgun a full bypass."""
     if val is None:
         return False
-    return val.strip().lower() in ("1", "true", "yes", "on")
+    return str(val).strip().strip("'\"").lower() in _TRUTHY
+
+
+def _hatch_enabled() -> bool:
+    """The ENV escape hatch is VALUE-gated, not a mere presence check (see
+    _truthy). Read from the hook's own os.environ."""
+    return _truthy(os.environ.get("HARNESS_ALLOW_CROSS_WORKTREE"))
+
+
+# FIX #1 (2026-06-19): the env hatch above is UNREACHABLE from a single in-session
+# tool call — a PreToolUse hook reads its OWN process env, set before the command
+# runs, so the documented "re-run with env HARNESS_ALLOW_CROSS_WORKTREE=1" (typed
+# as an inline `HARNESS_ALLOW_CROSS_WORKTREE=1 rm ...` prefix) is invisible to it.
+# So ALSO honor a LEADING inline assignment on a Bash/PowerShell command — the
+# exact prefix the block message tells the operator to use. Anchored to the START
+# of the command (after optional other leading assignments) so an inert MENTION
+# (`echo "HARNESS_ALLOW_CROSS_WORKTREE=1"`, a mid-command/quoted token) can NEVER
+# enable it — only a genuine env-prefix can. Same security posture as the env
+# hatch (an explicit, intentional opt-in token), just usable in-session.
+_INLINE_HATCH_RE = re.compile(
+    r"^\s*"
+    r"(?:"
+    # bash env-prefix: optional other leading assignments, then ours, then a command.
+    r"(?:[A-Za-z_]\w*=\S*\s+)*"
+    r"HARNESS_ALLOW_CROSS_WORKTREE=(?P<bash>\S+)\s+\S"
+    r"|"
+    # powershell: `$env:HARNESS_ALLOW_CROSS_WORKTREE = '1' ; ...` at the start.
+    r"\$env:HARNESS_ALLOW_CROSS_WORKTREE\s*=\s*(?P<ps>'[^']*'|\"[^\"]*\"|\S+)\s*;"
+    r")",
+    # No re.IGNORECASE: the variable name is case-SENSITIVE in bash, so only the
+    # real token HARNESS_ALLOW_CROSS_WORKTREE may enable the hatch — a lowercase
+    # spelling would not set the actual env var either (auditor F5, 2026-06-19).
+)
+
+
+def _inline_hatch(command: str) -> bool:
+    """True if `command` opens with a truthy HARNESS_ALLOW_CROSS_WORKTREE env
+    prefix (bash or powershell). Leading-only by construction (see _INLINE_HATCH_RE)."""
+    if not command:
+        return False
+    m = _INLINE_HATCH_RE.match(command)
+    if not m:
+        return False
+    return _truthy(m.group("bash") or m.group("ps"))
+
+
+def _worktree_root_path(path: str) -> str | None:
+    """Like _worktree_id but returns the REAL (un-folded) worktree-root path so a
+    filesystem check can run against it. None if `path` is not inside a worktree."""
+    if not path:
+        return None
+    m = _WT_RE.match(path)
+    return m.group(1) if m else None
+
+
+def _is_live_worktree(wt_root_real: str) -> bool:
+    """FIX #3 (2026-06-19): distinguish a LIVE registered worktree (real parallel
+    work that MUST stay protected) from a STALE/orphaned `.claude/worktrees/<name>`
+    directory that git no longer tracks (e.g. one ExitWorktree deregistered but
+    left on disk) — touching the latter cannot clobber parallel work.
+
+    A git worktree's `<root>/.git` is a FILE pointing at `<repo>/.git/worktrees/<name>`;
+    that admin dir exists IFF git still registers the worktree. The ONLY signature
+    we treat as a safe-to-touch STALE worktree is the precise one git leaves on
+    deregistration: a `.git` FILE whose `gitdir:` admin dir no longer exists.
+    EVERYTHING else -> protect (return True): no `.git` (not a confirmed stale
+    worktree — could be a coincidental path or one about to be created), a `.git`
+    dir (a full repo), an unrecognized pointer, or any error. Pure filesystem.
+
+    FAIL-SAFE by construction: 'allow' (False) requires POSITIVE confirmation that
+    a real worktree was deregistered; any uncertainty OVER-protects, never exposes
+    a live sibling."""
+    try:
+        if not wt_root_real:
+            return True
+        dotgit = os.path.join(wt_root_real, ".git")
+        if not os.path.exists(dotgit):
+            return True   # no .git -> not a confirmed stale worktree -> protect
+        if os.path.isdir(dotgit):
+            return True   # a full repo dir here is unexpected -> protect
+        with open(dotgit, "r", encoding="utf-8", errors="replace") as fh:
+            head = fh.read(4096)
+        m = re.search(r"gitdir:\s*(.+)", head)
+        if not m:
+            return True   # unrecognized .git file -> protect
+        admin = m.group(1).strip().strip('"').strip()
+        # Git may write a RELATIVE gitdir pointer (worktree.useRelativePaths /
+        # extensions.relativeWorktrees, or after `git worktree move`/`repair`).
+        # It is relative to the worktree ROOT (the dir holding this .git file),
+        # NOT the hook's cwd — anchor it there, or a LIVE worktree with a relative
+        # pointer reads as stale and gets wrongly allowed (auditor F1, 2026-06-19).
+        if not os.path.isabs(admin):
+            admin = os.path.normpath(os.path.join(wt_root_real, admin))
+        # admin dir present -> git still registers it (LIVE, block);
+        # admin dir gone -> deregistered stale orphan (safe to clean, allow).
+        return os.path.isdir(admin)
+    except Exception:
+        return True       # any error -> protect
 
 
 def main() -> int:
@@ -451,9 +555,22 @@ def main() -> int:
         # is itself absolute, so no base is needed to normalize it.
         session_wt = _worktree_id(_normalize(cwd))
 
-        if tool == "Bash":
+        # FIX #2 (2026-06-19): PowerShell was a blind spot — on Windows it is the
+        # primary shell, so Remove-Item / Set-Content / Copy-Item into a sibling
+        # worktree sailed straight through. Scan its command string with the SAME
+        # scanner (path/quote syntax is close enough; the scanner is fail-safe
+        # over-block, and `git worktree` management stays exempt for both).
+        # NOTE (follow-up): PowerShell var-hiding (`$d="..."; rm $d\..`) is NOT
+        # caught (the var-expander is bash `name=value` only) — a residual gap akin
+        # to the documented runtime-path gap; literal worktree paths ARE caught.
+        if tool in ("Bash", "PowerShell"):
             command = ti.get("command", "")
             if isinstance(command, str) and command:
+                # FIX #1: a LEADING inline HARNESS_ALLOW_CROSS_WORKTREE=1 prefix is
+                # the documented escape, now made usable in-session (the env hatch
+                # is invisible to a PreToolUse hook). Honor it before scanning.
+                if _inline_hatch(command):
+                    return 0
                 # LOCKED flag (ADR 0008): "lenient" skips the anti-evasion scrubbing.
                 lenient = flag("guards.worktree_isolation.bash_scanner", "strict") != "strict"
                 target_wt = _bash_foreign_worktree(command, session_wt, cwd, lenient)
@@ -467,6 +584,16 @@ def main() -> int:
                 continue
             target_wt = _foreign(raw, session_wt, cwd)
             if target_wt is not None:
+                # FIX #3 (2026-06-19): a foreign target that is a STALE/orphaned
+                # worktree (git no longer registers it — e.g. one ExitWorktree
+                # deregistered but left on disk) is not live parallel work, so allow
+                # its cleanup. FAIL-SAFE: skip ONLY on positive confirmation it is
+                # not registered; any uncertainty falls through and blocks. Scoped to
+                # file tools — Bash/PS cross-worktree cleanup uses the #1 inline hatch
+                # (their paths are unreliable to resolve after quote/space scrubbing).
+                wt_root = _worktree_root_path(_normalize(raw, cwd))
+                if wt_root and not _is_live_worktree(wt_root):
+                    continue
                 _block(target_wt, session_wt)
                 return 2
         return 0
@@ -483,7 +610,16 @@ def _block(target_wt: str, session_wt: str | None) -> None:
         f"('{target_wt}').\n"
         "Cross-worktree access lets parallel work clobber itself. Operate only "
         "on your own worktree's files (or the trunk).\n"
-        "If this is intentional, re-run with env HARNESS_ALLOW_CROSS_WORKTREE=1.",
+        "If this is intentional, prefix the command with the escape hatch (a bare "
+        "`export`/`set` will NOT reach this hook — it must be on the same command):\n"
+        "  Bash:        HARNESS_ALLOW_CROSS_WORKTREE=1 <your command>\n"
+        "  PowerShell:  $env:HARNESS_ALLOW_CROSS_WORKTREE='1'; <your command>\n"
+        "The prefix disables this check for the ENTIRE command (like the env hatch), "
+        "so keep it to a single intentional command — anything chained after `;`/`&&` "
+        "rides along.\n"
+        "(For non-shell tools — Read/Edit/Write — set HARNESS_ALLOW_CROSS_WORKTREE=1 "
+        "in the session environment.) Cleaning up a STALE worktree git no longer "
+        "tracks is allowed automatically for file tools; for `rm` use the hatch above.",
         file=sys.stderr,
     )
 
