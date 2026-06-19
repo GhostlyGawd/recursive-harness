@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """cartograph/extract.py — read-only cartograph extractor for the harness.
 
-Phase 0 of the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
-cartograph.md). This script DERIVES the harness's connectivity graph from
-machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
+Implements the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
+cartograph.md) — Phases 0–4: a text dump, map.json, and an interactive --html page
+(live-state overlay + git time-slider). This script DERIVES the harness's connectivity
+graph from machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
 to the enforcement layer (hooks/, lint/, evals/, bin/, .github/, autonomy.json,
 settings.json, templates/ are all write-locked). It only reads them.
 
@@ -327,7 +328,7 @@ def render_text(g, warnings, wired):
         by_etype.setdefault(e["type"], []).append(e)
 
     P("=" * 70)
-    P("  THE LIVING HARNESS CARTOGRAPH - Phase 0 (machine-truth graph)")
+    P("  THE LIVING HARNESS CARTOGRAPH  (machine-truth graph)")
     P("=" * 70)
     P(f"  {len(nodes)} nodes   {len(edges)} edges")
     P("  nodes by type : " + ", ".join(f"{t}={len(v)}" for t, v in sorted(by_type.items())))
