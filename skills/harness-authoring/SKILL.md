@@ -37,6 +37,13 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
    OTHER repo. (session 9147f304, 2026-06-14: ported the worktree skill and
    opened PR #14 before reading the live Claude Code docs the skill's own §5
    mandated; shipped a false guard-hook claim a user-requested second pass caught.)
+   A digest from a fan-out / background research workflow (Discover→Read→Synthesize)
+   is NOT grounding: an empty fetch phase still returns a fluent, confident summary
+   written from training memory, with no signal of failure. Before trusting or
+   relaying one, read its provenance counters (urlsRead / sources / pages-read); if
+   zero sources were read, DISCARD the synthesis and fetch directly. (session
+   5af1bbc4, 2026-06-18: a read-skills-docs workflow returned a full docs digest with
+   urlsRead:[] / "Discovered 0 canonical doc URLs"; only that field exposed the fabrication.)
 
 ## Budgets (lint-enforced — they are quality pressure, not bureaucracy)
 
