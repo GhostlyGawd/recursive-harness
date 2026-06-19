@@ -19,6 +19,15 @@
         ]
       },
       {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/inject_kernel.py\""
+          }
+        ]
+      },
+      {
         "matcher": "resume|clear",
         "hooks": [
           {
