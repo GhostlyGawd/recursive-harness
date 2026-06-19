@@ -13,6 +13,8 @@ Security-critical contract (why this file exists):
   - The reader FAILS SAFE to the caller default on missing/corrupt/garbage input, so a
     broken or absent config behaves exactly like today.
 """
+import importlib.machinery
+import importlib.util
 import io
 import json
 import os
@@ -85,6 +87,11 @@ def reader_tests():
               hf.flag("guards.worktree_isolation.bash_scanner", "strict") == "strict")
         check("LOCKED ttl IGNORES local override", hf.num("guards.worktree_session.ttl_seconds", 900) == 900.0)
 
+        # ...and the ignore also holds for the NESTED local form, not just flat-dotted keys.
+        _write(local, {"guards": {"worktree_isolation": {"block": False}}})
+        check("LOCKED block IGNORES nested local override",
+              hf.flag("guards.worktree_isolation.block", True) is True)
+
         # LOCKED keys ARE honored from the committed (human-edited, protected) file.
         _write(feats, {"guards": {"worktree_isolation": {"block": False, "bash_scanner": "lenient"}}})
         _write(local, {})
@@ -121,7 +128,12 @@ def guard_a_tests():
     local = os.path.join(tmp, "state", "features.local.json")
     orig = (hf.FEATURES_PATH, hf.LOCAL_PATH)
     hf.FEATURES_PATH, hf.LOCAL_PATH = feats, local
-    wt = os.path.join(ROOT, ".claude", "worktrees")
+    # Base the synthetic worktree paths on a tempdir, NOT ROOT: if ROOT itself sits
+    # under .claude/worktrees/ (i.e. these tests are run from inside a worktree), a
+    # ROOT-relative path would collapse cwd and target to the same worktree id and
+    # mask the block. The guard resolves worktree identity purely lexically, so the
+    # base need not exist on disk.
+    wt = os.path.join(tempfile.mkdtemp(), ".claude", "worktrees")
     cross = {"tool_name": "Read", "tool_input": {"file_path": os.path.join(wt, "wt-b", "x.py")},
              "cwd": os.path.join(wt, "wt-a"), "session_id": "s1"}
     # A quote-split path that ONLY the strict scrubber rejoins into a worktree literal.
@@ -192,6 +204,17 @@ def guard_b_tests():
         hf.FEATURES_PATH, hf.LOCAL_PATH = orig
 
 
+def _load_cli_module():
+    """Import bin/harness (extension-less script) as a module to read its LOCKED_FEATURES.
+    Top-level only defines constants/functions (main() runs under __main__), so this is safe."""
+    path = os.path.join(ROOT, "bin", "harness")
+    loader = importlib.machinery.SourceFileLoader("harness_cli", path)
+    spec = importlib.util.spec_from_loader("harness_cli", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
 def cli_tests():
     """The CLI refuses to weaken a guard via a SOFT override (write-free refusal paths)."""
     cli = os.path.join(ROOT, "bin", "harness")
@@ -204,8 +227,18 @@ def cli_tests():
     check("CLI `features list` exits 0", rc == 0)
     check("CLI `features list` shows a known key", "nudges.retro_gate" in out)
 
-    rc, _, err = run("set", "guards.worktree_session.block", "false")
-    check("CLI refuses to SET a LOCKED key", rc == 1 and "LOCKED" in err)
+    # Drift guard (auditor finding 2): the CLI's LOCKED mirror MUST equal the reader's
+    # LOCKED set. If a future locked key is added to one and not the other, the CLI could
+    # write that guard-weakening key to the agent-writable local file — a silent bypass.
+    cli_mod = _load_cli_module()
+    check("CLI LOCKED_FEATURES == reader LOCKED (no drift)",
+          set(cli_mod.LOCKED_FEATURES) == set(hf.LOCKED),
+          f"cli={sorted(cli_mod.LOCKED_FEATURES)} reader={sorted(hf.LOCKED)}")
+
+    # EVERY locked key is refused BEFORE any write (not just one).
+    for k in sorted(hf.LOCKED):
+        rc, _, err = run("set", k, "false")
+        check(f"CLI refuses to SET LOCKED key {k}", rc == 1 and "LOCKED" in err)
 
     rc, _, err = run("set", "no.such.key", "1")
     check("CLI refuses an unknown key", rc == 1)

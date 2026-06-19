@@ -443,7 +443,7 @@ def cmd_features(args) -> int:
             print("usage: harness features set <key> <value>", file=sys.stderr)
             return 1
         if args.key in LOCKED_FEATURES:
-            print(f"'{args.key}' is a LOCKED safety key — set it in the committed "
+            print(f"'{args.key}' is a LOCKED safety key -- set it in the committed "
                   f"features.json (human-gated), not the local override. See ADR 0008.",
                   file=sys.stderr)
             return 1
