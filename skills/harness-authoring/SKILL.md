@@ -107,3 +107,19 @@ dirty (`git restore` is then content-neutral). Stage only intended files
 into an enforcement-layer commit.
 (session cca5ccb9, 2026-06-14: a subagent normalized two guard files CRLF→LF
 before editing; a "modified" .claude/settings.json was a pure EOL artifact.)
+
+## Running scripts on this Windows checkout (cp1252 default + multiple drives)
+
+Python here defaults to cp1252, not UTF-8. Any script that reads/writes files
+containing characters outside cp1252 (arrows like →, box-drawing, many smart-quote
+forms — common in harness output) MUST force UTF-8: `open(p, encoding="utf-8")`,
+and `PYTHONIOENCODING=utf-8` for stdout. A
+cp1252 crash mid-write can leave the file TRUNCATED TO EMPTY (it wrote `None`) — so
+after any encoding crash, re-verify the file's contents before trusting it; never
+assume a partial write left it intact. Separately, `os.path.relpath(path, start)`
+raises ValueError when the two are on DIFFERENT drive letters (temp on C: while the
+repo is on D:) — guard it with try/except falling back to the absolute path, or
+normalize to the repo drive first.
+(session dc1c3470, 2026-06-19: cp1252 repeatedly crashed the cartograph extractor on
+non-cp1252 glyphs like arrows and once truncated cartograph/extract.py to empty; its
+new eval also caught a cross-drive relpath ValueError when --json wrote to C: from the D: repo.)
