@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: Create + manage git worktrees in this harness — when to isolate vs when one is overhead, how to EnterWorktree/ExitWorktree (they live at .claude/worktrees/<name>), and the gotchas that bite here: results don't auto-merge to main; state/ is gitignored so `harness` writes in a worktree miss the main ledger; committed memory/ rides in; shared DB/ports aren't isolated; the guard protects the trunk, not a worktree's own copies. Use whenever a second session opens, independent tasks fan out, or file-mutating agents run beside other work — the user never asks for a worktree or recites a gotcha.
-provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test.
+provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test. · 2026-06-19 (session 0081d05a): added §3 batch-prune-under-concurrency + Guard-A-loop gotchas, from a cleanup whose stale-snapshot plan mispredicted (prediction a7cf091e, miss).
 ---
 
 # Worktree — isolate parallel work without clobbering
@@ -123,6 +123,27 @@ Two paths with two different bars — don't conflate them:
   cleanup can't yank it.
 - **Before removing, reconcile this worktree's gitignored `state/`** (see §2) —
   cleanup discards it.
+- **Pruning a BATCH of stale worktrees/branches — rule-driven, not list-driven.**
+  Branch/worktree state is non-stationary while another session is live: it can
+  swap a worktree's branch, push, open a PR, or delete a branch mid-pass. So (1)
+  treat any `git worktree list` / `git branch -vv` survey as a SNAPSHOT — re-read
+  it immediately before each destructive batch, not once at the start; (2) drive
+  each delete off a RULE ("merged into `main` AND not pinned by a worktree AND no
+  open PR"), never off a memorized list of names; (3) lean on git's own refusals
+  as the real safety net — `git worktree remove` (no `--force`) refuses a dirty
+  tree, `git branch -d` (not `-D`) refuses an unmerged branch — let them refuse
+  rather than pre-judging. Spot live sessions by comparing `.jsonl` mtimes under
+  the config `projects/*<repo>*` dirs. (session 0081d05a, 2026-06-19 — a concurrent
+  session swapped a worktree's branch and opened a PR mid-cleanup; the snapshot
+  plan mispredicted 6 worktrees / 18 branches, got 5 / 16; prediction a7cf091e
+  scored a miss.)
+- **Guard A's `git worktree` exemption is matched per shell-segment, at the
+  segment START — so a loop breaks it.** A batch loop (`for w in …; do git
+  worktree remove ".claude/worktrees/$w"; done`) is BLOCKED: the scanned segment
+  leads with `for`/`if`, and the unexpanded `$w` reads as a quoted foreign-worktree
+  literal, so the exemption never applies. Run each `git worktree remove "<literal
+  path>"` as its OWN command (each then leads with `git worktree` and is exempt).
+  Loop expansion does not inherit the exemption. (session 0081d05a, 2026-06-19.)
 
 ## 4. Windows / this repo's housekeeping
 
