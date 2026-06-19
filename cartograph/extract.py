@@ -27,6 +27,15 @@ Usage:
   python cartograph/extract.py            # print the graph as text
   python cartograph/extract.py --json     # also write cartograph/map.json
   python cartograph/extract.py --json P   # write the json to P instead
+  python cartograph/extract.py --html     # write the interactive page
+  python cartograph/extract.py --check    # GATE: non-zero exit on un-baselined structural rot
+  python cartograph/extract.py --write-baseline   # grandfather the current warnings
+  python cartograph/extract.py --root DIR --check # gate another clone / a test fixture
+
+Part B (the gate): the consistency report below only PRINTS. --check turns it into
+a gate that EXITS NON-ZERO when an un-baselined warning (an orphaned hook, a dangling
+ADR) exists, so structural rot can block a commit/CI instead of scrolling past.
+--write-baseline grandfathers the currently-accepted warnings so only NEW rot blocks.
 
 The biological ROLE (nucleus/enzyme/ribosome/...) and the 3-LOOP assignment are
 curated overlays from the design synthesis, not machine-truth — they are flagged
@@ -150,7 +159,7 @@ def frontmatter(text):
 
 SESSION_RE = re.compile(r"session\s+([0-9a-f]{8}-[0-9a-f-]{20,})", re.I)
 DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
-ADR_RE = re.compile(r"ADR[\s-]?(\d{3,4})")
+ADR_RE = re.compile(r"ADR[\s-]?(\d{3,})")  # full digit run: ADR 12345 must not alias 1234
 
 
 def build():
@@ -189,7 +198,7 @@ def build():
     # ADRs (files = real; references to missing ones get flagged later)
     adr_files = {}
     for f in listfiles("memory/decisions", ".md"):
-        m = re.match(r"(\d{3,4})", os.path.basename(f))
+        m = re.match(r"(\d{3,})", os.path.basename(f))
         if m:
             num = m.group(1).zfill(4)
             adr_files[num] = f
@@ -344,7 +353,14 @@ def build():
                     if tm:
                         template_wired.add(tm.group(1))
 
+    # Warnings carry a stable, human-readable FINGERPRINT (orphan-hook:<name>,
+    # dangling-adr:<NNNN>) so the Part B baseline survives message rewording and
+    # stays auditable. notes stay free text - they are benign, never gated.
     warnings, notes = [], []
+
+    def warn(fingerprint, message):
+        warnings.append({"fingerprint": fingerprint, "message": message})
+
     for hname in hook_files:
         if hname.startswith("__"):
             continue
@@ -360,8 +376,9 @@ def build():
         if nid in g.nodes:
             g.nodes[nid]["wiring"] = wiring
         if wiring == "orphan":
-            warnings.append(f"hook {hname}.py is wired nowhere - not in settings.json, "
-                            f"not imported by another hook, not in any template (likely dead)")
+            warn(f"orphan-hook:{hname}",
+                 f"hook {hname}.py is wired nowhere - not in settings.json, "
+                 f"not imported by another hook, not in any template (likely dead)")
         elif wiring == "library":
             notes.append(f"hook {hname}.py is a shared library imported by other hooks "
                          f"(not event-wired - expected, not dead)")
@@ -371,13 +388,103 @@ def build():
 
     for nid, node in g.nodes.items():
         if nid.startswith("adr:") and node.get("missing"):
-            warnings.append(f"ADR-{nid.split(':')[1]} is referenced but has no file in "
-                            f"memory/decisions/ (dangling harness decision)")
+            num = nid.split(":")[1]
+            warn(f"dangling-adr:{num}",
+                 f"ADR-{num} is referenced but has no file in "
+                 f"memory/decisions/ (dangling harness decision)")
     for src, num in foreign_adr:
         notes.append(f"{src.split(':', 1)[1]} cites a venture decision log "
                      f"(DECISIONS.md {num}), not a harness ADR - not counted as dangling")
 
     return g, warnings, notes, wired
+
+
+# ----------------------------------------------------------- Part B: structural-rot gate
+# The consistency report is now gateable. A warning's FINGERPRINT (orphan-hook:<name>,
+# dangling-adr:<NNNN>) is the gate's unit of identity: the baseline grandfathers a set
+# of fingerprints, and --check blocks only on warnings whose fingerprint is NOT in it.
+# An absent baseline means "nothing grandfathered" - i.e. strict, which is what the
+# (currently 0-warning) trunk wants.
+def default_baseline():
+    return os.path.join(ROOT, "cartograph", "baseline.json")
+
+
+def load_baseline(path):
+    """Return the set of grandfathered fingerprints (empty if the file is absent or
+    unreadable - an absent baseline grandfathers nothing, i.e. fully strict)."""
+    if not path or not os.path.isfile(path):
+        return set()
+    try:
+        data = json.loads(read(path))
+    except json.JSONDecodeError:
+        return set()
+    if not isinstance(data, dict):
+        return set()  # valid JSON but not our schema (null/list/scalar) -> strict
+    return {e.get("fingerprint") for e in data.get("accepted", [])
+            if isinstance(e, dict) and e.get("fingerprint")}
+
+
+def write_baseline(path, warnings):
+    """Grandfather the current warnings into a baseline file. Deterministic - entries
+    sorted by fingerprint, no timestamps - so re-running it on an unchanged repo
+    produces a byte-identical file (no spurious git churn)."""
+    accepted = sorted(
+        ({"fingerprint": w["fingerprint"], "message": w["message"]} for w in warnings),
+        key=lambda e: e["fingerprint"],
+    )
+    data = {
+        "version": 1,
+        "description": ("Grandfathered structural-rot fingerprints accepted by the "
+                        "cartograph gate (cartograph/extract.py --check). A warning whose "
+                        "fingerprint is NOT listed here blocks. Remove an entry once its "
+                        "rot is fixed; regenerate with `extract.py --write-baseline`."),
+        "accepted": accepted,
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(data, fh, indent=2)
+        fh.write("\n")
+
+
+def gate(warnings, baseline_fps):
+    """Split current warnings against grandfathered fingerprints.
+      new           - fingerprint NOT baselined  -> these BLOCK (non-zero exit)
+      grandfathered - fingerprint IS  baselined  -> allowed
+      stale         - baselined fingerprint matching no current warning
+                      -> rot was fixed; the baseline entry can be pruned (never blocks)
+    """
+    cur_fps = {w["fingerprint"] for w in warnings}
+    new = sorted((w for w in warnings if w["fingerprint"] not in baseline_fps),
+                 key=lambda w: w["fingerprint"])
+    grandfathered = [w for w in warnings if w["fingerprint"] in baseline_fps]
+    stale = sorted(baseline_fps - cur_fps)
+    return new, grandfathered, stale
+
+
+def run_gate(warnings, path):
+    """--check: report new vs grandfathered structural warnings; return the process
+    exit code (0 = nothing new, 1 = un-baselined rot blocks)."""
+    new, grandfathered, stale = gate(warnings, load_baseline(path))
+    where = rel(path) if os.path.isfile(path) else f"{rel(path)} (none yet)"
+    out = []
+    if new:
+        out.append(f"cartograph gate: FAIL - {len(new)} new structural warning(s) block "
+                   f"[baseline {where}, {len(grandfathered)} grandfathered]")
+        for w in new:
+            out.append(f"    ! {w['fingerprint']}  -  {w['message']}")
+        out.append("  -> fix the rot, or grandfather it: "
+                   "python cartograph/extract.py --write-baseline")
+    else:
+        out.append(f"cartograph gate: clean - 0 new structural warnings "
+                   f"[baseline {where}, {len(grandfathered)} grandfathered]")
+    if stale:
+        plural = "y" if len(stale) == 1 else "ies"
+        out.append(f"  note: {len(stale)} baseline entr{plural} no longer match any "
+                   f"warning (rot fixed? prune from baseline):")
+        for fp in stale:
+            out.append(f"    - {fp}")
+    sys.stdout.write("\n".join(out) + "\n")
+    return 1 if new else 0
 
 
 # --------------------------------------------------------------------- text render
@@ -452,7 +559,7 @@ def render_text(g, warnings, notes, wired):
     P("-" * 70)
     if warnings:
         for w in warnings:
-            P(f"      ! {w}")
+            P(f"      ! {w['message']}")
     else:
         P("      (clean - no orphaned hooks, no dangling harness ADRs)")
     if notes:
@@ -827,28 +934,60 @@ slabel.textContent='≤ '+selDate();
 
 
 def main():
-    ap = argparse.ArgumentParser(description="read-only cartograph extractor")
-    ap.add_argument("--json", nargs="?", const=os.path.join(ROOT, "cartograph", "map.json"),
-                    metavar="PATH", help="also write nodes+edges json (default cartograph/map.json)")
-    ap.add_argument("--html", nargs="?", const=os.path.join(ROOT, "cartograph", "index.html"),
-                    metavar="PATH", help="write the interactive page (default cartograph/index.html); "
-                                         "implies the live-state overlay + git time-slider")
+    global ROOT
+    ap = argparse.ArgumentParser(
+        description="read-only cartograph extractor + structural-rot gate")
+    ap.add_argument("--root", metavar="DIR",
+                    help="harness repo root to map (default: this script's repo). Lets the "
+                         "gate / export run against a test fixture or another clone; all default "
+                         "output and baseline paths then resolve under --root.")
+    ap.add_argument("--json", nargs="?", const="", default=None, metavar="PATH",
+                    help="also write nodes+edges json (default cartograph/map.json under --root)")
+    ap.add_argument("--html", nargs="?", const="", default=None, metavar="PATH",
+                    help="write the interactive page (default cartograph/index.html under --root); "
+                         "implies the live-state overlay + git time-slider")
+    # --check and --write-baseline are mutually exclusive: writing-then-checking in one
+    # run would grandfather all rot before the check reads it, so the gate would always
+    # pass (a silent false negative). The group makes that combination an argparse error.
+    gate_mode = ap.add_mutually_exclusive_group()
+    gate_mode.add_argument("--check", nargs="?", const="", default=None, metavar="BASELINE",
+                           help="GATE: exit non-zero if an un-baselined structural warning exists "
+                                "(BASELINE defaults to cartograph/baseline.json)")
+    gate_mode.add_argument("--write-baseline", nargs="?", const="", default=None, dest="write_baseline",
+                           metavar="BASELINE", help="grandfather the current warnings into BASELINE "
+                                                    "(default cartograph/baseline.json) so only NEW rot blocks")
     ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
     args = ap.parse_args()
 
+    if args.root:
+        ROOT = os.path.abspath(args.root)
+
     g, warnings, notes, wired = build()
 
+    # Part B gate modes are terminal: do the gate, skip the graph dump / json / html.
+    # (--check / --write-baseline are mutually exclusive at the argparse layer.)
+    if args.write_baseline is not None:
+        bpath = args.write_baseline or default_baseline()
+        write_baseline(bpath, warnings)
+        sys.stdout.write(f"wrote baseline {rel(bpath)} ({len(warnings)} grandfathered)\n")
+        return
+    if args.check is not None:
+        sys.exit(run_gate(warnings, args.check or default_baseline()))
+
     # Phases 2-3 enrich the graph in place; only needed when rendering/exporting.
+    # NB: --json/--html use const="" (a falsy sentinel meaning "default path"), so these
+    # must test `is not None`, not truthiness, or a bare `--json` would be skipped.
     overlay, dates = None, None
-    if args.html or args.json:
+    if args.html is not None or args.json is not None:
         overlay = compute_overlay(g)
         dates = attach_git_dates(g)
 
     if not args.quiet:
         sys.stdout.write(render_text(g, warnings, notes, wired))
 
-    if args.json:
-        os.makedirs(os.path.dirname(args.json), exist_ok=True)
+    if args.json is not None:
+        jpath = args.json or os.path.join(ROOT, "cartograph", "map.json")
+        os.makedirs(os.path.dirname(os.path.abspath(jpath)), exist_ok=True)
         payload = {
             "nodes": list(g.nodes.values()),
             "edges": g.edges,
@@ -858,16 +997,17 @@ def main():
             "notes": notes,
             "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges)},
         }
-        with open(args.json, "w", encoding="utf-8") as fh:
+        with open(jpath, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
-        sys.stderr.write(f"\nwrote {rel(args.json)} "
+        sys.stderr.write(f"\nwrote {rel(jpath)} "
                          f"({len(g.nodes)} nodes, {len(g.edges)} edges)\n")
 
-    if args.html:
-        os.makedirs(os.path.dirname(args.html), exist_ok=True)
-        with open(args.html, "w", encoding="utf-8") as fh:
+    if args.html is not None:
+        hpath = args.html or os.path.join(ROOT, "cartograph", "index.html")
+        os.makedirs(os.path.dirname(os.path.abspath(hpath)), exist_ok=True)
+        with open(hpath, "w", encoding="utf-8") as fh:
             fh.write(render_html(g, overlay, dates))
-        sys.stderr.write(f"\nwrote {rel(args.html)} "
+        sys.stderr.write(f"\nwrote {rel(hpath)} "
                          f"({len(g.nodes)} nodes, {len(g.edges)} edges, "
                          f"{len(dates)} time-steps) - open it in a browser\n")
 

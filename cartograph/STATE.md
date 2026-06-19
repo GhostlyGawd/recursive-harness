@@ -4,16 +4,9 @@ Living scratchpad for building out cartograph across sessions. Keep it **short a
 current** — prune stale lines, don't append forever. This is our coordination doc for
 this build, not harness memory.
 
-**Updated:** 2026-06-19 · **Status:** `main` current; FP-hardening already shipped (see banner) · **Next:** Part B gate (`--check`/`--baseline`)
-
-> ⚠️ **RECONCILED 2026-06-19 — read this first.** The "Part A" warning-hardening logged
-> below was **already shipped on `main` by PR #62** (`fix(cartograph): teach the linter about
-> 3 legit non-dead wirings`): it classifies each hook as event/library/template/orphan,
-> recognizes the venture `DECISIONS.md` ADR cite, and reaches **3 → 0 warnings** with a notes
-> channel. This chat re-implemented the same fix on a stale copy of `extract.py` (kept on
-> branch `cartograph-build` for history, **not merged**). **Do NOT rebuild the false-positive
-> fix.** The genuine remaining work is **Part B — the `--check`/`--baseline` gate — built on
-> #62's current `extract.py`.**
+**Updated:** 2026-06-19 · **Status:** Part B gate **built + reviewed** on branch
+`feat/2026-06-19-cartograph-gate` (M2+M3 done; 42/42 gate tests + eval green; PR pending) ·
+**Next:** M4/M5 — pre-commit/CI wiring + eval-corpus guard (both **locked** → `/harness-pr`)
 
 ## What cartograph is
 Read-only extractor (`cartograph/extract.py`) that maps the harness from machine-truth and
@@ -35,22 +28,38 @@ Make the consistency warnings *block bad commits* instead of just printing.
 
 ## Roadmap
 - [x] **M1** — spec'd #1; warning logic now trustworthy (shipped via #62 on `main`).
-- [ ] **M2** — `extract.py`: Part B (`--check` / `--baseline` gate) on top of #62.
-- [ ] **M3** — e2e for the gate (break wiring on purpose, confirm `--check` exits non-zero).
+- [x] **M2** — `extract.py` Part B: `--check` (exit 1 on un-baselined rot) + `--write-baseline`
+  (grandfather) + `--root`; stable fingerprints `orphan-hook:<name>` / `dangling-adr:<NNNN>`;
+  empty `cartograph/baseline.json`. Branch `feat/2026-06-19-cartograph-gate` (PR pending).
+- [x] **M3** — `cartograph/test_gate.py`: 42 unit+e2e assertions (break-on-purpose → exit 1;
+  grandfather → exit 0; only-new-rot-blocks; mutual exclusion; corrupt-baseline → strict).
 - [ ] **M4** — wire pre-commit + CI via `/harness-pr` (locked).
 - [ ] **M5** — eval-corpus guard for `--check` (locked, `/harness-pr`).
 - [ ] _later_ — #3: feed structural findings into a self-audit loop.
 
-## Open questions
-- Baseline format: a file of accepted-warning fingerprints? How does it get refreshed?
-- Gate strict-with-baseline from day one, or warn-only first? (Trunk is already at 0 warnings,
-  so strict-from-day-one is viable.)
+## Decisions (Part B) — resolved
+- **Baseline format:** `cartograph/baseline.json` = `{version, description, accepted:[{fingerprint,
+  message}]}`. Refresh with `extract.py --write-baseline` (deterministic: sorted, LF, no timestamp
+  → byte-identical rewrites, no git churn). `message` is for human auditing; the gate keys on
+  `fingerprint` only.
+- **Strict from day one** (trunk is at 0 warnings): an absent/empty baseline grandfathers nothing,
+  so any new orphan-hook / dangling-ADR blocks immediately. `--check` and `--write-baseline` are
+  mutually exclusive (writing-then-checking in one run would self-pass). A corrupt/non-dict
+  baseline degrades to strict (empty), never a traceback.
 
 ## Test / feedback log (newest first)
+- **2026-06-19** — Part B `cartograph/test_gate.py` 42/42 (7 unit + 35 e2e); `cartograph-extractor`
+  eval green (81 nodes / 124 edges). Built clean, then a 21-agent adversarial review surfaced 14
+  confirmed issues → all fixed: non-dict-baseline crash, `--check`/`--write-baseline` mutual
+  exclusion, `--root`+default-`--json`/`--html` path, bare-filename `makedirs('')`, ADR-fingerprint
+  truncation collision, and the mixed-grandfather ("only NEW rot blocks") e2e test gap.
 - **2026-06-19** — (on `cartograph-build`, unmerged) warning-logic e2e `test_warnings.py` 6/6.
   Superseded by #62's already-merged implementation; kept on branch for history.
 
 ## Session log (newest first)
+- **2026-06-19** — built Part B (M2+M3) on `feat/2026-06-19-cartograph-gate`: the `--check` /
+  `--baseline` structural-rot gate + e2e. Ran an adversarial workflow review, fixed all 14
+  confirmed findings, re-verified (42 tests + eval). PR pending. M4/M5 remain locked → `/harness-pr`.
 - **2026-06-19** — reconciled: discovered the FP-hardening was already merged as #62; updated
   local `main` (was 11 behind), backed up `cartograph-build` to origin, landed this STATE doc
   on `main`. Re-pointed roadmap to Part B.

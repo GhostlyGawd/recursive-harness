@@ -28,3 +28,7 @@ jobs:
         run: python3 tests/test_retro_done.py
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run
+      - name: Cartograph structural-rot gate (Part B) + its tests
+        run: |
+          python3 cartograph/extract.py --check
+          python3 cartograph/test_gate.py
