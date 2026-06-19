@@ -139,11 +139,14 @@ Two paths with two different bars — don't conflate them:
   scored a miss.)
 - **Guard A's `git worktree` exemption is matched per shell-segment, at the
   segment START — so a loop breaks it.** A batch loop (`for w in …; do git
-  worktree remove ".claude/worktrees/$w"; done`) is BLOCKED: the scanned segment
-  leads with `for`/`if`, and the unexpanded `$w` reads as a quoted foreign-worktree
-  literal, so the exemption never applies. Run each `git worktree remove "<literal
-  path>"` as its OWN command (each then leads with `git worktree` and is exempt).
-  Loop expansion does not inherit the exemption. (session 0081d05a, 2026-06-19.)
+  worktree remove ".claude/worktrees/$w"; done`) is BLOCKED: after the guard
+  splits on `;`, the loop-BODY segment leads with `do` (a conditional body leads
+  with `then`), not `git worktree`, so the exemption never fires — and the
+  `.claude/worktrees/` reference in that body then trips the foreign-worktree match
+  (true whether the path is a literal or an unexpanded `$w`). Run each `git
+  worktree remove "<literal path>"` as its OWN command — each then leads with `git
+  worktree` and is exempt; `&&`-chaining them works too, since every chained
+  segment still leads with `git worktree`. (session 0081d05a, 2026-06-19.)
 
 ## 4. Windows / this repo's housekeeping
 
