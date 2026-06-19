@@ -18,10 +18,11 @@ jobs:
         run: python3 lint/lint_harness.py
       - name: Hook behavior tests
         run: python3 tests/test_hooks.py
-      - name: Worktree guard tests (Guard A + Guard B)
+      - name: Concurrency guard tests (Guard A + B worktree, Guard C trunk-lease)
         run: |
           python3 tests/test_guard_worktree_isolation.py
           python3 tests/test_guard_worktree_session.py
+          python3 tests/test_guard_trunk_lease.py
       - name: Feature-flag layer tests (ADR 0008)
         run: python3 tests/test_features.py
       - name: Retro-completion ledger tests

@@ -111,14 +111,37 @@ try:
     git(["checkout", "-q", "-b", "peerbranch"], r)   # simulate a 2nd session switching HEAD
     rc, _, err = run(pl("Edit", EDIT(r), r, sid="A"))
     check("peer moved HEAD -> A's next mutating op BLOCKED", blocked(rc, err), f"rc={rc} err={err[:70]}")
+    check("peer-moved-HEAD block blames a peer", "another session" in err.lower(), err[:90])
 
-    # --- 3b. peer made an uncommitted edit (dirty change) -> BLOCK ---
+    # --- 3b. peer made an uncommitted edit to a TRACKED file -> BLOCK (a tracked
+    #         change is real, clobberable divergence; HEAD unchanged, so the message
+    #         must NOT blame a peer) ---
     r = fresh()
     stamp(r, "A")
-    with open(os.path.join(r, "peer.txt"), "w") as f:
-        f.write("peer work\n")
+    with open(os.path.join(r, "README.md"), "w") as f:
+        f.write("peer edited a tracked file\n")
     rc, _, err = run(pl("Write", {"file_path": os.path.join(r, "mine.py")}, r, sid="A"))
-    check("peer dirtied the tree -> A BLOCKED", blocked(rc, err), f"rc={rc}")
+    check("peer edited a TRACKED file -> A BLOCKED", blocked(rc, err), f"rc={rc}")
+    check("tracked-dirty block does NOT blame a phantom peer (HEAD unchanged)",
+          "another session" not in err.lower() and "head is unchanged" in err.lower(), err[:100])
+
+    # --- 3c. CALIBRATION (2026-06-19): a NEW UNTRACKED file/dir must NOT block. A
+    #         session's own background-subagent output, a pre-ignore build artifact, or
+    #         `.claude/` first materializing flipped the dirty hash with HEAD unchanged
+    #         and produced phantom-peer self-blocks (the 3x self-block that day).
+    #         Untracked can't be clobbered by a peer the way tracked/index state can,
+    #         so it is excluded from the dirty fingerprint. ---
+    r = fresh()
+    stamp(r, "A")
+    with open(os.path.join(r, "scratch_untracked.txt"), "w") as f:
+        f.write("subagent output\n")
+    rc, _, _ = run(pl("Edit", EDIT(r), r, sid="A"))
+    check("new UNTRACKED file does NOT block (no phantom-peer self-block)", rc == 0, f"rc={rc}")
+    os.makedirs(os.path.join(r, "newdir_untracked"))
+    with open(os.path.join(r, "newdir_untracked", "a.txt"), "w") as f:
+        f.write("y\n")
+    rc, _, _ = run(pl("Edit", EDIT(r), r, sid="A"))
+    check("new top-level UNTRACKED dir does NOT block", rc == 0, f"rc={rc}")
 
     # --- 4. session_id CHURN must NOT false-lock: A stamps at X; a NEW sid A' acts
     #         on the SAME unchanged tree -> bootstrap -> ALLOW (the ADR-0007 guard) ---

@@ -178,18 +178,43 @@ def _under_state(chunk: str) -> bool:
     return p == "state" or p.startswith("state/")
 
 
+def _is_untracked(chunk: str) -> bool:
+    """True if a porcelain `-z` entry is an UNTRACKED file ('?? path').
+
+    Untracked paths are EXCLUDED from the dirty fingerprint (auditor 2026-06-19): a
+    peer session's clobber is a HEAD move / branch switch / tracked-or-staged edit --
+    all still captured by head_oid+head_sym and the tracked dirty -- whereas a peer
+    merely CREATING an untracked file does not overwrite my work. Meanwhile a
+    session's OWN new untracked paths (a background subagent's output, a build
+    artifact created before it is gitignored, `.claude/` first materializing) are the
+    DOMINANT false-positive source: a NEW top-level untracked entry flips the dirty
+    hash with HEAD byte-identical, producing a 'phantom peer' BLOCK on solo
+    single-session work (the 3x self-block of 2026-06-19). Excluding untracked
+    removes that entire surface without weakening real-divergence detection.
+    (git collapses an untracked DIR to one '?? dir/' line, so nested churn inside an
+    already-present untracked dir never moved the hash -- only a NEW top-level entry
+    did; this strips both.)"""
+    return chunk[:3] == "?? "
+
+
 def _fingerprint(cwd):
     """Observable trunk state: {head_sym, head_oid, dirty}. None if git is unusable.
-    `dirty` hashes `git status --porcelain=v1 -z` with state/ entries STRIPPED: the
-    machine-local ledger's churn is not a trunk change, and excluding it makes the
-    fingerprint immune to whether state/ is gitignored -- so a lease write can never
-    self-perturb the fingerprint and brick the checkout (auditor FIX-B, 2026-06-19)."""
+    `dirty` hashes `git status --porcelain=v1 -z` with two classes of entry STRIPPED:
+      - state/ entries (auditor FIX-B, 2026-06-19): the machine-local ledger's churn
+        is not a trunk change, and excluding it makes the fingerprint immune to
+        whether state/ is gitignored, so a lease write can never self-perturb it.
+      - UNTRACKED entries ('?? ...', auditor 2026-06-19, see _is_untracked): a new
+        untracked path cannot be clobbered by a peer the way tracked/index state can,
+        and a session's OWN untracked churn was the dominant false-positive source.
+    Only TRACKED + STAGED divergence (plus HEAD oid/symbolic-ref) remains -- exactly
+    the state a concurrent session can actually clobber."""
     head_oid = _git(["rev-parse", "HEAD"], cwd)
     status = _git(["status", "--porcelain=v1", "-z"], cwd)
     if head_oid is None and status is None:
         return None  # git wholly unusable -> fail open
     head_sym = _git(["symbolic-ref", "-q", "HEAD"], cwd)
-    kept = [c for c in (status or "").split("\0") if not _under_state(c)]
+    kept = [c for c in (status or "").split("\0")
+            if c and not _under_state(c) and not _is_untracked(c)]
     dirty = hashlib.sha1("\0".join(kept).encode("utf-8", "replace")).hexdigest()
     return {"head_sym": head_sym or "DETACHED",
             "head_oid": head_oid or "NONE",
@@ -282,21 +307,42 @@ def _block(mine, cur) -> None:
         ref = ref.split("/")[-1] if isinstance(ref, str) else "?"
         oid = str(fp.get("head_oid", "?"))[:8]
         return f"{ref}@{oid}"
-    print(
-        "BLOCKED by harness guard: the trunk changed since this session last "
-        f"touched it (you last saw {desc(mine)}; it is now {desc(cur)}). Another "
-        "session likely moved HEAD or edited files in this shared checkout -- "
-        "acting now risks committing onto the wrong branch or clobbering its work.\n"
+    # Only blame a PEER when HEAD actually moved. When head_sym+head_oid match and
+    # only the tracked `dirty` hash differs, no peer moved HEAD -- the working tree
+    # diverged out-of-band (a tool, a background subagent, your own edit). Asserting
+    # "another session moved HEAD" there sends you chasing a phantom (the misleading
+    # message of the 2026-06-19 self-blocks, where both fingerprints read the SAME
+    # branch@oid). Tell the truth in each case.
+    head_moved = not (isinstance(mine, dict) and isinstance(cur, dict)
+                      and mine.get("head_sym") == cur.get("head_sym")
+                      and mine.get("head_oid") == cur.get("head_oid"))
+    hatch = (
         "\n"
-        "If this change is EXPECTED (your own pull/rebase, or you accept the other "
-        "session's state), re-baseline and proceed by prefixing the command:\n"
+        "If this change is EXPECTED (your own pull/rebase/edit, or you accept the "
+        "other session's state), re-baseline and proceed by prefixing the command:\n"
         "  Bash:        HARNESS_TRUNK_LEASE_OK=1 <your command>\n"
         "  PowerShell:  $env:HARNESS_TRUNK_LEASE_OK='1'; <your command>\n"
-        "To PRESERVE your in-flight work instead, branch or stash before proceeding.\n"
-        "(To work in parallel without this contention, use your own worktree: the "
-        "EnterWorktree tool, or `claude --worktree <name>` -- see skill `worktree`.)",
-        file=sys.stderr,
+        "To PRESERVE your in-flight work instead, branch or stash before proceeding."
     )
+    if head_moved:
+        print(
+            "BLOCKED by harness guard: the trunk moved since this session last "
+            f"touched it (you last saw {desc(mine)}; it is now {desc(cur)}). Another "
+            "session likely moved HEAD or switched branches in this shared checkout "
+            "-- acting now risks committing onto the wrong branch or clobbering its "
+            "work." + hatch + "\n"
+            "(To work in parallel without this contention, use your own worktree: the "
+            "EnterWorktree tool, or `claude --worktree <name>` -- see skill `worktree`.)",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "BLOCKED by harness guard: tracked files changed since this session last "
+            f"acted (HEAD is unchanged at {desc(cur)}). A tool, a background subagent, "
+            "or an out-of-band edit modified the working tree -- this is local churn, "
+            "not a peer moving HEAD. Acting now may build on an unexpected tree." + hatch,
+            file=sys.stderr,
+        )
 
 
 def main() -> int:
