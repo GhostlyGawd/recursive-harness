@@ -9,12 +9,21 @@ import json
 import os
 import sys
 
+try:
+    from harness_features import flag
+except Exception:  # never let a config-reader import brick the hook
+    def flag(key, default=None):
+        return default
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(HARNESS_ROOT, "state")
 THRESHOLD = 3
 
 
 def main() -> int:
+    # SOFT flag (ADR 0008): disable the per-session retro nudge.
+    if not flag("nudges.retro_gate", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
@@ -22,8 +31,8 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
     session = data.get("session_id", "?")
-    flag = os.path.join(STATE, f"retro_gate_{session}")
-    if os.path.exists(flag):
+    gate_flag = os.path.join(STATE, f"retro_gate_{session}")  # not `flag`: that name is the feature reader
+    if os.path.exists(gate_flag):
         return 0
     count = 0
     log = os.path.join(STATE, "corrections.jsonl")
@@ -37,7 +46,7 @@ def main() -> int:
                     continue
     if count >= THRESHOLD:
         os.makedirs(STATE, exist_ok=True)
-        with open(flag, "w", encoding="utf-8") as f:
+        with open(gate_flag, "w", encoding="utf-8") as f:
             f.write("nudged\n")
         print(json.dumps({
             "decision": "block",

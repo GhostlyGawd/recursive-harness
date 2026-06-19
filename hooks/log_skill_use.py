@@ -9,11 +9,20 @@ import json
 import os
 import sys
 
+try:
+    from harness_features import flag
+except Exception:  # never let a config-reader import brick the hook
+    def flag(key, default=None):
+        return default
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(HARNESS_ROOT, "state", "skill_usage.jsonl")
 
 
 def main() -> int:
+    # SOFT flag (ADR 0008): stop recording skill activations when disabled.
+    if not flag("observability.log_skill_use", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:

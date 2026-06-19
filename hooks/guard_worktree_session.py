@@ -99,6 +99,15 @@ import re
 import sys
 import time
 
+try:
+    from harness_features import flag, num
+except Exception:  # never let a config-reader import brick a guard
+    def flag(key, default=None):
+        return default
+
+    def num(key, default):
+        return float(default)
+
 # A ".claude/worktrees/<name>" segment, case-insensitive, tolerating '/' and
 # '\\'. group(1) spans from the start through <name> — the worktree root.
 _WT_RE = re.compile(
@@ -150,7 +159,12 @@ def _hatch_enabled() -> bool:
 
 
 def _ttl_seconds() -> float:
-    return _TTL_SECONDS  # fixed by design; see _TTL_SECONDS comment (no env override)
+    # LOCKED flag (ADR 0008): read only from the enforcement-PROTECTED features.json
+    # — never env-overridable. This preserves the invariant that motivated the fixed
+    # constant (a live session cannot self-assert a tiny TTL to evict the real owner,
+    # because it cannot edit the protected file) while realizing the _TTL_SECONDS
+    # comment's own sanctioned path: "a human-gated config via /harness-pr".
+    return num("guards.worktree_session.ttl_seconds", _TTL_SECONDS)
 
 
 def _strip_extended(path: str) -> str:
@@ -512,7 +526,12 @@ def main() -> int:
         m = _load_map(repo)
         now = time.time()
         owner = m.get(tree)
-        if _worktree_root(tree) and owner and owner.get("session_id") != sid and not _is_stale(owner, now):
+        # LOCKED flag (ADR 0008): the worktree owner-map BLOCK can be disabled only via
+        # the enforcement-PROTECTED features.json (an agent cannot self-disable it). The
+        # claim/heartbeat below still runs so liveness + the warn path keep working.
+        if (flag("guards.worktree_session.block", True)
+                and _worktree_root(tree) and owner
+                and owner.get("session_id") != sid and not _is_stale(owner, now)):
             _block(owner, tree, now)
             return 2
         # MAIN checkout: WARN (never block) on a detected concurrent peer. Blocking
@@ -525,9 +544,12 @@ def main() -> int:
         # heartbeat rewrite in _claim. 0.0 if the entry isn't mine yet (first claim /
         # post-churn) -> the next peer detection warns once, then the cooldown holds.
         warn_ts = _my_last_warn(owner, sid)
-        if not _worktree_root(tree):
+        # SOFT flags (ADR 0008): the non-blocking main-checkout warning + its cooldown
+        # window are freely toggleable (a missed warning is harmless, so no human gate).
+        if not _worktree_root(tree) and flag("guards.worktree_session.warn_main_checkout", True):
             peer = _concurrent_live_session(data, now)
-            if peer is not None and (now - warn_ts) >= _WARN_COOLDOWN_SECONDS:
+            cooldown = num("guards.worktree_session.warn_cooldown_seconds", _WARN_COOLDOWN_SECONDS)
+            if peer is not None and (now - warn_ts) >= cooldown:
                 _warn_concurrent(peer)   # non-blocking: warn (throttled), then claim
                 warn_ts = now
         _claim(m, tree, sid, last_warn_ts=warn_ts)

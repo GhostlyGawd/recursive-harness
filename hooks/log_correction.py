@@ -13,6 +13,12 @@ import os
 import re
 import sys
 
+try:
+    from harness_features import flag
+except Exception:  # never let a config-reader import brick the hook
+    def flag(key, default=None):
+        return default
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(HARNESS_ROOT, "state", "corrections.jsonl")
 
@@ -25,6 +31,9 @@ SIGNALS = re.compile(
 
 
 def main() -> int:
+    # SOFT flag (ADR 0008): quietly stop auto-logging corrections when disabled.
+    if not flag("observability.log_corrections", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:

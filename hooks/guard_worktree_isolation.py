@@ -38,6 +38,12 @@ import os
 import re
 import sys
 
+try:
+    from harness_features import flag
+except Exception:  # never let a config-reader import brick a guard
+    def flag(key, default=None):
+        return default
+
 # Match a ".claude/worktrees/<name>" segment, case-insensitive on the literal
 # ".claude/worktrees" part (Windows is case-insensitive), tolerating both '/'
 # and '\\' separators around it. The captured group spans from the start of the
@@ -317,7 +323,7 @@ def _is_git_worktree_mgmt(segment: str) -> bool:
 
 
 def _bash_foreign_worktree(command: str, session_wt: str | None,
-                           cwd: str) -> str | None:
+                           cwd: str, lenient: bool = False) -> str | None:
     """Return the id of the FIRST foreign worktree REACHED by a Bash command, or
     None if every reference is same-worktree / inert / absent / a git-worktree
     management op.
@@ -331,10 +337,20 @@ def _bash_foreign_worktree(command: str, session_wt: str | None,
       4a. Tolerant-glob match for the .claude/worktrees/<name> literal.
       4b. Resolve RELATIVE tokens against the session cwd and segment-check —
           catches `../<sibling>/f` traversal that has no literal worktree text.
+
+    LENIENT mode (ADR 0008 feature flag): skip steps 1-2 (the anti-evasion
+    scrubbing). The raw command is still de-globbed and scanned for a LITERAL
+    .claude/worktrees/<name> and for ..\\sibling traversal, so honest cross-worktree
+    paths are still caught — but a path hidden by quote-concatenation or a var
+    assignment can slip through. Lets the user A/B whether the heavy scanner earns
+    its keep without losing the cheap literal catch.
     """
-    scrubbed = _strip_quotes_and_heredocs(command)
-    scrubbed = _expand_simple_vars(scrubbed)
-    scrubbed = _deglob(scrubbed)
+    if lenient:
+        scrubbed = _deglob(command)
+    else:
+        scrubbed = _strip_quotes_and_heredocs(command)
+        scrubbed = _expand_simple_vars(scrubbed)
+        scrubbed = _deglob(scrubbed)
 
     session_name = _wt_name(session_wt) if session_wt else None
 
@@ -405,6 +421,10 @@ def _hatch_enabled() -> bool:
 def main() -> int:
     if _hatch_enabled():
         return 0
+    # LOCKED flag (ADR 0008): read only from the enforcement-PROTECTED features.json,
+    # so the agent cannot turn its own isolation guard off via the gitignored override.
+    if not flag("guards.worktree_isolation.block", True):
+        return 0
     try:
         data = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
@@ -426,7 +446,9 @@ def main() -> int:
         if tool == "Bash":
             command = ti.get("command", "")
             if isinstance(command, str) and command:
-                target_wt = _bash_foreign_worktree(command, session_wt, cwd)
+                # LOCKED flag (ADR 0008): "lenient" skips the anti-evasion scrubbing.
+                lenient = flag("guards.worktree_isolation.bash_scanner", "strict") != "strict"
+                target_wt = _bash_foreign_worktree(command, session_wt, cwd, lenient)
                 if target_wt is not None:
                     _block(target_wt, session_wt)
                     return 2
