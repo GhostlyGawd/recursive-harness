@@ -1,0 +1,9 @@
+{
+  "_doc": "Nested sub-repos to materialize into a worktree. These are gitignored, own-remote repos developed in place that `.worktreeinclude` CANNOT copy (it copies gitignored files, and git does not recurse a nested-repo boundary — verified 2026-06-20, prediction 55b1735b). hooks/materialize_worktree_repos.py reads this on SessionStart + PostToolUse[EnterWorktree] and clones any missing entry into the worktree (from the local primary checkout if present, else `remote`). To register a new sub-repo: append one {path, remote} entry — no code change. See skills/nested-repos.",
+  "repos": [
+    {
+      "path": "skills/brand-foundry",
+      "remote": "https://github.com/GhostlyGawd/brand-foundry.git"
+    }
+  ]
+}
