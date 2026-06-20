@@ -16,6 +16,12 @@ HUMAN_APPROVED
 # Ventures are outputs, not the harness brain — kept on disk, not in the trunk.
 # Each venture is its own repo (or untracked working dir) under products/<slug>/.
 products/
+# brand-foundry is its OWN repo (github.com/GhostlyGawd/brand-foundry), developed
+# in place under skills/ and pushed to its own GitHub — its history is not the
+# harness trunk's. Ignored here so it isn't double-committed; listed in
+# .worktreeinclude so the plugin still rides into every new worktree. See
+# skills/vendoring-skills.
+skills/brand-foundry/
 # Living Harness Cartograph: generated + vendored build artifacts. Only the
 # source extractor (cartograph/extract.py) is tracked; regenerate the rest with
 # `python cartograph/extract.py --html`. map.json/index.html embed volatile live
