@@ -42,6 +42,7 @@ curated overlays from the design synthesis, not machine-truth — they are flagg
 as such in the output so they are never mistaken for extracted facts.
 """
 import argparse
+import datetime
 import json
 import os
 import re
@@ -161,6 +162,49 @@ SESSION_RE = re.compile(r"session\s+([0-9a-f]{8}-[0-9a-f-]{20,})", re.I)
 DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 ADR_RE = re.compile(r"ADR[\s-]?(\d{3,})")  # full digit run: ADR 12345 must not alias 1234
 
+# A session id AS WRITTEN in a provenance line. Two real shapes only:
+#   * a hex run - 8-hex short id or a dashed uuid (`9147f304`, `c5f1c14c-63a7-...`);
+#   * a digit-led base62 id - the Claude `01NHukMT` / `session_01Trp...` form.
+# Both rule out an English word that merely follows "session" inside a provenance sentence
+# ("in-session AskUserQuestion", "session stranded the agent"): prose is letter-led and
+# non-hex, so it matches neither shape. (Caught in-practice; the first cut over-matched.)
+_SID = r"(?:[0-9a-f]{8}(?:-[0-9a-f]{4,})*|[0-9][0-9A-Za-z]{6,})"
+PROV_SESSION_RE = re.compile(r"session(?:\(s\))?[_\s:]+`?(" + _SID + r")", re.I)
+
+
+def provenance_blocks(text):
+    """The regions where an artifact DECLARES its lineage - as opposed to merely
+    mentioning a session in its body. Scanning only these keeps born_in honest: a skill
+    that DISCUSSES nine sessions is not born in nine sessions."""
+    blocks = []
+    # any `provenance:` declaration (frontmatter, a trailing line, or mid-line) - a
+    # superset of the old fm / first-1500-chars scan, so nothing it caught is lost
+    blocks += re.findall(r"(?i)provenance:[^\n]*", text)
+    # <!-- provenance: ... --> comments (may span lines)
+    blocks += [m.group(1) for m in re.finditer(r"<!--\s*provenance:(.*?)-->", text, re.S | re.I)]
+    # a markdown "## Provenance" section (heading -> next heading / end of file)
+    blocks += [m.group(1) for m in
+               re.finditer(r"(?ims)^\#{1,6}\s*provenance\b(.*?)(?=^\#{1,6}\s|\Z)", text)]
+    # the /harness-pr template's `session(s): <ids>` provenance line
+    blocks += re.findall(r"(?im)^.*session\(s\):[^\n]*", text)
+    return blocks
+
+
+def provenance_sessions(text):
+    """All DISTINCT sessions declared in `text`'s provenance block(s), each paired with
+    the date nearest it. Returns sorted [(short_id, date_or_None), ...]. The unit of the
+    born_in fix: was a single .search over a narrow window; now every declared session."""
+    seen = {}
+    for blk in provenance_blocks(text):
+        for sm in PROV_SESSION_RE.finditer(blk):
+            short = sm.group(1)[:8]
+            if short in seen:
+                continue
+            window = blk[max(0, sm.start() - 60): sm.end() + 30]
+            dm = DATE_RE.search(window) or DATE_RE.search(blk)
+            seen[short] = dm.group(1) if dm else None
+    return sorted(seen.items())
+
 
 def build():
     g = Graph()
@@ -249,15 +293,12 @@ def build():
         body = re.sub(r"<!--.*?-->", " ", body, flags=re.S)
         self_name = node_id.split(":", 1)[-1]
 
-        # (2) born_in — provenance lineage
-        prov_blob = fm if "provenance" in fm else (text[:1500] if "provenance:" in text[:1500] else "")
-        sm = SESSION_RE.search(prov_blob)
-        if sm:
-            short = sm.group(1)[:8]
-            dm = DATE_RE.search(prov_blob)
+        # (2) born_in — provenance lineage: EVERY session the artifact declares in a
+        # provenance block (multi-session lines, trailing/`## Provenance`/comment blocks),
+        # not just the first, and never a session merely discussed in the body.
+        for short, date in provenance_sessions(text):
             g.node(f"session:{short}", "session",
-                   f"{short} ({dm.group(1) if dm else '?'})",
-                   date=(dm.group(1) if dm else None))
+                   f"{short} ({date or '?'})", date=date)
             g.edge(node_id, f"session:{short}", "born_in")
 
         # (3) cites — skill references (matched against known skill names)
@@ -273,12 +314,15 @@ def build():
             if re.search(r"harness[\"']?\s+" + re.escape(sc) + r"\b", body):
                 g.edge(node_id, f"cli:{sc}", "invokes")
 
-        # (5) spawns — agent references (word-boundary, known agents only)
-        for name in agent_files:
-            if name == self_name:
-                continue
-            if re.search(r"\b" + re.escape(name) + r"\b", body):
-                g.edge(node_id, f"agent:{name}", "spawns")
+        # (5) spawns — agent references (word-boundary, known agents only). A HOOK is
+        # synchronous Python enforcement that cannot launch a subagent, so a hook naming
+        # an agent (e.g. a comment referencing harness-auditor) is a mention, not a spawn.
+        if not node_id.startswith("hook:"):
+            for name in agent_files:
+                if name == self_name:
+                    continue
+                if re.search(r"\b" + re.escape(name) + r"\b", body):
+                    g.edge(node_id, f"agent:{name}", "spawns")
 
         # (6) references — ADRs. Harness ADRs are individual files in
         # memory/decisions/. A reference whose number has NO such file is either a
@@ -518,6 +562,121 @@ def run_gate(warnings, path):
             out.append(f"    - {fp}")
     sys.stdout.write("\n".join(out) + "\n")
     return 1 if new else 0
+
+
+# ------------------------------------------------- #3: the autophagic self-audit feed
+# The gate (--check) BLOCKS on structural rot. The audit (--audit) is the other half of
+# the loop: it SURFACES rot + dead-weight CANDIDATES, with evidence, for /meta-retro to
+# weigh - and it deliberately stops there. It never mutates the repo and never blocks
+# (exit 0 always). That firewall (audit advises, gate blocks, neither prunes) is the
+# anti-reward-hack guarantee: cartograph informs the harness's self-pruning, it does not
+# perform it. A map that could delete its own nodes to look clean is exactly the
+# corruption mode the kernel warns about, so the audit has no power to act.
+
+# Inbound edges that mean "something in the harness points AT this node". Lineage
+# (born_in -> a session) and state writes (touches -> a ledger) are not references, so a
+# node reachable only by them is still effectively unreferenced.
+REF_EDGE_TYPES = {"cites", "spawns", "invokes", "references", "nudges", "wires", "fires_on"}
+
+# meta-retro already refuses to delete anything with provenance younger than this, so a
+# dead-weight CANDIDATE must clear the same bar before it is even worth surfacing.
+DEAD_WEIGHT_AGE_DAYS = 90
+
+
+def compute_indegree(g):
+    """node id -> count of inbound REF_EDGE_TYPES edges (how many artifacts cite/spawn/
+    invoke/... it). Lineage + state edges are excluded by REF_EDGE_TYPES."""
+    indeg = {nid: 0 for nid in g.nodes}
+    for e in g.edges:
+        if e["type"] in REF_EDGE_TYPES:
+            indeg[e["target"]] = indeg.get(e["target"], 0) + 1
+    return indeg
+
+
+def is_dead_weight(node, indeg, today):
+    """A conservative prune CANDIDATE - never an automatic action. True only when ALL
+    hold, so the false-positive rate stays low enough that /meta-retro can trust the list:
+      - type is skill or agent (commands are user entry points; hooks have the gate);
+      - in-degree 0           (nothing in the harness references it);
+      - unused                (0 / no fires; agents never fire, so in-degree is their signal);
+      - older than the <90d window meta-retro already protects (recent work isn't rot).
+    An undatable node (no git add date) is NOT flagged - we never guess it's old."""
+    if node.get("type") not in ("skill", "agent"):
+        return False
+    if indeg != 0:
+        return False
+    if node.get("fires"):                 # None or 0 -> unused; a positive count -> alive
+        return False
+    added = node.get("added")
+    if not added:                         # cannot prove it is old -> do not flag
+        return False
+    try:
+        born = datetime.date.fromisoformat(added)
+    except (ValueError, TypeError):
+        return False
+    return (today - born).days > DEAD_WEIGHT_AGE_DAYS
+
+
+def audit_report(g, warnings, today=None):
+    """Assemble the self-audit feed: structural rot (== the gate's warnings) + dead-weight
+    candidates, each carrying its evidence. Pure: reads the graph, writes nothing."""
+    today = today or datetime.date.today()
+    indeg = compute_indegree(g)
+    dead = []
+    for nid, node in g.nodes.items():
+        if is_dead_weight(node, indeg.get(nid, 0), today):
+            dead.append({
+                "id": nid,
+                "type": node["type"],
+                "file": node.get("file"),
+                "in_degree": 0,
+                "fires": node.get("fires"),
+                "added": node.get("added"),
+                "reason": "unreferenced (in_degree 0) + unused (no fires) + older than "
+                          f"{DEAD_WEIGHT_AGE_DAYS}d - candidate for /meta-retro prune review",
+            })
+    dead.sort(key=lambda x: x["id"])
+    rot = sorted(({"fingerprint": w["fingerprint"], "message": w["message"]} for w in warnings),
+                 key=lambda r: r["fingerprint"])
+    return {
+        "structural_rot": rot,
+        "dead_weight": dead,
+        "meta": {
+            "rot_count": len(rot),
+            "dead_weight_count": len(dead),
+            "advisory": True,      # audit never blocks (exit 0 always)
+            "mutates": False,      # audit never writes to the repo
+            "age_threshold_days": DEAD_WEIGHT_AGE_DAYS,
+        },
+    }
+
+
+def render_audit_text(report):
+    """Human view of the audit feed - candidates with evidence, never a verdict."""
+    out = []
+    P = out.append
+    rot, dead = report["structural_rot"], report["dead_weight"]
+    P("=" * 70)
+    P("  CARTOGRAPH SELF-AUDIT  (candidates for /meta-retro - advisory, never auto-acted)")
+    P("=" * 70)
+    P(f"  {len(rot)} structural-rot + {len(dead)} dead-weight candidate(s). "
+      "Nothing is pruned here; the human decides.")
+    P("")
+    P("  structural rot (same set the gate blocks on):")
+    if rot:
+        for r in rot:
+            P(f"    ! {r['fingerprint']}  -  {r['message']}")
+    else:
+        P("    (none - clean)")
+    P("")
+    P(f"  dead-weight candidates (skill/agent, unreferenced + unused + >{report['meta']['age_threshold_days']}d):")
+    if dead:
+        for d in dead:
+            P(f"    ? {d['id']}  ({d['file']})")
+            P(f"        {d['reason']}")
+    else:
+        P("    (none - every skill/agent is referenced, used, or too recent to be rot)")
+    return "\n".join(out) + "\n"
 
 
 # --------------------------------------------------------------------- text render
@@ -1201,6 +1360,10 @@ def main():
     gate_mode.add_argument("--write-baseline", nargs="?", const="", default=None, dest="write_baseline",
                            metavar="BASELINE", help="grandfather the current warnings into BASELINE "
                                                     "(default cartograph/baseline.json) so only NEW rot blocks")
+    gate_mode.add_argument("--audit", nargs="?", const="", default=None, metavar="JSON_OUT",
+                           help="AUTOPHAGIC FEED: print structural-rot + dead-weight CANDIDATES for "
+                                "/meta-retro (advisory - exits 0, mutates nothing). Pass a path to also "
+                                "write the machine-readable {structural_rot,dead_weight,meta} json there.")
     ap.add_argument("--flow", action="store_true",
                     help="print the DERIVED flowmap (entrypoint-seeded layers + discovered "
                          "SCC loops + dataflow direction) instead of the relation web")
@@ -1221,6 +1384,23 @@ def main():
         return
     if args.check is not None:
         sys.exit(run_gate(warnings, args.check or default_baseline()))
+    if args.audit is not None:
+        # The audit needs the live `fires` (compute_overlay) + git `added` (attach_git_dates)
+        # tags to apply the dead-weight rule. Both only READ - no repo mutation.
+        compute_overlay(g)
+        attach_git_dates(g)
+        report = audit_report(g, warnings)
+        if not args.quiet:
+            sys.stdout.write(render_audit_text(report))
+        if args.audit:                       # an explicit path was given -> also write json
+            apath = os.path.abspath(args.audit)
+            os.makedirs(os.path.dirname(apath) or ".", exist_ok=True)
+            with open(apath, "w", encoding="utf-8") as fh:
+                json.dump(report, fh, indent=2)
+            sys.stderr.write(f"\nwrote {rel(apath)} "
+                             f"({report['meta']['rot_count']} rot, "
+                             f"{report['meta']['dead_weight_count']} dead-weight)\n")
+        sys.exit(0)
 
     # Derive the flow overlay (layer + scc) in place - cheap, machine-truth, and useful in
     # every render path (text/json/html), so compute it once here, after the gate returns.
