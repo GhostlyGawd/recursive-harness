@@ -1,9 +1,11 @@
 # Proposal: the harness ledger fragments across worktrees — single-store options
 
 - **Date:** 2026-06-20
-- **Status:** PROPOSAL — **exploring, not locked.** The user explicitly wants to
-  weigh multiple solutions before committing one. This doc lays out the option
-  space with honest trade-offs and a *leaning*, not a decision.
+- **Status:** PROPOSAL — converging. After review (2026-06-20) the space narrowed:
+  the hard account-sync constraint (below) **eliminates Option B**, and un-gitignoring
+  `state/` was evaluated and **rejected**, leaving **Option A** as the direction. One
+  fork stays genuinely open — whether to also add raw cross-machine sync — and that
+  fork is the user's to call before any enforcement PR.
 - **Origin:** session e8b739e9, 2026-06-20. While discussing "should every session
   start in a worktree?", the user flagged the worktree `state/` split itself as an
   anti-pattern: *"isn't this kind of an anti-pattern we should fix?"* It is.
@@ -35,6 +37,13 @@ anti-pattern.
 
 ## Constraints that shape the fix
 
+- **HARD CONSTRAINT — memory must NEVER desync across accounts** (user, 2026-06-20:
+  *"Different accounts losing memory sync is a big anti-pattern. That can never
+  happen."*). Verified topology: every account symlinks the SAME single repo clone
+  (`.claude-private/accounts/<name>/{hooks,commands,skills,agents}` →
+  `/d/GitHub Projects/recursive-harness/...`), so all accounts already share ONE
+  `state/` today. Any design that gives an account its own ledger is disqualified —
+  this **eliminates Option B**.
 - **`bin/` is enforcement-locked.** Any change here is a human-merged PR +
   `HUMAN_APPROVED` + harness-auditor + `/run-evals`. Not a unilateral edit.
 - **The harness values greppable plaintext.** README: durable/hot knowledge is
@@ -76,27 +85,25 @@ ADR-portability). A linked worktree's `--git-common-dir` points back to the main
 
 - **Keeps today's semantics:** state lives in the repo, machine-local, per-clone.
   Smallest conceptual change.
+- **Satisfies the hard constraint:** accounts already share the one clone's
+  `state/`; A changes nothing there — it only adds worktree→main resolution on top.
 - **Pros:** deterministic; transparent; no new location, no config, no migration
   of *where* it lives.
 - **Cons:** enforcement edit; depends on `git` being present; reintroduces a
   shared-write surface (see Concurrency).
 
-### Option B — Move state to the per-account config dir (state belongs to the brain, not the checkout)
+### Option B — per-account config dir — ❌ REJECTED (violates the hard constraint)
+
+**Rejected 2026-06-20:** this is the one option that splits the ledger per-account —
+exactly the desync the hard constraint forbids. Account A's predictions would never
+reach account B's calibration. Kept here for the record; do not revisit without
+overturning that constraint.
 
 `STATE = $CLAUDE_CONFIG_DIR/harness-state/` (the per-account dir
-`.claude-private/accounts/<name>/`, already gitignored, already outside every
-worktree, already pinned per session).
-
-- **Reframes the model:** state is per-**account**, not per-checkout. Worktrees,
-  extra clones, even a re-clone of the repo all share the account's ledger by
-  construction.
-- **Pros:** fully decouples state from any checkout — worktrees stop mattering at
-  all; no `git` dependency; fits the fleet/silo model cleanly; survives a repo
-  re-clone (calibration history isn't tied to a working dir).
-- **Cons:** **changes semantics** — today two accounts on one machine share state
-  via the single repo clone; per-account state would split their calibration.
-  That's a deliberate call, not a freebie. Requires migrating existing `state/`
-  and updating the "state lives in the repo" story in README + CLAUDE.md.
+`.claude-private/accounts/<name>/`). It *would* decouple state from any checkout
+(worktrees stop mattering; survives a re-clone; no `git` dependency) — the appeal was
+real — but "per-account" is precisely the forbidden failure mode, so B is out
+regardless of ergonomics.
 
 ### Option G — Hybrid: globalize only the accumulating ledgers; keep ephemera local
 
@@ -114,6 +121,21 @@ and leave the rest tree-local.
 
 ### Rejected (explored, weaker — listed so the space is visibly covered)
 
+- **Track `state/` in git (un-gitignore it).** Tempting — tracked files flow to
+  every worktree/clone/account for free. Rejected for six reasons: (1) it breaks the
+  core anti-auto-memory premise (ADR 0001) — committing RAW hot state puts unreviewed
+  prose in the trunk, the exact thing the distill-before-version discipline forbids;
+  (2) privacy — `corrections.jsonl`/`predictions.jsonl` hold verbatim session text,
+  and the repo is built to be shippable/forkable; (3) a perpetually-dirty tree
+  pollutes every `/retro` + `/harness-pr` diff and trips clean-tree checks; (4) merge
+  conflicts on the rewrite-files and the constantly-churning runtime locks; (5)
+  runtime locks (`session_owners`, `trunk-lease`, `retro_gate`) reference live PIDs —
+  meaningless in git; (6) unbounded history bloat. The only thing tracking would add
+  is cross-machine sync — already served for the DURABLE layer by the tracked
+  `memory/calibration/` rollups (see the open fork for raw cross-machine sync).
+  **`.worktreeinclude` is also NOT a fix:** it COPIES gitignored files at worktree
+  creation, so the copy immediately diverges from main — fragmentation with a stale
+  seed, not a shared ledger.
 - **Symlink/junction** `<worktree>/state -> <main>/state` at creation: no `bin/`
   change, but Windows symlinks are flagged-buggy (worktree skill §2: cleanup can
   silently fail; a write can replace the link with a regular file). Fragile on the
@@ -149,15 +171,20 @@ and leave the rest tree-local.
 
 ---
 
-## Leaning (explicitly NOT locked — for your exploration)
+## Direction (narrowed 2026-06-20)
 
-- **Smallest blast radius:** A + tombstone (ii).
-- **Most conceptually clean for the fleet:** B + tombstone (ii) — but it's the
-  bigger semantic decision.
-- **The real fork to decide first:** should state stay **per-repo-clone** (A) or
-  become **per-account** (B)? Everything else (HOW, concurrency, migration)
-  follows from that one answer. That's the question to settle before any
-  enforcement PR is drafted.
+- **Chosen approach: Option A + append-tombstone (ii)**, with `state/` staying
+  gitignored. A preserves the account-sync the hard constraint requires (accounts
+  already share one clone) and extends that sharing to worktrees; the tombstone turns
+  the last clobber-prone writer into a safe append. B is rejected (would desync
+  accounts); un-gitignoring is rejected (six reasons above).
+- **The one fork still open (user's call):** do we also want RAW cross-machine sync —
+  the same `state/` ledger shared across two physical computers? Today only the
+  distilled `memory/calibration/` rollups sync cross-machine (via the trunk); the raw
+  ledger is machine-local by design. If raw cross-machine sync IS wanted, it's a
+  separate dedicated mechanism (a private state branch/repo synced out-of-band), NOT
+  committing raw `state/` to this trunk. The single-machine A design is the same
+  either way — answer this before the enforcement PR is drafted.
 
 ## Implementation notes (for whoever takes it)
 
@@ -180,3 +207,9 @@ for a proposal that explores multiple solutions before locking one in. Code rece
 read live from bin/harness (lines 29-30, 67, 87, 43). Routed as a proposal (not a
 bin/harness diff) because (a) bin/ is enforcement-locked and (b) the WHERE decision
 changes a semantic the user wants to choose deliberately. -->
+<!-- update, same session/date: user added the HARD constraint "accounts must never
+desync" (eliminates B) and asked why state/ is gitignored / whether .worktreeinclude
+solves it. Verified accounts share one clone (symlink topology: rhen's
+hooks/commands/skills/agents → the repo). Narrowed to A + tombstone; recorded
+un-gitignore + .worktreeinclude as rejected; left raw cross-machine sync as the one
+open fork. -->
