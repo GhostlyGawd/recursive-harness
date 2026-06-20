@@ -2,8 +2,11 @@
 """cartograph/extract.py — read-only cartograph extractor for the harness.
 
 Implements the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
-cartograph.md) — Phases 0–4: a text dump, map.json, and an interactive --html page
-(live-state overlay + git time-slider). This script DERIVES the harness's connectivity
+cartograph.md) — Phases 0–4: a text dump, an on-demand json export, and a
+self-contained interactive --html page (live-state overlay + git time-slider). The
+html is the SINGLE persistent artifact: it embeds the one canonical graph payload, so
+there is no separate map.json beside it to drift out of sync. This script DERIVES the
+harness's connectivity
 graph from machine-truth already in the repo — it draws nothing by hand and WRITES NOTHING
 to the enforcement layer (hooks/, lint/, evals/, bin/, .github/, autonomy.json,
 settings.json, templates/ are all write-locked). It only reads them.
@@ -25,8 +28,8 @@ Edges  = real relations harvested from the repo's own conventions:
 
 Usage:
   python cartograph/extract.py            # print the graph as text
-  python cartograph/extract.py --json     # also write cartograph/map.json
-  python cartograph/extract.py --json P   # write the json to P instead
+  python cartograph/extract.py --json     # print the canonical graph json to stdout
+  python cartograph/extract.py --json P   # write that json to file P (on-demand export)
   python cartograph/extract.py --html     # write the interactive page
   python cartograph/extract.py --check    # GATE: non-zero exit on un-baselined structural rot
   python cartograph/extract.py --write-baseline   # grandfather the current warnings
@@ -891,18 +894,53 @@ LOOP_LABEL = {
 }
 
 
-def render_html(g, overlay, dates):
-    payload = {
+def build_stamp():
+    """Provenance for a generated artifact - the build date + the extractor's git
+    commit, plus whether extract.py had uncommitted edits at build time. Surfaced in
+    the html header so a stale or dirty-built page ANNOUNCES it instead of silently
+    lying (the drift the artifacts used to invite). Best-effort: blank fields on any
+    git failure. Lives only in gitignored output, so a timestamp here causes no churn."""
+    def git(*a):
+        try:
+            return subprocess.run(["git", "-C", ROOT, *a], capture_output=True,
+                                  text=True, timeout=15).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return ""
+    return {
+        "generated": datetime.date.today().isoformat(),
+        "commit": git("rev-parse", "--short", "HEAD"),
+        "extractor_dirty": bool(git("status", "--porcelain", "--", "cartograph/extract.py")),
+    }
+
+
+def build_payload(g, overlay, dates, warnings, notes, stamp):
+    """The ONE canonical graph payload. Both the --json export and the index.html embed
+    are built from this single dict, so the machine-readable form and the page's inlined
+    DATA cannot drift apart - the failure mode that came from maintaining a separate
+    map.json beside the html's own copy. Presentation-only maps (colors/labels/root) are
+    grafted on by render_html; they are styling, not graph data."""
+    return {
         "nodes": list(g.nodes.values()),
         "edges": g.edges,
         "overlay": overlay,
         "dates": dates,
+        "warnings": warnings,
+        "notes": notes,
+        "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges), **stamp},
+    }
+
+
+def render_html(payload):
+    # The page embeds the ONE canonical payload (so its inlined DATA can never drift from
+    # a --json export) and adds presentation-only maps the json form doesn't carry.
+    data = dict(payload)
+    data.update({
         "root": ROOT.replace("\\", "/"),
         "roleColors": ROLE_COLORS,
         "edgeColors": EDGE_COLORS,
         "loopLabel": LOOP_LABEL,
-    }
-    data_json = json.dumps(payload).replace("</", "<\\/")
+    })
+    data_json = json.dumps(data).replace("</", "<\\/")
     head = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Living Harness Cartograph</title>
 <style>
@@ -941,9 +979,12 @@ def render_html(g, overlay, dates):
   .stat b{color:#fff}
   .muted{color:var(--mut)}
   #warn{color:#ffb454}
+  #stamp{font-size:10px;white-space:nowrap}
+  #stamp.dirty{color:#ffb454}
 </style></head><body><div id="app">
 <div id="bar">
   <h1>🧫 Living Harness Cartograph</h1>
+  <span id="stamp" class="muted" title="when this page was generated, and from which extract.py commit"></span>
   <div class="grp" id="edgefilters"></div>
   <div class="grp"><label><input type="checkbox" id="ov"> live overlay</label></div>
   <div class="grp">⏱ <input type="range" id="slider"><span id="slabel"></span>
@@ -1152,6 +1193,14 @@ const tops=Object.entries(ov.skill_fires).slice(0,6);
 if(tops.length){ s+='<h2>top fired</h2>'; tops.forEach(([k,v])=> s+='<div class="stat"><span>'+k+'</span><b>'+v+'</b></div>'); }
 document.getElementById('stats').innerHTML=s;
 
+// --- provenance stamp: make staleness/dirty-builds visible instead of silent ---
+const meta=DATA.meta||{};
+const stampEl=document.getElementById('stamp');
+stampEl.textContent='generated '+(meta.generated||'?')
+  +(meta.commit?(' · extract.py @'+meta.commit):'')
+  +(meta.extractor_dirty?' · ⚠ built from a modified extract.py':'');
+if(meta.extractor_dirty) stampEl.classList.add('dirty');
+
 slabel.textContent='≤ '+selDate();
 }
 </script></body></html>"""
@@ -1346,7 +1395,10 @@ def main():
                          "gate / export run against a test fixture or another clone; all default "
                          "output and baseline paths then resolve under --root.")
     ap.add_argument("--json", nargs="?", const="", default=None, metavar="PATH",
-                    help="also write nodes+edges json (default cartograph/map.json under --root)")
+                    help="export the canonical graph json: bare --json prints it to stdout, "
+                         "--json PATH writes it to a file (on-demand export). There is no "
+                         "default-path map.json - the embedded DATA in --html's index.html is "
+                         "the single persistent artifact, so nothing can drift out of sync.")
     ap.add_argument("--html", nargs="?", const="", default=None, metavar="PATH",
                     help="write the interactive page (default cartograph/index.html under --root); "
                          "implies the live-state overlay + git time-slider")
@@ -1407,41 +1459,48 @@ def main():
     roots, fadj = compute_flow(g)
 
     # Phases 2-3 enrich the graph in place; only needed when rendering/exporting.
-    # NB: --json/--html use const="" (a falsy sentinel meaning "default path"), so these
-    # must test `is not None`, not truthiness, or a bare `--json` would be skipped.
+    # NB: --json/--html use const="" as the no-arg sentinel (bare --json -> stdout, bare
+    # --html -> the default cartograph/index.html), so test `is not None`, not truthiness.
+    json_to_stdout = args.json == ""        # bare --json: machine output, never an orphan file
     overlay, dates = None, None
     if args.html is not None or args.json is not None:
         overlay = compute_overlay(g)
         dates = attach_git_dates(g)
 
-    if not args.quiet:
+    # A bare --json is a request for machine output on stdout, so the human text dump would
+    # only corrupt it; suppress it in that one case (an explicit --json PATH still prints it).
+    if not args.quiet and not json_to_stdout:
         if args.flow:
             sys.stdout.write(render_flow_text(g, roots, fadj))
         else:
             sys.stdout.write(render_text(g, warnings, notes, wired))
 
+    # ONE canonical payload feeds BOTH the json export and the html embed, so the
+    # machine-readable form and the page's inlined DATA can never disagree. There is
+    # deliberately NO default-path map.json: it had zero consumers and only ever went
+    # stale - index.html's embedded DATA is the single persistent artifact, and
+    # --json PATH covers on-demand export (e.g. the cartograph-extractor eval).
+    payload = None
+    if args.json is not None or args.html is not None:
+        payload = build_payload(g, overlay, dates, warnings, notes, build_stamp())
+
     if args.json is not None:
-        jpath = args.json or os.path.join(ROOT, "cartograph", "map.json")
-        os.makedirs(os.path.dirname(os.path.abspath(jpath)), exist_ok=True)
-        payload = {
-            "nodes": list(g.nodes.values()),
-            "edges": g.edges,
-            "overlay": overlay,
-            "dates": dates,
-            "warnings": warnings,
-            "notes": notes,
-            "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges)},
-        }
-        with open(jpath, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2)
-        sys.stderr.write(f"\nwrote {rel(jpath)} "
-                         f"({len(g.nodes)} nodes, {len(g.edges)} edges)\n")
+        text = json.dumps(payload, indent=2)
+        if json_to_stdout:
+            sys.stdout.write(text + "\n")
+        else:
+            jpath = os.path.abspath(args.json)
+            os.makedirs(os.path.dirname(jpath) or ".", exist_ok=True)
+            with open(jpath, "w", encoding="utf-8") as fh:
+                fh.write(text + "\n")
+            sys.stderr.write(f"\nwrote {rel(jpath)} "
+                             f"({len(g.nodes)} nodes, {len(g.edges)} edges)\n")
 
     if args.html is not None:
-        hpath = args.html or os.path.join(ROOT, "cartograph", "index.html")
-        os.makedirs(os.path.dirname(os.path.abspath(hpath)), exist_ok=True)
+        hpath = os.path.abspath(args.html) if args.html else os.path.join(ROOT, "cartograph", "index.html")
+        os.makedirs(os.path.dirname(hpath) or ".", exist_ok=True)
         with open(hpath, "w", encoding="utf-8") as fh:
-            fh.write(render_html(g, overlay, dates))
+            fh.write(render_html(payload))
         sys.stderr.write(f"\nwrote {rel(hpath)} "
                          f"({len(g.nodes)} nodes, {len(g.edges)} edges, "
                          f"{len(dates)} time-steps) - open it in a browser\n")
