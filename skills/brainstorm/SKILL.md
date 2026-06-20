@@ -69,6 +69,14 @@ push toward the same mechanism, change one BEFORE spawning.
   Put each candidate's full pitch in that option's `preview` so the UI renders
   them **side-by-side** — that side-by-side layout *is* the arena. Option `label`
   = the candidate title; `description` = a one-line hook.
+- **Plain OUTCOME language, not the mechanism's jargon** (user taste — memory/
+  user-model.md, evidence 4). `label`/`description`/`preview` must name what each
+  candidate *does for the user* and *the one thing it found/changes* — never the
+  algorithm behind it. "What sets off what · almost nothing runs on its own", NOT
+  "Reachability / transitive closure"; "Top-to-bottom layers", NOT "Tarjan SCC +
+  longest-path layering". If you can't state an option in one sentence a
+  non-engineer decodes, the pitch isn't finished — an undecodable arena earns
+  "idk what these mean" and the pick stalls (happened 2026-06-19).
 - **Fallback:** if previews don't render side-by-side (older client, or >4
   candidates after shortlisting), present the pitches as a numbered list and ask
   which wins. The pick is what matters; the side-by-side layout is a nicety.
