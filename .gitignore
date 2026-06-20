@@ -31,3 +31,9 @@ skills/brand-foundry/
 cartograph/vendor/
 cartograph/index.html
 cartograph/map.json
+# prospector is its OWN repo (github.com/GhostlyGawd/prospector), a multi-skill
+# plugin developed in place under plugins/ and pushed to its own GitHub — its
+# history is not the harness trunk's. Ignored here so it isn't double-committed;
+# registered in worktree-repos.json so it materializes into every worktree. See
+# skills/nested-repos.
+plugins/prospector/
