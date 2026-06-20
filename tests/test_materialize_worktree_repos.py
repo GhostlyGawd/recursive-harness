@@ -170,6 +170,40 @@ def main():
         check("F6c: clone failure -> exit 0 (session not bricked)", rc == 0,
               f"rc={rc} stderr={err}")
 
+        # ====================================================================
+        print("Scenario 6 — out-of-worktree paths are refused (security/containment)")
+        # a `../` traversal path must NOT clone outside the worktree root
+        p5 = os.path.join(tmp, "primary5")
+        init_repo(p5, "harness5")
+        with open(os.path.join(p5, ".gitignore"), "w") as f:
+            f.write("vendored/\n")
+        with open(os.path.join(p5, "worktree-repos.json"), "w") as f:
+            json.dump({"repos": [{"path": "../../ESCAPED_TARGET", "remote": source}]}, f)
+        git("add", "-A", cwd=p5)
+        git("commit", "-q", "-m", "reg", cwd=p5)
+        wt5 = os.path.join(tmp, "wt5")
+        git("worktree", "add", "-q", wt5, "-b", "wt5", cwd=p5)
+        escaped = os.path.normpath(os.path.join(wt5, "..", "..", "ESCAPED_TARGET"))
+        rc, err = run_hook(wt5)
+        check("F-sec a: traversal path -> exit 0", rc == 0, f"rc={rc}")
+        check("F-sec b: traversal target NOT created outside worktree",
+              not os.path.exists(escaped), f"hook wrote outside the worktree: {escaped}")
+        # an ABSOLUTE path must also be refused
+        p6 = os.path.join(tmp, "primary6")
+        init_repo(p6, "harness6")
+        abs_escape = os.path.join(tmp, "ABS_ESCAPED")
+        with open(os.path.join(p6, ".gitignore"), "w") as f:
+            f.write("vendored/\n")
+        with open(os.path.join(p6, "worktree-repos.json"), "w") as f:
+            json.dump({"repos": [{"path": abs_escape, "remote": source}]}, f)
+        git("add", "-A", cwd=p6)
+        git("commit", "-q", "-m", "reg", cwd=p6)
+        wt6 = os.path.join(tmp, "wt6")
+        git("worktree", "add", "-q", wt6, "-b", "wt6", cwd=p6)
+        rc, err = run_hook(wt6)
+        check("F-sec c: absolute path refused", rc == 0 and not os.path.exists(abs_escape),
+              f"absolute path not refused; rc={rc} exists={os.path.exists(abs_escape)}")
+
     print()
     if FAILURES:
         print(f"RESULT: {len(FAILURES)} failure(s):")

@@ -81,6 +81,16 @@ def materialize(cwd):
             if not rel:
                 continue
             target = os.path.join(worktree_root, rel)
+            # containment [security]: a careless `../` or absolute `path` in the
+            # registry must NEVER write outside the worktree (it would land in the
+            # user's real .claude/worktrees tree or anywhere on disk). Lexical check
+            # (no symlink resolution, per harness-authoring): require target under root.
+            nroot = os.path.normcase(os.path.normpath(os.path.abspath(worktree_root)))
+            ntarget = os.path.normcase(os.path.normpath(os.path.abspath(target)))
+            if os.path.isabs(rel) or (ntarget != nroot and
+                                      not ntarget.startswith(nroot + os.sep)):
+                sys.stderr.write(f"[materialize] refusing out-of-worktree path: {rel!r}\n")
+                continue
             if os.path.exists(target):  # never clobber [F4]
                 continue
             local_src = os.path.join(primary_root, rel)
@@ -88,11 +98,11 @@ def materialize(cwd):
             if not source:
                 continue
             os.makedirs(os.path.dirname(target), exist_ok=True)
-            r = subprocess.run(["git", "clone", "--quiet", source, target],
+            r = subprocess.run(["git", "clone", "--quiet", "--", source, target],
                                capture_output=True, text=True)
             if r.returncode != 0 and source == local_src and remote:
                 # local clone failed -> fall back to the declared remote
-                r = subprocess.run(["git", "clone", "--quiet", remote, target],
+                r = subprocess.run(["git", "clone", "--quiet", "--", remote, target],
                                    capture_output=True, text=True)
             if r.returncode != 0:
                 sys.stderr.write(f"[materialize] could not clone {rel}: "

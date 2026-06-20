@@ -77,9 +77,11 @@ it's out of the parent's history.
   clobbers an existing dir; fails open. Registering a new sub-repo is a one-line
   append, no code change.
 - **Update**: develop/`git pull` in place exactly as a standalone repo.
-- **Worktree**: cloned in automatically on `EnterWorktree` AND `claude
-  --worktree`. (Subagent `isolation:worktree` worktrees fire neither trigger —
-  minor edge; clone manually if a subagent needs it.)
+- **Worktree**: cloned in automatically on `EnterWorktree` (verified end-to-end
+  2026-06-20 — a real EnterWorktree auto-fired the hook and cloned brand-foundry
+  in) and on `claude --worktree` launch (SessionStart wiring; same engine, not
+  separately live-fired). Subagent `isolation:worktree` worktrees fire neither
+  trigger — minor edge; clone manually if a subagent needs it.
 - **Pick when**: you develop it in place as its own repo, want it in EVERY
   worktree, and the parent must NOT track its version (the sub-repo's own remote
   is the source of truth). This is what brand-foundry uses.
