@@ -29,6 +29,19 @@ you are not unlucky, you are lying to yourself with extra steps.
 Score EVERY prediction, especially misses — misses are where the information
 is. The SessionStart banner shows your unscored count; keep it near zero.
 
+## A load-bearing prediction gates shipping
+
+If a prediction underwrites the DELIVERABLE — its core behavioral claim, the
+thing the user actually asked for — then while it is still `pending` or scored
+`miss`, the work is NOT done and must NOT merge. Green gates (tests, lint, a
+passing auditor, an eval run) verify the ARTIFACTS; they do not verify the CLAIM.
+Resolve it by exercising the REAL path end-to-end — the actual tool / trigger /
+environment, never a proxy — then score it before declaring done or merging.
+Shipping on a self-flagged "unverified" load-bearing claim is how a green PR
+delivers the opposite of the goal. (2026-06-20: merged a "rides into worktrees"
+change while its own prediction 55b1735b said that exact behavior was unverified;
+post-merge it scored a MISS and the whole goal had to be re-delivered.)
+
 ## Reading your own stats
 
 `harness stats` reports two lenses on the same scored log — confidence buckets
