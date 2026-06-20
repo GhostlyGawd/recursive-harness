@@ -20,6 +20,25 @@ git clone <your-fork> recursive-harness && cd recursive-harness
 
 From then on: work normally. The hooks watch, the kernel routes, `/retro` harvests.
 
+## Add the harness to an existing repo on this machine
+
+Two independent steps — NEITHER is auto-created:
+
+1. **Load the brain (persistent).** In a terminal IN that repo, start Claude with
+   the harness config dir pinned:
+   `CLAUDE_CONFIG_DIR=<harness>/.claude-private/accounts/<name> claude`. A plain
+   `claude` loads the OS-global `~/.claude`, NOT this harness (ADR 0004). The pin
+   is what makes the session run this shared brain, so persist it (export it in
+   that shell or your launcher) — every session in the repo needs it.
+2. **(Optional) thin project contract.** Run `./project-init.sh` in the repo root
+   to write a thin local `CLAUDE.md` (repo-specific facts only, < 40 lines). Skip
+   it when the repo needs no project-local facts — the brain still loads from step 1.
+
+Caution: a sibling launcher script (e.g. `fable-harness`, a `Hybrid` wrapper)
+pins a DIFFERENT `CLAUDE_CONFIG_DIR` and loads a DIFFERENT brain — starting a
+session through the wrong launcher silently gives you the wrong harness. If
+behavior surprises you, check which config dir is actually pinned.
+
 ## The architecture in one paragraph
 
 A 60-line kernel (`CLAUDE.md`) is the only always-loaded instruction. Six skills load on trigger and encode the system's procedures: how to route a learning, how to predict-then-score, how to detect being stuck, how to retrospect, how to author harness artifacts, how to capture regression evals. Three fresh-context agents do the jobs that must not share the working context: a critic that grades finished work, a retro-miner that reads transcripts for signal, and a harness-auditor that adversarially reviews every proposed harness diff. Six lifecycle hooks enforce mechanically what prose can only suggest. Six commands give the human and the agent named workflows. Hot telemetry lives in gitignored `state/`; durable knowledge lives in versioned `memory/`; ground truth lives in `evals/corpus/`. A linter holds the whole structure to budgets, and an autonomy ledger meters how much of the loop runs without a human.

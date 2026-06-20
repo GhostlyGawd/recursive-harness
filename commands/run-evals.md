@@ -2,7 +2,7 @@
 description: Replay the regression corpus inside THIS interactive session — no headless, no API key (ADR 0003). Required before merging enforcement-layer changes; part of /meta-retro.
 ---
 
-provenance: 2026-06-12, user correction "there should be no headless" (ADR 0003); 2026-06-13 retro (session 56295237 → 61f58113) added the MSYS /tmp caution after a verified bash↔Windows-python path split
+provenance: 2026-06-12, user correction "there should be no headless" (ADR 0003); 2026-06-13 retro (session 56295237 → 61f58113) added the MSYS /tmp caution after a verified bash↔Windows-python path split; 2026-06-19 (followups 1639c1/dff31d, session 85bf58c5) extended the cygpath -w sandbox path to step 3's SUBAGENT — its Windows-native Write/Edit resolved bare /tmp to the cwd-drive, landing artifacts where the grader couldn't see them
 
 For each case in evals/corpus/ (or only those named in $ARGUMENTS):
 
@@ -18,7 +18,11 @@ For each case in evals/corpus/ (or only those named in $ARGUMENTS):
    fails against nothing. Verified 2026-06-13: a file `mkdir`'d in bash under
    `/tmp/evalrun-x` is invisible to `python3` at the same path. (ADR 0004 = topology.)
 3. Spawn a FRESH subagent (Task tool) whose prompt is the verbatim contents
-   of task.md plus "work in /tmp/evalrun-<slug>". It must receive nothing
+   of task.md plus `work in "$SANDBOX"` — pass the SAME Windows-resolved path
+   from step 2, NEVER a bare `/tmp/evalrun-<slug>`. The subagent's Write/Edit
+   tools are Windows-native and resolve bare `/tmp` to `<cwd-drive>:\tmp\…`, so
+   its artifacts would land in a different, empty dir than the grader reads →
+   false FAIL (both eval subagents hit this 2026-06-19). It must receive nothing
    else — your context contaminates the result; the isolation IS the eval.
 4. Grade (python3 grader gets `"$SANDBOX"`, the Windows path — see step 2):
    - objective: `python3 evals/run_evals.py --grade <slug> "$SANDBOX"`
