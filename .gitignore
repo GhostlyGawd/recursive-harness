@@ -22,10 +22,12 @@ products/
 # .worktreeinclude so the plugin still rides into every new worktree. See
 # skills/vendoring-skills.
 skills/brand-foundry/
-# Living Harness Cartograph: generated + vendored build artifacts. Only the
-# source extractor (cartograph/extract.py) is tracked; regenerate the rest with
-# `python cartograph/extract.py --html`. map.json/index.html embed volatile live
-# state, and vendor/ is third-party JS — none belong in the trunk.
+# Living Harness Cartograph: generated + vendored build artifacts. Only the source
+# extractor (cartograph/extract.py) is tracked; regenerate the page with
+# `python cartograph/extract.py --html`. index.html is the single self-contained
+# artifact (it embeds volatile live state), and vendor/ is third-party JS — neither
+# belongs in the trunk. map.json is no longer written by default (`--json PATH`
+# exports it on demand) but stays ignored so an explicit export here is never committed.
 cartograph/vendor/
 cartograph/index.html
 cartograph/map.json
