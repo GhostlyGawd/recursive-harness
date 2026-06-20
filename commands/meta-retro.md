@@ -12,6 +12,16 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    Zero-fire skills → propose pruning or a description rewrite (per
    skill-creator wisdom: skills under-trigger when descriptions aren't pushy).
    Confirm with the user before deleting anything with provenance < 90d old.
+   **Machine-fed candidate list** (the autophagic loop — feeds this step AND step 7):
+   `python3 "$HARNESS/cartograph/extract.py" --audit`. It surfaces `structural_rot`
+   (orphan hooks / dangling ADRs — same fingerprints the gate blocks on) and
+   `dead_weight` (skill/agent that is unreferenced *and* unused *and* > 90d old —
+   the same three-part bar this step already applies, computed mechanically so you
+   prune from evidence, not by eyeball). The audit is **advisory only**: it exits 0,
+   mutates nothing, and never prunes. Candidates are surfaced for human judgment;
+   pruning stays your decision (a map that could delete its own nodes to look clean
+   is the reward-hack the kernel forbids). On the young trunk it correctly reports
+   0/0 — a non-empty list is the signal that this audit found real work.
    **Guard-friction audit** (same earns-its-friction test for enforcement HOOKS,
    which have no usage counter): for each guard the user has flagged as noisy, or
    with no logged real catch in 90d, spawn a fresh-context auditor that mines
