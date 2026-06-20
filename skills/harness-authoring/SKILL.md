@@ -60,6 +60,12 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
 - Falsifiable content. "Be careful with the database" is decoration;
   "run migrations in a transaction; the 2026-05 incident was a half-applied
   migration" is a learning.
+- One name per concept. Name each concept ONCE and reuse that exact token
+  throughout the artifact (and across siblings that share it) — never alternate
+  synonyms ("Stop gate"/"retro gate", "blackboard"/"ledger", RESUME.md vs
+  HANDOFF.md). A reader with no memory of today cannot tell whether two names
+  mean two things; terminology drift was the single recurring defect across the
+  2026-06-17 skill audit. (followup a4f372.)
 
 ## Enforcement exemptions (lint / hook rules)
 
@@ -99,6 +105,13 @@ itself enforcement-relevant — make it a constant, not env-readable.
   auditor caught it empirically and `>{1,2}(?!&[0-9-])` was the verified fix.)
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
+- **Multi-stage skill SUITES** (a gated pipeline of skills/phases — e.g.
+  brand-foundry → huashu-design): give the suite ONE canonical funnel view —
+  the ordered stages plus the gate between each — not only a router that says
+  "pick the smallest entry point." A pure-router front door trains reactive,
+  one-stage-at-a-time use; the funnel shows the whole path so a session entering
+  mid-pipeline still sees what precedes and follows. (followup 337ac0;
+  retro-backlog 2026-06-19, session d7de6b55.)
 
 ## Editing tracked files on this Windows checkout (core.autocrlf=true)
 

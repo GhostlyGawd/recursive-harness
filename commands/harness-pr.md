@@ -61,13 +61,14 @@ For the change described in $ARGUMENTS:
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
    Otherwise leave for human review — and say so without grumbling.
+   - A merged enforcement hook goes live in a siloed account only after
+     `account-init.sh --sync-settings` regenerates its frozen `settings.json`;
+     say so when reporting one, and never wire a hook before its file exists (missing-file python exits 2). (04ca3d)
 7. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` leaves a STALE local main after the PR merges on GitHub; the `--ff-only` pull refreshes it. This flow branches
-   in-place in the MAIN checkout; if you end the session still on `proposal/*`,
-   that branch persists across sessions and silently strands the NEXT session on
-   a dead branch (the SessionStart banner now flags it, but don't create the
-   mess). The work is safe on its pushed branch + PR — leaving the local HEAD on
-   it buys nothing. Skip ONLY if the user explicitly wants to keep iterating the
-   branch in this same session.
+   in-place in the MAIN checkout; ending the session still on `proposal/*` strands
+   the NEXT session on a dead branch (the SessionStart banner flags it). The work
+   is safe on its pushed branch + PR. Skip ONLY if the user wants to keep iterating
+   the branch this session.
 
 <!-- provenance: session 9147f304, 2026-06-14 — added the fetch/branch-off-origin
 step to (1) after a PR branched off a stale local main; the merge diffstat listed

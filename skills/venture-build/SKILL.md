@@ -61,7 +61,10 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
   a RISK-flagged ADR gets a later OUTCOME ADR). Decide autonomously; escalate to the
   user ONLY for external account state (billing, domain, publish-source).
 - **PARITY.md** + **RESUME.md / HANDOFF.md** — the spec/feature checklist and the
-  index a fresh chat opens first.
+  index a fresh chat opens first. Writing a handoff MUST reconcile predictions:
+  score any whose outcome is now known (`harness outcome <id>`), and list the ids
+  of those still pending as explicit carried-forward debt — a paused session never
+  silently abandons an unscored prediction (kernel rule 1). (followup bb625a.)
 
 > provenance: 2026-06-16 · cross-Grove retro · the superset-replica build ran 6 sessions / 4 days off STATE.json + DECISIONS.md + RESUME/HANDOFF/PARITY, never chat history; venture-build's ledger/ had no resume contract.
 

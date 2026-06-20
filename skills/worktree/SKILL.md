@@ -202,9 +202,11 @@ Claude Code changes under us, and stale worktree knowledge is dangerous. So:
   (bash) / `$env:HARNESS_ALLOW_CROSS_WORKTREE='1'; <cmd>` (powershell) — verified
   this session (a prefixed cross-worktree read succeeded). Guard B's env hatch
   remains LAUNCH-only (`HARNESS_ALLOW_MULTI_SESSION=1 claude …`). (session 2a9d8553,
-  2026-06-17; corrected 2026-06-19 — prior text wrongly said every tool incl.
-  Read/Glob stays blocked and that EnterWorktree/knowledge were the only in-session
-  options.)
+  2026-06-17; corrected 2026-06-19 — prior text wrongly said every tool, incl.
+  Read/Glob, stays blocked cross-worktree.)
+
+- **Before reimplementing a trunk fix, `git fetch` + scan recently-merged PRs** (`gh pr list --state merged --limit 20`) — parallel chats ship the same fix, so a blind redo duplicates merged work. (retro-backlog 2026-06-19, sessions b7488db6 + dc1c3470.)
+- **Two sessions sharing one checkout race on `.git/HEAD`.** Prevent with separate worktrees (Guard C's lease now blocks a stale-HEAD mutate on main); to commit mid-race, build from git objects (`write-tree`→`commit-tree`→`push <oid>:refs/heads/…`) off a TEMP `GIT_INDEX_FILE`, never `checkout`/`reset` a HEAD a peer holds. (sessions b7488db6 + dc1c3470.)
 
 ## Rules
 
