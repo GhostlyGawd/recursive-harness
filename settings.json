@@ -3,6 +3,8 @@
     "SessionStart": [
       {"matcher": "startup|resume|clear",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_start.py"}]},
+      {"matcher": "startup|resume|clear",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/materialize_worktree_repos.py"}]},
       {"matcher": "resume|clear",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
     ],
@@ -22,6 +24,8 @@
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_trunk_lease.py"}]}
     ],
     "PostToolUse": [
+      {"matcher": "EnterWorktree",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/materialize_worktree_repos.py"}]},
       {"matcher": "Skill",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_skill_use.py"}]},
       {"matcher": "Bash",

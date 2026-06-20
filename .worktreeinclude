@@ -8,10 +8,11 @@
 # installed plugins OFF and prompts for permissions already granted on main.
 # See skills/worktree/SKILL.md §2.
 .claude/settings.local.json
-# brand-foundry plugin: its own in-place repo (skills/brand-foundry/.git),
-# gitignored so it stays out of the trunk. Listed here to copy it into new
-# worktrees so the plugin is present. CAVEAT: a raw copy of a live nested .git is
-# reliable only when the sub-repo is QUIESCENT — a concurrent commit during the
-# copy corrupted it once (2026-06-20: `fatal: bad object HEAD`); if a worktree's
-# copy is broken, re-clone it. See skills/nested-repos (chooser + the fragility).
-skills/brand-foundry/
+# NOTE: a gitignored NESTED-REPO directory (one with its own .git) canNOT be
+# carried by .worktreeinclude — this copies gitignored FILES, and git does not
+# recurse into a nested-repo boundary, so the dir copies as nothing (verified
+# 2026-06-20, prediction 55b1735b miss; brand-foundry never rode in). Nested
+# repos like skills/brand-foundry are materialized into worktrees by
+# worktree-repos.json + hooks/materialize_worktree_repos.py instead. Only single
+# gitignored FILES (like settings.local.json above) belong in this file. See
+# skills/nested-repos.
