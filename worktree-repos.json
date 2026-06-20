@@ -4,6 +4,10 @@
     {
       "path": "skills/brand-foundry",
       "remote": "https://github.com/GhostlyGawd/brand-foundry.git"
+    },
+    {
+      "path": "plugins/prospector",
+      "remote": "https://github.com/GhostlyGawd/prospector.git"
     }
   ]
 }
