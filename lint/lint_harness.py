@@ -24,6 +24,7 @@ import json
 import os
 import py_compile
 import re
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -85,11 +86,36 @@ def check_kernel() -> None:
                   "into a skill or delete it; the kernel is not a junk drawer.")
 
 
+def git_ignored(path: str) -> bool:
+    """True iff git ignores `path`. Fail-open: any git error -> treat as NOT ignored,
+    so a real artifact is never hidden from lint by a broken git invocation."""
+    try:
+        return subprocess.run(
+            ["git", "-C", ROOT, "check-ignore", "-q", path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        ).returncode == 0
+    except Exception:
+        return False
+
+
 def check_skills() -> None:
     sdir = os.path.join(ROOT, "skills")
     for name in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
         skill_md = os.path.join(sdir, name, "SKILL.md")
         rel = f"skills/{name}"
+        # A gitignored skill dir is not a trunk artifact — it's an external / vendored-live
+        # repo (often with its own remote, e.g. skills/brand-foundry) that merely lives under
+        # skills/. Lint governs trunk artifacts only, so skip it. NOT self-assertable from a
+        # skill's own frontmatter: the ignore rule must live in a PARENT scope (a `.gitignore`
+        # with `*` INSIDE the skill dir does not hide the dir itself). The merge-blocking
+        # boundary is CI: a clean checkout carries no local excludes, so only COMMITTED
+        # (tracked, PR-reviewed) ignore rules can suppress a dir there. A local
+        # .git/info/exclude or core.excludesFile can suppress it in a developer's LOCAL run
+        # but NEVER in CI — the authoritative gate stays committed-only. Surfaced, never silent.
+        if git_ignored(os.path.join(sdir, name)):
+            print(f"  note: {rel}: gitignored (external/vendored-live repo, not a trunk "
+                  f"artifact) — lint skipped")
+            continue
         if not os.path.exists(skill_md):
             err("B3", f"{rel}: missing SKILL.md")
             continue
