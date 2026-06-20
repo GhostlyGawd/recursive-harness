@@ -228,6 +228,13 @@ def build():
     state_files = set(re.findall(r"([a-z_]+)\.jsonl", harness_src))
     for name in ("predictions", "corrections", "skill_usage", "followups", "approvals"):
         state_files.add(name)
+    # ALSO harvest ledgers referenced only in hooks (e.g. sessions.jsonl, written by
+    # session_end + read by stop_cadence_gate, never named in bin/harness) so ledger
+    # discovery is complete rather than bin/harness-only — otherwise the dataflow view
+    # silently drops a whole bus.
+    for hf in hook_files.values():
+        for nm in re.findall(r"([a-z_]+)\.jsonl", read(hf)):
+            state_files.add(nm)
 
     foreign_adr = []  # (artifact, num) for ADR cites that resolve to a venture DECISIONS.md
 
@@ -236,6 +243,10 @@ def build():
         text = read(path)
         fm = frontmatter(text)
         body = text[len(fm):] if fm else text
+        # Strip HTML/provenance comments: a /command or `skill` ref that lives ONLY inside an
+        # <!-- provenance: ... --> comment is lineage, not an active relation - counting it
+        # (as nudges/cites) would contradict compute_flow() dropping born_in/references.
+        body = re.sub(r"<!--.*?-->", " ", body, flags=re.S)
         self_name = node_id.split(":", 1)[-1]
 
         # (2) born_in — provenance lineage
@@ -292,12 +303,26 @@ def build():
                     g.node(f"adr:{num}", "adr", f"ADR-{num} (referenced, no file)", missing=True)
             g.edge(node_id, f"adr:{num}", "references")
 
-        # (7) touches — state ledgers (hooks + CLI + kernel only)
+        # (7) touches — state ledgers. Classify each access as writes / reads / rw from
+        # the surrounding source so dataflow DIRECTION (producer -> ledger -> consumer)
+        # survives instead of collapsing into one undirected relation.
         if node_id.startswith(("hook:", "cli:")) or node_id == "kernel:CLAUDE.md":
             for st in state_files:
                 if re.search(re.escape(st) + r"\.jsonl", text):
                     g.node(f"state:{st}", "state", f"{st}.jsonl", file=f"state/{st}.jsonl")
-                    g.edge(node_id, f"state:{st}", "touches")
+                    g.edge(node_id, f"state:{st}", "touches", mode=ledger_mode(text, st))
+
+        # (8) nudges — references to a /command. Commands had NO in-edges at all (every one
+        # was a disconnected source), so the runtime/doc spine "a Stop gate points the operator
+        # at /retro" was invisible. A literal /name token of a known command is machine-truth.
+        # Body-only (like cites/invokes/spawns) - frontmatter `description:` pointers are trigger
+        # metadata, not procedure, so they are intentionally not edges. Trailing (?![\w-]) so
+        # /retro does NOT match inside /retro-backlog.
+        for name in cmd_files:
+            if name == self_name:
+                continue
+            if re.search(r"(?<![\w/])/" + re.escape(name) + r"(?![\w-])", body):
+                g.edge(node_id, f"command:{name}", "nudges")
 
     for name, f in skill_files.items():
         scan(f"skill:{name}", f)
@@ -315,6 +340,7 @@ def build():
     except json.JSONDecodeError:
         settings = {}
     wired = set()
+    cfg_wired = set()  # hooks already given a config->hook wires edge (dedup across events)
     for event, groups in (settings.get("hooks") or {}).items():
         g.node(f"event:{event}", "event", event)
         for grp in groups:
@@ -328,6 +354,13 @@ def build():
                 if f"hook:{hname}" not in g.nodes:
                     g.node(f"hook:{hname}", "hook", f"{hname}.py")
                 g.edge(f"hook:{hname}", f"event:{event}", "fires_on", matcher=matcher)
+                # (1b) wires — settings.json is the regulator that docks each hook at its
+                # membrane. The fires_on edges are DERIVED from this file, yet the config
+                # node itself had zero edges (a floating orphan); this connects the
+                # regulatory layer into the graph.
+                if "config:settings.json" in g.nodes and hname not in cfg_wired:
+                    cfg_wired.add(hname)
+                    g.edge("config:settings.json", f"hook:{hname}", "wires")
 
     # ---- consistency report (the winner's stated risk: silent edge drops) ----
     # A hook is only "dead" if it is wired NOWHERE. Two legitimate non-settings
@@ -541,15 +574,23 @@ def render_text(g, warnings, notes, wired):
         "invokes": "invokes     artifact -> CLI subcommand  (harness <cmd>)",
         "spawns": "spawns      artifact -> agent          (agent refs)",
         "references": "references  artifact -> ADR            (ADR NNNN)",
-        "touches": "touches     artifact -> state ledger    (state/*.jsonl)",
+        "touches": "touches     artifact -> state ledger    (state/*.jsonl) [mode]",
+        "wires": "wires       config -> hook           (settings.json docks)",
+        "nudges": "nudges      artifact -> command       (/cmd pointer)",
     }
-    for et in ["fires_on", "born_in", "cites", "invokes", "spawns", "references", "touches"]:
+    for et in ["fires_on", "born_in", "cites", "invokes", "spawns", "references",
+               "touches", "wires", "nudges"]:
         es = by_etype.get(et, [])
         if not es:
             continue
         P(f"\n  [{etype_label.get(et, et)}]  ({len(es)})")
         for e in sorted(es, key=lambda e: (e["source"], e["target"])):
-            extra = f"  ({e['matcher']})" if e.get("matcher") and e["matcher"] != "*" else ""
+            if e.get("matcher") and e["matcher"] != "*":
+                extra = f"  ({e['matcher']})"
+            elif e.get("mode"):
+                extra = f"  [{e['mode']}]"
+            else:
+                extra = ""
             P(f"      {e['source']:<28} -> {e['target']}{extra}")
 
     # consistency report
@@ -682,6 +723,7 @@ ROLE_COLORS = {
 EDGE_COLORS = {
     "fires_on": "#ff5c5c", "born_in": "#6d7b8d", "cites": "#4fcf6b",
     "invokes": "#ff9f43", "spawns": "#4f9bff", "references": "#b15cff", "touches": "#f2d65c",
+    "wires": "#c08457", "nudges": "#2fd0c8",
 }
 LOOP_LABEL = {
     "inner": "INNER · predict→act→score", "middle": "MIDDLE · /retro",
@@ -748,6 +790,7 @@ def render_html(g, overlay, dates):
   <div class="grp">⏱ <input type="range" id="slider"><span id="slabel"></span>
     <button id="play">▶ grow</button></div>
   <input type="search" id="search" placeholder="find node…">
+  <div class="grp">layout <button id="weblayout">web</button><button id="flowlayout">flow</button></div>
   <button id="fit">fit</button>
 </div>
 <div id="main"><div id="cy"></div><div id="side">
@@ -776,7 +819,8 @@ const els = [];
 Object.keys(loops).forEach(lp => els.push({data:{id:'loop:'+lp, label:(LL[lp]||lp), isLoop:1, loop:lp}}));
 DATA.nodes.forEach(n => els.push({data:{
   id:n.id, label:n.label, type:n.type, role:n.role, loop:n.loop,
-  file:n.file||'', fires:n.fires||0, added:n.added||'', parent:'loop:'+n.loop}}));
+  file:n.file||'', fires:n.fires||0, added:n.added||'', layer:(n.layer||0),
+  scc:(n.scc==null?-1:n.scc), parent:'loop:'+n.loop}}));
 DATA.edges.forEach((e,i) => els.push({data:{
   id:'e'+i, source:e.source, target:e.target, etype:e.type, matcher:e.matcher||''}}));
 
@@ -892,6 +936,7 @@ function showDetail(n){
   h+='<div><span class="k">type</span><span class="pill" style="background:'+(RC[d.role]||'#888')+'">'+d.role+'</span> '+d.type+'</div>';
   h+='<div><span class="k">loop</span>'+d.loop+'</div>';
   h+='<div><span class="k">file</span>'+srcLink(d.file)+'</div>';
+  h+='<div><span class="k">layer</span>'+(d.layer!=null?d.layer:'—')+(d.scc>=0?' · scc '+d.scc:'')+'</div>';
   h+='<div><span class="k">added</span>'+(d.added||'—')+'</div>';
   if((d.fires||0)>0) h+='<div><span class="k">fires</span><b>'+d.fires+'</b> this window</div>';
   if(node.missing) h+='<div id="warn">⚠ referenced but no file on disk</div>';
@@ -912,6 +957,27 @@ document.getElementById('search').addEventListener('input', e=>{
 });
 document.getElementById('fit').addEventListener('click', ()=>{ clearHL(); cy.fit(null,30); });
 
+// --- layout toggle: web (force-directed relation web) vs flow (entrypoint-seeded layers) ---
+document.getElementById('weblayout').addEventListener('click', ()=>{
+  cy.nodes('[!isLoop]').forEach(n=>{ n.move({parent:'loop:'+n.data('loop')}); });
+  cy.nodes('[?isLoop]').style('display','element');
+  runLayout();
+});
+document.getElementById('flowlayout').addEventListener('click', ()=>{
+  // The flow view is a DERIVED top->bottom layering that cuts across the curated loop
+  // boxes, so detach + hide them and place nodes by machine-truth `layer`.
+  const byL={};
+  cy.nodes('[!isLoop]').forEach(n=>{ const L=+(n.data('layer')||0); (byL[L]=byL[L]||[]).push(n); });
+  cy.nodes('[!isLoop]').forEach(n=>{ n.move({parent:null}); });
+  cy.nodes('[?isLoop]').style('display','none');
+  const pos={}, SX=150, SY=120;
+  Object.keys(byL).map(Number).sort((a,b)=>a-b).forEach(L=>{
+    byL[L].sort((a,b)=>(a.data('label')||'').localeCompare(b.data('label')||''));
+    byL[L].forEach((n,i)=>{ pos[n.id()]={x:i*SX - byL[L].length*SX/2, y:L*SY}; });
+  });
+  cy.layout({name:'preset', positions:pos, fit:true, padding:30, animate:false}).run();
+});
+
 // --- legend + stats ---
 const seenRoles=[...new Set(DATA.nodes.map(n=>n.role))];
 document.getElementById('legend').innerHTML = seenRoles.map(r=>
@@ -931,6 +997,185 @@ slabel.textContent='≤ '+selDate();
 }
 </script></body></html>"""
     return head + scripts + data + app
+
+
+# ----------------------------------------------------- dataflow direction + flow layout
+def ledger_mode(text, st):
+    """Best-effort writes/reads/rw for a *.jsonl ledger access. Resolves module-level aliases
+    (LOG = ...'name.jsonl') so accesses through the alias are seen, then classifies PER LINE on
+    the open()-mode + write/read signatures applied to the ledger or its alias - NOT a blind
+    char window (which bled hints across adjacent ledgers and mistook json.load(sys.stdin) for a
+    ledger read). Falls back to 'rw' on genuine ambiguity; this stays a heuristic, not a parser."""
+    litre = re.compile(re.escape(st) + r"\.jsonl")
+    aliases = set(re.findall(r"^[ \t]*([A-Za-z_]\w*)[ \t]*=[ \t]*[^\n]*" + re.escape(st) + r"\.jsonl",
+                             text, re.M))
+    alias_re = re.compile(r"\b(?:" + "|".join(re.escape(a) for a in aliases) + r")\b") if aliases else None
+    w = r_ = False
+    for line in text.splitlines():
+        if not (litre.search(line) or (alias_re and alias_re.search(line))):
+            continue
+        is_open = "open(" in line
+        write_mode = re.search(r",\s*['\"][aw]\+?['\"]", line)
+        if (is_open and write_mode) or ".write(" in line or "json.dump(" in line:
+            w = True
+        if (is_open and not write_mode) or re.search(r"json\.load\(|read_jsonl\(|_count\(|_read\w*\(", line):
+            r_ = True
+    if w and not r_:
+        return "writes"
+    if r_ and not w:
+        return "reads"
+    return "rw"
+
+
+def strongly_connected(adj, nodes):
+    """SCC ids via pairwise mutual reachability (the graph is tiny, so O(V^2) is fine and
+    sidesteps recursive-Tarjan stack limits). Members of a real (size>1) cycle get a STABLE id
+    - groups ordered by their min member - while every singleton gets -1, so a consumer can
+    distinguish 'in a real cycle' from 'on its own'. Pure stdlib."""
+    def reach(start):
+        seen, st = set(), [start]
+        while st:
+            x = st.pop()
+            for y in adj.get(x, ()):
+                if y not in seen:
+                    seen.add(y)
+                    st.append(y)
+        return seen
+    R = {n: reach(n) for n in nodes}
+    parent = {n: n for n in nodes}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+    for u in nodes:
+        for v in R[u]:
+            if u != v and u in R.get(v, ()):
+                parent[find(u)] = find(v)
+    groups = {}
+    for n in nodes:
+        groups.setdefault(find(n), []).append(n)
+    nontrivial = sorted((grp for grp in groups.values() if len(grp) > 1), key=min)
+    out = {n: -1 for n in nodes}
+    for i, grp in enumerate(nontrivial):
+        for n in grp:
+            out[n] = i
+    return out
+
+
+def compute_flow(g):
+    """Derive a machine-truth FLOW overlay (no curation) - the thing the relation web cannot
+    show:
+      * orient edges for flow - a fired event points at the hooks it triggers (fires_on
+        reversed); provenance/citation (born_in/references) are annotations, not flow;
+      * seed LAYERS from the real entrypoints (lifecycle events + /commands) by shortest hop,
+        so it reads top (poke it here) -> bottom (atomic effect). A node no entrypoint reaches
+        is BANDED as an upstream regulator/source (it still drives others - settings.json, the
+        kernel) or a terminal/unreferenced sink (ADRs, isolated configs), never dumped together
+        at the bottom as if both were effects;
+      * tag SCCs of the reference graph (mutual-reference clusters). These are NOT necessarily
+        control-flow cycles - render_flow_text reports real control cycles separately (on
+        invokes/spawns/fires_on/touches), which is where the honest 'is there a closed loop'
+        answer lives.
+    Bands each node (source/entry/flow/terminal) + tags `layer` & `scc`; returns (roots, fadj)."""
+    from collections import deque
+    fadj = {}
+
+    def add(a, b):
+        fadj.setdefault(a, set()).add(b)
+    for e in g.edges:
+        s, t, ty = e["source"], e["target"], e["type"]
+        if ty == "fires_on":
+            add(t, s)
+        elif ty in ("born_in", "references"):
+            continue
+        else:
+            add(s, t)
+    nodes = list(g.nodes)
+    roots = [n for n in nodes if n.startswith(("event:", "command:"))]
+    layer = {r: 0 for r in roots}
+    dq = deque((r, 0) for r in roots)
+    while dq:
+        n, d = dq.popleft()
+        for m in fadj.get(n, ()):
+            if m not in layer:
+                layer[m] = d + 1
+                dq.append((m, d + 1))
+    reached_max = max(layer.values()) if layer else 0
+    for n in nodes:
+        if n in layer:
+            g.nodes[n]["band"] = "entry" if layer[n] == 0 else "flow"
+        elif fadj.get(n):              # unreached but still drives others -> upstream regulator
+            layer[n] = -1
+            g.nodes[n]["band"] = "source"
+        else:                          # unreached and drives nothing -> terminal / unreferenced
+            layer[n] = reached_max + 2
+            g.nodes[n]["band"] = "terminal"
+    scc = strongly_connected(fadj, nodes)
+    for n in nodes:
+        g.nodes[n]["layer"] = layer[n]
+        g.nodes[n]["scc"] = scc[n]
+    return roots, fadj
+
+
+def render_flow_text(g, roots, fadj):
+    out = []
+    P = out.append
+    by_layer = {}
+    for n in g.nodes.values():
+        by_layer.setdefault(n["layer"], []).append(n)
+    layers_present = sorted(by_layer)
+    P("=" * 70)
+    P("  THE CARTOGRAPH FLOWMAP  (entrypoint-seeded layers, fires_on reversed)")
+    P("  [layer + scc are DERIVED from machine-truth - not the curated role/loop overlay]")
+    P("=" * 70)
+    P(f"  {len(g.nodes)} nodes   {len(layers_present)} bands   "
+      f"{len(roots)} entrypoints (lifecycle events + /commands)")
+
+    # Honesty split: the scc (full flow graph incl. cites+nudges) is a MUTUAL-REFERENCE
+    # cluster, not proof of control flow. Report REAL control cycles separately, on directed
+    # control edges only - that is the machine-truth answer to "is the loop closed on-graph?".
+    clusters = {}
+    for n in g.nodes.values():
+        if n["scc"] >= 0:
+            clusters.setdefault(n["scc"], []).append(n["id"])
+    CTRL = {"invokes", "spawns", "fires_on", "touches"}
+    cadj = {}
+    for e in g.edges:
+        if e["type"] in CTRL:
+            a, b = (e["target"], e["source"]) if e["type"] == "fires_on" else (e["source"], e["target"])
+            cadj.setdefault(a, set()).add(b)
+    cgroups = {}
+    for nid, c in strongly_connected(cadj, list(g.nodes)).items():
+        if c >= 0:
+            cgroups.setdefault(c, []).append(nid)
+    P(f"  control-flow cycles (invokes/spawns/fires_on/touches only): {len(cgroups)}"
+      + ("   <- the self-improvement loop closes OFF-GRAPH, via the human + runtime"
+         if not cgroups else ""))
+    P(f"  mutual-reference clusters (cites+nudges cross-refs, NOT control flow): {len(clusters)}")
+    for c in sorted(clusters.values(), key=len, reverse=True):
+        P("      {" + ", ".join(sorted(c)) + "}")
+    P("")
+    P("-" * 70)
+    band_tag = {
+        "source": "UPSTREAM REGULATORS . govern the engine; no entrypoint triggers them (top)",
+        "entry": "ENTRYPOINTS . a human/runtime pokes the engine here",
+        "terminal": "TERMINAL / UNREFERENCED . no entrypoint reaches; no downstream (bottom)",
+    }
+    for L in layers_present:
+        members = sorted(by_layer.get(L, []), key=lambda n: n["id"])
+        if not members:
+            continue
+        tag = band_tag.get(members[0].get("band"), f"layer {L}")
+        P(f"\n  [{tag}]  ({len(members)})")
+        for n in members:
+            outs = sorted(fadj.get(n["id"], ()))
+            lbls = [g.nodes[t]["label"] for t in outs if t in g.nodes]
+            arrow = ("  ->  " + ", ".join(lbls[:5]) + (" ..." if len(lbls) > 5 else "")) if lbls else ""
+            P(f"      {n['label']:<26}{arrow}")
+    P("")
+    return "\n".join(out)
 
 
 def main():
@@ -956,6 +1201,9 @@ def main():
     gate_mode.add_argument("--write-baseline", nargs="?", const="", default=None, dest="write_baseline",
                            metavar="BASELINE", help="grandfather the current warnings into BASELINE "
                                                     "(default cartograph/baseline.json) so only NEW rot blocks")
+    ap.add_argument("--flow", action="store_true",
+                    help="print the DERIVED flowmap (entrypoint-seeded layers + discovered "
+                         "SCC loops + dataflow direction) instead of the relation web")
     ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
     args = ap.parse_args()
 
@@ -974,6 +1222,10 @@ def main():
     if args.check is not None:
         sys.exit(run_gate(warnings, args.check or default_baseline()))
 
+    # Derive the flow overlay (layer + scc) in place - cheap, machine-truth, and useful in
+    # every render path (text/json/html), so compute it once here, after the gate returns.
+    roots, fadj = compute_flow(g)
+
     # Phases 2-3 enrich the graph in place; only needed when rendering/exporting.
     # NB: --json/--html use const="" (a falsy sentinel meaning "default path"), so these
     # must test `is not None`, not truthiness, or a bare `--json` would be skipped.
@@ -983,7 +1235,10 @@ def main():
         dates = attach_git_dates(g)
 
     if not args.quiet:
-        sys.stdout.write(render_text(g, warnings, notes, wired))
+        if args.flow:
+            sys.stdout.write(render_flow_text(g, roots, fadj))
+        else:
+            sys.stdout.write(render_text(g, warnings, notes, wired))
 
     if args.json is not None:
         jpath = args.json or os.path.join(ROOT, "cartograph", "map.json")
