@@ -5,7 +5,7 @@ description: End-to-end procedure for turning a charter (GOAL.md or inline brief
 
 # Venture Build
 
-> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005. · 2026-06-17 (session d7de6b55): added the grading-independence gate after a 529-forced main-thread build.
+> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005. · 2026-06-17 (session d7de6b55): added the grading-independence gate after a 529-forced main-thread build. · 2026-06-21 (session 7d2da048): cite build-loop as the per-feature inner loop (build-loop is the generic core; venture-build is its venture-scale superset).
 
 Turn a charter into a validated, managed, acquisition-ready venture. The product
 is bespoke every time; THIS procedure is what repeats. Defaults: bias to
@@ -69,6 +69,12 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
 > provenance: 2026-06-16 · cross-Grove retro · the superset-replica build ran 6 sessions / 4 days off STATE.json + DECISIONS.md + RESUME/HANDOFF/PARITY, never chat history; venture-build's ledger/ had no resume contract.
 
 ## The loop (each phase has a falsifiable exit)
+
+> The per-feature inner discipline — align → criteria → RED tests → pre-build
+> review → build to green → verify in practice — is the skill `build-loop`; this
+> venture loop is its multi-session, Linear-managed, scaffold+ledger superset.
+> Phase 4 keeps venture's tests-as-you-go pace for MVP coherence; tighten to
+> build-loop's tests-RED-first when building an individual feature to spec.
 
 0. INTAKE & PREDICT. Read the charter (GOAL.md or inline). If it lacks ICP,
    constraints, or success criteria, ask <=3 scoping questions. Then log the
