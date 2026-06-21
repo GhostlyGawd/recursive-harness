@@ -99,6 +99,14 @@ check("born_in" not in getattr(ex, "DEP_EDGE_TYPES", set()),
 check({"cites", "invokes", "spawns", "references", "fires_on", "touches"}
       <= getattr(ex, "DEP_EDGE_TYPES", set()),
       "the seven+ real reference/wiring edges ARE dependency edges (incl. touches)")
+# SDD Phase A exclusion invariant (Decision B): the basis test above is a SUBSET (`<=`)
+# assertion, so a future leak of a spec edge into DEP would pass it silently. Assert the
+# NEGATIVE explicitly - governance edges must never inflate blast-radius / dependents /
+# remove a node from orphans().
+check("specifies" not in getattr(ex, "DEP_EDGE_TYPES", set())
+      and "requires" not in getattr(ex, "DEP_EDGE_TYPES", set())
+      and "verified_by" not in getattr(ex, "DEP_EDGE_TYPES", set()),
+      "DEP_EDGE_TYPES EXCLUDES the spec edge class (specifies/requires/verified_by)")
 
 
 # ===================================================== 1. dependencies() = direct successors
