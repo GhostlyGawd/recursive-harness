@@ -258,10 +258,15 @@ with tempfile.TemporaryDirectory() as d:
           "the absent eval target becomes a node flagged missing=True (dangling-adr mirror)")
     check(("requirement:absent-binding/R1", "evals:also-missing", "verified_by") in edges,
           "an absent requirement-altitude pointer STILL draws a verified_by edge")
-    # Phase A draws the edge but does NOT add a warning (no dangling-spec / untested-requirement)
+    # Phase A draws the edge to a missing node; Phase B (now shipped) turns that missing endpoint
+    # into a dangling-spec warning. ABSENT_FM is status: proposed, so the anti-backdoor ratchet
+    # DEFERS untested-requirement here while dangling-spec still fires. (Full gate coverage lives
+    # in test_spec_gate.py; this only pins the Phase A -> Phase B hand-off on the same fixture.)
     fps = {w["fingerprint"] for w in warnings}
-    check(not any(fp.startswith(("dangling-spec", "untested-requirement")) for fp in fps),
-          "Phase A adds NO dangling-spec / untested-requirement warning (that is Phase B)")
+    check(any(fp.startswith("dangling-spec") for fp in fps),
+          "a missing pointer endpoint now fires a dangling-spec warning (Phase B over Phase A's edge)")
+    check(not any(fp.startswith("untested-requirement") for fp in fps),
+          "status: proposed DEFERS untested-requirement (anti-backdoor ratchet holds; dangling-spec still fires)")
 
 
 # ============================================================ 3. DORMANCY / COUNT-NEUTRALITY
