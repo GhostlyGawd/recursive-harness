@@ -65,3 +65,13 @@ Log the prediction miss (`harness outcome <id> --result miss --notes ...`),
 and route the lesson: mechanical cause → propose a hook; knowledge gap →
 skill or reference; misread the user → user-model entry. A derailment you
 don't route WILL recur, and next time it costs the same.
+
+And when the ladder fired on a real bug, record it in the **cross-session**
+ledger so the next session inherits your falsified hypotheses instead of
+re-deriving them: `python3 skills/auto-healer/heal.py bug add …`, then one
+`attempt add <bug-id> … --outcome failed` per hypothesis you ruled out. This
+ladder is the IN-session half; the `auto-healer` skill is the cross-session
+record (pull it via `/heal`, never pushed). The boundary is symmetric — see
+auto-healer's "Boundary vs stuck-detection".
+
+<!-- provenance: 2026-06-21, follow-up 27cd1f — reciprocal cross-link to auto-healer (PR #98). The auto-healer SKILL.md already pointed here ("Boundary vs stuck-detection") one-directionally; this closes the loop so the in-session ladder also feeds the cross-session ledger. -->
