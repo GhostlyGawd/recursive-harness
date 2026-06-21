@@ -46,11 +46,15 @@ as such in the output so they are never mistaken for extracted facts.
 """
 import argparse
 import datetime
+import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -1386,6 +1390,423 @@ def render_flow_text(g, roots, fadj):
     return "\n".join(out)
 
 
+# ============================================================ Part A: Structural Oracle
+# Turn the extracted graph into a thing an AGENT consults before editing a file: what does this
+# node USE, what USES it, and what is the blast radius if its contract changes. Edges are
+# consumer->provider (source depends on target), so dependents are PREDECESSORS and dependencies
+# are SUCCESSORS; born_in (lineage) is never a dependency. Everything here is read-only.
+DEP_EDGE_TYPES = REF_EDGE_TYPES | {"touches"}       # excludes born_in (provenance lineage)
+# Provider-definition types the orphans query considers. config is deliberately EXCLUDED: a
+# config (settings.json/autonomy.json/features.json) is runtime-read, never graph-CITED, so it
+# has zero dependents BY CONSTRUCTION and would be constant noise - e.g. settings.json is the
+# single most-wired node (13 outgoing `wires`), the opposite of an orphan. (Verified in practice.)
+ORPHAN_CANDIDATE_TYPES = {"skill", "agent", "cli", "adr"}   # provider definitions, not configs
+LOCKED_PREFIXES = ("hooks/", "lint/", "evals/", "bin/", ".github/", "templates/")
+LOCKED_FILES = {"autonomy.json", "settings.json"}
+
+
+def _dep_adj(g):
+    """Forward {src:[(tgt,via)]} + reverse {tgt:[(src,via)]} adjacency over DEP edges only."""
+    fwd, rev = {}, {}
+    for e in g.edges:
+        if e["type"] not in DEP_EDGE_TYPES:
+            continue
+        fwd.setdefault(e["source"], []).append((e["target"], e["type"]))
+        rev.setdefault(e["target"], []).append((e["source"], e["type"]))
+    return fwd, rev
+
+
+def dependencies(g, nid):
+    """Direct successors of nid over DEP edges - what nid USES. Sorted unique ids."""
+    fwd, _ = _dep_adj(g)
+    return sorted({t for t, _via in fwd.get(nid, [])})
+
+
+def dependents(g, nid):
+    """Direct predecessors of nid over DEP edges - what USES nid. Sorted unique ids."""
+    _, rev = _dep_adj(g)
+    return sorted({s for s, _via in rev.get(nid, [])})
+
+
+def blast_radius(g, nid):
+    """Transitive dependents of nid - everything that may need to change if nid's contract
+    changes - each mapped to its shortest hop distance. BFS over reverse DEP edges; cycle-safe;
+    the start node is never included (a node is not in its own blast radius)."""
+    _, rev = _dep_adj(g)
+    dist, seen, frontier, d = {}, {nid}, [nid], 0
+    while frontier:
+        d += 1
+        nxt = []
+        for x in frontier:
+            for s, _via in rev.get(x, []):
+                if s not in seen:
+                    seen.add(s)
+                    dist[s] = d
+                    nxt.append(s)
+        frontier = nxt
+    return dist
+
+
+def find_path(g, a, b):
+    """Shortest dependency path a->b over DEP edges (does a transitively depend on b, and how),
+    as a list of ids, or None if none exists. find_path(x,x) == [x]. DIRECTIONAL."""
+    if a == b:
+        return [a] if a in g.nodes else None
+    fwd, _ = _dep_adj(g)
+    prev, q, qi = {a: None}, [a], 0
+    while qi < len(q):
+        x = q[qi]
+        qi += 1
+        for t, _via in fwd.get(x, []):
+            if t not in prev:
+                prev[t] = x
+                if t == b:
+                    path = [b]
+                    while path[-1] != a:
+                        path.append(prev[path[-1]])
+                    return list(reversed(path))
+                q.append(t)
+    return None
+
+
+def orphans(g):
+    """Provider-type nodes (skill/agent/cli/adr/config) that NOTHING uses (zero dependents).
+    Excludes actors (hook/event - natural DEP sources) and entrypoints (command/kernel) and
+    lineage (session/state) by type, so it is not just 'every hook'. Distinct from the gate's
+    orphan-hook (hook wiring) and the audit's dead_weight (which adds age + unused gates)."""
+    _, rev = _dep_adj(g)
+    return sorted(nid for nid, n in g.nodes.items()
+                  if n.get("type") in ORPHAN_CANDIDATE_TYPES and not rev.get(nid))
+
+
+def resolve_node(g, target):
+    """Resolve a CLI target to a node id. Tries (1) exact id, (2) unique bare name / label,
+    (3) unique file path (rel, forward-slashed). Returns (nid, [nid]) on a hit,
+    (None, [candidates]) when ambiguous, (None, []) on a miss. Never raises."""
+    if target in g.nodes:
+        return target, [target]
+    cands = sorted(nid for nid in g.nodes
+                   if nid.split(":", 1)[-1] == target or g.nodes[nid].get("label") == target)
+    if len(cands) == 1:
+        return cands[0], cands
+    if cands:
+        return None, cands
+    norm = target.replace("\\", "/").lstrip("./")
+    fc = sorted(nid for nid, n in g.nodes.items()
+                if n.get("file") and n["file"].replace("\\", "/") == norm)
+    if len(fc) == 1:
+        return fc[0], fc
+    return (None, fc) if fc else (None, [])
+
+
+def _is_locked(file):
+    if not file:
+        return False
+    f = file.replace("\\", "/")
+    return f.startswith(LOCKED_PREFIXES) or f in LOCKED_FILES
+
+
+def _is_rot_source(nid, warnings):
+    """True if nid is the subject of a gate warning fingerprint (orphan-hook:<n>/dangling-adr:<n>)."""
+    for w in warnings:
+        fp = w["fingerprint"]
+        if fp.startswith("orphan-hook:") and nid == "hook:" + fp.split(":", 1)[1]:
+            return True
+        if fp.startswith("dangling-adr:") and nid == "adr:" + fp.split(":", 1)[1]:
+            return True
+    return False
+
+
+def node_brief(g, warnings, nid):
+    """The agent-facing brief for nid: identity, provenance, BOTH dependency directions, the
+    transitive-dependents blast radius, and the locked/rot/unused flags. Pure read."""
+    n = g.nodes[nid]
+    fwd, rev = _dep_adj(g)
+    prov = []
+    for e in g.edges:
+        if e["source"] == nid and e["type"] == "born_in":
+            prov.append({"session": e["target"].split(":", 1)[-1],
+                         "date": g.nodes.get(e["target"], {}).get("date")})
+    deps = sorted(({"id": t, "type": g.nodes.get(t, {}).get("type", "?"), "via": via}
+                   for t, via in fwd.get(nid, [])), key=lambda x: (x["via"], x["id"]))
+    dpts = sorted(({"id": s, "type": g.nodes.get(s, {}).get("type", "?"), "via": via}
+                   for s, via in rev.get(nid, [])), key=lambda x: (x["via"], x["id"]))
+    br = blast_radius(g, nid)
+    return {
+        "node": {"id": nid, "type": n.get("type"), "role": n.get("role"),
+                 "loop": n.get("loop"), "file": n.get("file")},
+        "provenance": sorted(prov, key=lambda p: p["session"]),
+        "dependencies": deps,
+        "dependents": dpts,
+        "blast_radius": {"count": len(br),
+                         "nodes": [{"id": k, "distance": v} for k, v in
+                                   sorted(br.items(), key=lambda kv: (kv[1], kv[0]))]},
+        "flags": {"locked_layer": _is_locked(n.get("file")),
+                  "structural_rot": _is_rot_source(nid, warnings),
+                  "unused": n.get("type") in ORPHAN_CANDIDATE_TYPES and not rev.get(nid)},
+    }
+
+
+def render_brief_text(b):
+    out = []
+    P = out.append
+    n = b["node"]
+    lock = "  (locked-layer)" if b["flags"]["locked_layer"] else ""
+    P("=" * 70)
+    P(f"  {n['id']}   [{n['type']} | {n['role']} | {n['loop']}]")
+    P("=" * 70)
+    P(f"  file        {n['file'] or '(none)'}{lock}")
+    fl = b["flags"]
+    P(f"  flags       structural_rot={'yes' if fl['structural_rot'] else 'no'}  "
+      f"unused={'yes' if fl['unused'] else 'no'}")
+    if b["provenance"]:
+        P("  provenance  born_in: "
+          + ", ".join(f"{p['session']}({p['date'] or '?'})" for p in b["provenance"]))
+    P("")
+    P(f"  dependencies - what it uses ({len(b['dependencies'])}):")
+    for d in b["dependencies"]:
+        P(f"      {d['via']:<10} -> {d['id']}")
+    if not b["dependencies"]:
+        P("      (none)")
+    P("")
+    P(f"  dependents - what uses it ({len(b['dependents'])}):")
+    for d in b["dependents"]:
+        P(f"      {d['via']:<10} <- {d['id']}")
+    if not b["dependents"]:
+        P("      (none)")
+    P("")
+    br = b["blast_radius"]
+    P(f"  blast radius - transitive dependents ({br['count']}):")
+    for x in br["nodes"]:
+        P(f"      {x['id']}   (distance {x['distance']})")
+    if not br["nodes"]:
+        P("      (none - changing this affects no other node's contract)")
+    return "\n".join(out) + "\n"
+
+
+def _resolve_error(target, cands):
+    if cands:
+        return (f"cartograph: '{target}' is ambiguous - candidates: "
+                + ", ".join(cands) + "  (pass a full node id)")
+    return (f"cartograph: could not resolve '{target}' to a node "
+            "(not a node id, a unique name, or a mapped file path)")
+
+
+def run_context(g, warnings, target, as_json):
+    nid, cands = resolve_node(g, target)
+    if nid is None:
+        sys.stderr.write(_resolve_error(target, cands) + "\n")
+        return 2
+    brief = node_brief(g, warnings, nid)
+    sys.stdout.write(json.dumps(brief, indent=2) + "\n" if as_json
+                     else render_brief_text(brief))
+    return 0
+
+
+def run_query(g, warnings, query_args, as_json):
+    kind = query_args[0]
+    rest = query_args[1:]
+
+    def emit(obj, text):
+        sys.stdout.write(json.dumps(obj, indent=2) + "\n" if as_json else text)
+
+    if kind == "orphans":
+        ids = orphans(g)
+        obj = {"orphans": [{"id": i, "type": g.nodes[i]["type"], "file": g.nodes[i].get("file")}
+                           for i in ids]}
+        txt = f"orphans - provider definitions nothing uses ({len(ids)}):\n" + \
+              ("".join(f"  {i}\n" for i in ids) or "  (none)\n")
+        emit(obj, txt)
+        return 0
+
+    if kind == "path":
+        if len(rest) != 2:
+            sys.stderr.write("cartograph: --query path needs TWO targets: path A B\n")
+            return 2
+        ra, ca = resolve_node(g, rest[0])
+        if ra is None:
+            sys.stderr.write(_resolve_error(rest[0], ca) + "\n")
+            return 2
+        rb, cb = resolve_node(g, rest[1])
+        if rb is None:
+            sys.stderr.write(_resolve_error(rest[1], cb) + "\n")
+            return 2
+        path = find_path(g, ra, rb)
+        obj = {"a": ra, "b": rb, "path": path, "length": (len(path) - 1) if path else None}
+        txt = ("path  " + "  ->  ".join(path) + f"   (length {len(path) - 1})\n") if path \
+              else f"no dependency path from {ra} to {rb}\n"
+        emit(obj, txt)
+        return 0
+
+    if kind in ("blast-radius", "dependents", "dependencies", "node"):
+        if len(rest) != 1:
+            sys.stderr.write(f"cartograph: --query {kind} needs exactly one target\n")
+            return 2
+        nid, cands = resolve_node(g, rest[0])
+        if nid is None:
+            sys.stderr.write(_resolve_error(rest[0], cands) + "\n")
+            return 2
+        if kind == "node":
+            brief = node_brief(g, warnings, nid)
+            emit(brief, render_brief_text(brief))
+            return 0
+        if kind == "blast-radius":
+            br = blast_radius(g, nid)
+            result = [{"id": k, "type": g.nodes.get(k, {}).get("type", "?"), "distance": v}
+                      for k, v in sorted(br.items(), key=lambda kv: (kv[1], kv[0]))]
+            txt = f"blast-radius {nid} - transitive dependents ({len(result)}):\n" + \
+                  ("".join(f"  {r['id']} (distance {r['distance']})\n" for r in result)
+                   or "  (none)\n")
+        else:
+            fwd, rev = _dep_adj(g)
+            src = fwd.get(nid, []) if kind == "dependencies" else rev.get(nid, [])
+            arrow = "->" if kind == "dependencies" else "<-"
+            result = sorted(({"id": t, "type": g.nodes.get(t, {}).get("type", "?"), "via": via}
+                             for t, via in src), key=lambda x: (x["via"], x["id"]))
+            txt = f"{kind} {nid} ({len(result)}):\n" + \
+                  ("".join(f"  {r['via']:<10} {arrow} {r['id']}\n" for r in result)
+                   or "  (none)\n")
+        emit({"target": nid, "kind": kind, "result": result}, txt)
+        return 0
+
+    sys.stderr.write(f"cartograph: unknown --query kind '{kind}' "
+                     "(blast-radius|dependents|dependencies|path|orphans|node)\n")
+    return 2
+
+
+# ============================================================ Part B: Structural Reviewer
+# Answer a question text-diff review cannot: what did this change do to the harness's WIRING.
+# Extract the graph at a git REF and at the working tree, diff them, and classify the delta -
+# the two GATE-blocking classes (a hook newly orphaned, an ADR newly dangling) plus a review
+# class (a new artifact nothing references). Advisory (exit 0) like --audit unless --strict, so
+# the --check gate stays the sole blocker. Read-only: it materializes REF in a throwaway temp
+# dir and removes it; it never touches the working tree.
+class GraphAtError(Exception):
+    """A git REF could not be materialized (bad ref / not a git repo)."""
+
+
+def graph_at(ref):
+    """(graph, warnings) for the repo AS OF git REF. Materializes REF's tree via `git archive`
+    into a temp dir and runs the CURRENT extractor over it - so extractor-LOGIC changes never
+    pollute a content diff (both sides are read by the same code). build()'s overlay/git-date
+    passes are NOT invoked (the archive has no .git/ or state/). The module ROOT is swapped to
+    the temp dir ONLY for this build and ALWAYS restored in finally, and the temp dir is ALWAYS
+    removed - so the caller's current-tree graph (built first, at the real ROOT) is never
+    corrupted and nothing leaks. Raises GraphAtError on a bad ref."""
+    global ROOT
+    proc = subprocess.run(["git", "-C", ROOT, "archive", "--format=tar", ref],
+                          capture_output=True)
+    if proc.returncode != 0:
+        err = proc.stderr.decode("utf-8", "replace").strip().splitlines()
+        raise GraphAtError(err[-1] if err else f"git archive {ref} failed")
+    tmp = tempfile.mkdtemp(prefix="cartograph-diff-")
+    saved = ROOT
+    try:
+        with tarfile.open(fileobj=io.BytesIO(proc.stdout)) as tf:
+            try:
+                tf.extractall(tmp, filter="data")   # secure default; silences the 3.14 warning
+            except TypeError:
+                tf.extractall(tmp)                   # Python < 3.12: no filter kwarg
+        ROOT = tmp
+        g, warnings, _notes, _wired = build()
+        return g, warnings
+    finally:
+        ROOT = saved
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def diff_report(ref_g, ref_warnings, cur_g, cur_warnings):
+    """Classify the structural delta ref -> cur. Pure: takes two graphs + their warning lists,
+    returns the report dict. Blocking = the gate's own rot (orphan-hook / dangling-adr) scoped
+    to fingerprints NEW in this delta; review = a newly-added skill/agent/command that nothing
+    references (indegree 0 in cur)."""
+    ref_nodes, cur_nodes = set(ref_g.nodes), set(cur_g.nodes)
+    nodes_added = sorted(cur_nodes - ref_nodes)
+    nodes_removed = sorted(ref_nodes - cur_nodes)
+
+    def ekey(e):
+        return (e["source"], e["target"], e["type"])
+    ref_edges = {ekey(e) for e in ref_g.edges}
+    cur_edges = {ekey(e) for e in cur_g.edges}
+    edges_added = sorted(cur_edges - ref_edges)
+    edges_removed = sorted(ref_edges - cur_edges)
+
+    ref_fps = {w["fingerprint"] for w in ref_warnings}
+    cur_fps = {w["fingerprint"] for w in cur_warnings}
+    warnings_added = sorted(cur_fps - ref_fps)
+    warnings_removed = sorted(ref_fps - cur_fps)
+    hooks_newly_orphaned = [fp for fp in warnings_added if fp.startswith("orphan-hook:")]
+    adrs_newly_dangling = [fp for fp in warnings_added if fp.startswith("dangling-adr:")]
+
+    indeg = compute_indegree(cur_g)
+    artifacts_new_unreferenced = sorted(
+        nid for nid in nodes_added
+        if cur_g.nodes[nid].get("type") in ("skill", "agent", "command")
+        and indeg.get(nid, 0) == 0)
+
+    blocking = len(hooks_newly_orphaned) + len(adrs_newly_dangling)
+    review = len(artifacts_new_unreferenced)
+    return {
+        "nodes_added": nodes_added,
+        "nodes_removed": nodes_removed,
+        "edges_added": [{"source": s, "target": t, "type": ty} for s, t, ty in edges_added],
+        "edges_removed": [{"source": s, "target": t, "type": ty} for s, t, ty in edges_removed],
+        "warnings_added": warnings_added,
+        "warnings_removed": warnings_removed,
+        "hooks_newly_orphaned": hooks_newly_orphaned,
+        "adrs_newly_dangling": adrs_newly_dangling,
+        "artifacts_new_unreferenced": artifacts_new_unreferenced,
+        "verdict": {"blocking": blocking, "review": review,
+                    "clean": blocking == 0 and review == 0},
+    }
+
+
+def render_diff_text(rep):
+    out = []
+    P = out.append
+    v = rep["verdict"]
+    P("=" * 70)
+    P(f"  CARTOGRAPH STRUCTURAL DIFF  (working tree vs {rep['ref']})")
+    P("=" * 70)
+    P("  verdict: " + ("CLEAN - no structural regressions in this delta"
+                       if v["clean"] else f"{v['blocking']} blocking, {v['review']} review"))
+    P("")
+    for fp in rep["hooks_newly_orphaned"]:
+        P(f"  ! BLOCKING  hook newly orphaned: {fp}")
+    for fp in rep["adrs_newly_dangling"]:
+        P(f"  ! BLOCKING  ADR newly dangling: {fp}")
+    for nid in rep["artifacts_new_unreferenced"]:
+        P(f"  ? REVIEW    new artifact nothing references: {nid}")
+    if not v["clean"]:
+        P("")
+    P(f"  raw delta: nodes +{len(rep['nodes_added'])}/-{len(rep['nodes_removed'])}, "
+      f"edges +{len(rep['edges_added'])}/-{len(rep['edges_removed'])}, "
+      f"warnings +{len(rep['warnings_added'])}/-{len(rep['warnings_removed'])}")
+    for nid in rep["nodes_added"]:
+        P(f"      + {nid}")
+    for nid in rep["nodes_removed"]:
+        P(f"      - {nid}")
+    for e in rep["edges_added"]:
+        P(f"      + {e['source']} --{e['type']}--> {e['target']}")
+    for e in rep["edges_removed"]:
+        P(f"      - {e['source']} --{e['type']}--> {e['target']}")
+    return "\n".join(out) + "\n"
+
+
+def run_diff(cur_g, cur_warnings, ref, strict, as_json):
+    """Drive --diff. cur_g/cur_warnings are the CURRENT-tree graph main() already built at the
+    real ROOT (so graph_at's ROOT swap can never corrupt them). Advisory exit 0 unless --strict
+    and a blocking finding exists."""
+    try:
+        ref_g, ref_warnings = graph_at(ref)
+    except GraphAtError as e:
+        sys.stderr.write(f"cartograph: cannot diff against '{ref}': {e}\n")
+        return 2
+    rep = {"ref": ref, **diff_report(ref_g, ref_warnings, cur_g, cur_warnings)}
+    sys.stdout.write(json.dumps(rep, indent=2) + "\n" if as_json else render_diff_text(rep))
+    return 1 if (strict and rep["verdict"]["blocking"] > 0) else 0
+
+
 def main():
     global ROOT
     ap = argparse.ArgumentParser(
@@ -1419,6 +1840,21 @@ def main():
     ap.add_argument("--flow", action="store_true",
                     help="print the DERIVED flowmap (entrypoint-seeded layers + discovered "
                          "SCC loops + dataflow direction) instead of the relation web")
+    ap.add_argument("--context", metavar="FILE",
+                    help="ORACLE: pre-edit brief for the node a FILE maps to - what it uses, "
+                         "what uses it, its blast radius, and locked/rot/unused flags. Read-only; "
+                         "add --json for machine output.")
+    ap.add_argument("--query", nargs="+", metavar="ARG",
+                    help="ORACLE: KIND [TARGET...] where KIND is blast-radius|dependents|"
+                         "dependencies|path|orphans|node (path takes two targets, orphans none). "
+                         "Read-only; add --json for machine output.")
+    ap.add_argument("--diff", metavar="REF",
+                    help="REVIEWER: structural delta between the working tree and git REF - "
+                         "newly-orphaned hooks / newly-dangling ADRs (blocking) + new unreferenced "
+                         "artifacts (review). Advisory exit 0 unless --strict. Read-only; add --json.")
+    ap.add_argument("--strict", action="store_true",
+                    help="with --diff: exit 1 if any BLOCKING finding exists (for CI). "
+                         "Default is advisory (exit 0) - the --check gate stays the sole blocker.")
     ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
     args = ap.parse_args()
 
@@ -1453,6 +1889,18 @@ def main():
                              f"({report['meta']['rot_count']} rot, "
                              f"{report['meta']['dead_weight_count']} dead-weight)\n")
         sys.exit(0)
+
+    # Part A oracle modes are terminal + read-only: resolve, print the brief/query, exit.
+    # They read the raw relation graph (no flow/overlay needed), so they run before compute_flow.
+    if args.context is not None:
+        sys.exit(run_context(g, warnings, args.context, args.json is not None))
+    if args.query is not None:
+        sys.exit(run_query(g, warnings, args.query, args.json is not None))
+
+    # Part B reviewer: diff the CURRENT graph (g/warnings, just built at the real ROOT) against
+    # the graph at REF. Terminal + read-only; advisory exit unless --strict.
+    if args.diff is not None:
+        sys.exit(run_diff(g, warnings, args.diff, args.strict, args.json is not None))
 
     # Derive the flow overlay (layer + scc) in place - cheap, machine-truth, and useful in
     # every render path (text/json/html), so compute it once here, after the gate returns.
