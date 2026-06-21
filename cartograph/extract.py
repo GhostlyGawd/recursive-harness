@@ -2188,8 +2188,10 @@ def main():
                          "add --json for machine output.")
     ap.add_argument("--query", nargs="+", metavar="ARG",
                     help="ORACLE: KIND [TARGET...] where KIND is blast-radius|dependents|"
-                         "dependencies|path|orphans|node (path takes two targets, orphans none). "
-                         "Read-only; add --json for machine output.")
+                         "dependencies|path|orphans|node|governed-by|traces (path takes two "
+                         "targets, orphans none; governed-by takes a FILE and returns the "
+                         "spec(s) governing it; traces takes a SPEC and returns its "
+                         "requirements + verifications). Read-only; add --json for machine output.")
     ap.add_argument("--diff", metavar="REF",
                     help="REVIEWER: structural delta between the working tree and git REF - "
                          "newly-orphaned hooks / newly-dangling ADRs (blocking) + new unreferenced "

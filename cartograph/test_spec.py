@@ -32,6 +32,7 @@ Run:  python cartograph/test_spec.py      # exits non-zero on any failure
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -407,6 +408,24 @@ with tempfile.TemporaryDirectory() as d:
 print("[7] spec/requirement node types have a ROLE_BY_TYPE entry (not the '?' fallback)")
 check(ex.ROLE_BY_TYPE.get("spec", "?") != "?", "spec type has a curated role")
 check(ex.ROLE_BY_TYPE.get("requirement", "?") != "?", "requirement type has a curated role")
+
+
+# ============================================================ 8. --query DISCOVERABILITY
+# Decision C/D wiring guard: the two new verbs must be advertised in the user-facing help,
+# not just implemented. The --query argparse help string (and the run_query unknown-kind
+# error) is the only place a reader learns governed-by/traces exist. If that list regresses
+# back to the old blast-radius|...|node set, this goes red. We collapse whitespace before
+# asserting because argparse wraps long help lines (splitting `governed-by` across a line);
+# the literal hyphen survives the collapse, the inserted newline/indent does not.
+print("[8] --query help advertises BOTH new verbs (governed-by + traces)")
+_, help_out, _ = run("--help")
+help_flat = re.sub(r"\s+", "", help_out)
+check("governed-by" in help_flat, "--help --query line advertises the `governed-by` verb")
+check("traces" in help_flat, "--help --query line advertises the `traces` verb")
+# the run_query unknown-kind error surfaces the same verb list on a single line
+_, _, unk_err = run("--query", "no-such-verb")
+check("governed-by" in unk_err and "traces" in unk_err,
+      "unknown --query kind error lists both new verbs")
 
 
 # ============================================================================ done
