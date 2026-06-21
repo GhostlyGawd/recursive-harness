@@ -86,6 +86,23 @@ def listfiles(subdir, ext):
     )
 
 
+def ignored_files(root):
+    """Repo-relative (forward-slash) paths present on disk but git-IGNORED under `root` - the set
+    a filesystem walk picks up that `git archive` omits (e.g. a vendored, gitignored
+    skills/brand-foundry/). Used by build(tracked_only=True) so the --diff CURRENT side matches
+    the REF side's archive. ONE `git ls-files`; fail-OPEN to an empty set (include everything =
+    the default behavior) on any git error, so this can never brick a build."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", root, "ls-files", "--others", "--ignored", "--exclude-standard"],
+            capture_output=True, text=True)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if proc.returncode != 0:
+        return set()
+    return {ln.strip() for ln in proc.stdout.splitlines() if ln.strip()}
+
+
 # --- curated overlays (design choices, NOT extracted truth) -------------------
 ROLE_BY_TYPE = {
     "skill": "ribosome",        # translate trigger-signals into procedure
@@ -213,15 +230,36 @@ def provenance_sessions(text):
     return sorted(seen.items())
 
 
-def build():
+def build(tracked_only=False):
     g = Graph()
+
+    # When tracked_only (the --diff CURRENT side), skip files present on disk but git-IGNORED so
+    # the current graph matches git-archive's tracked-only file set: a vendored, gitignored skill
+    # (e.g. brand-foundry/) must not read as "added" in every --diff, and its cascade (the born_in
+    # session node, the cites edges) must never form. Plain UNTRACKED files (not ignored) are KEPT
+    # - a new artifact you have not committed is a real, reviewable addition. (followup 3f3fab)
+    _ignored = ignored_files(ROOT) if tracked_only else set()
+
+    def _tracked(path):
+        # git collapses a fully-ignored DIRECTORY to a single 'dir/' entry rather than listing
+        # each file beneath it (e.g. 'skills/brand-foundry/'), so a path is ignored if it OR any
+        # ANCESTOR directory was listed - not only an exact file match.
+        r = rel(path)
+        if r in _ignored:
+            return False
+        i = r.find("/")
+        while i != -1:
+            if r[:i + 1] in _ignored:
+                return False
+            i = r.find("/", i + 1)
+        return True
 
     # --- discover artifact nodes + the "known name" sets we match against -----
     skill_files = {}
     skills_dir = os.path.join(ROOT, "skills")
     for d in (sorted(os.listdir(skills_dir)) if os.path.isdir(skills_dir) else []):
         sk = os.path.join(skills_dir, d, "SKILL.md")
-        if os.path.isfile(sk):
+        if os.path.isfile(sk) and _tracked(sk):
             fm = frontmatter(read(sk))
             m = re.search(r"^name:\s*(\S+)", fm, re.M)
             name = m.group(1) if m else d
@@ -230,18 +268,24 @@ def build():
 
     cmd_files = {}
     for f in listfiles("commands", ".md"):
+        if not _tracked(f):
+            continue
         name = os.path.splitext(os.path.basename(f))[0]
         cmd_files[name] = f
         g.node(f"command:{name}", "command", f"/{name}", rel(f))
 
     agent_files = {}
     for f in listfiles("agents", ".md"):
+        if not _tracked(f):
+            continue
         name = os.path.splitext(os.path.basename(f))[0]
         agent_files[name] = f
         g.node(f"agent:{name}", "agent", name, rel(f))
 
     hook_files = {}
     for f in listfiles("hooks", ".py"):
+        if not _tracked(f):
+            continue
         name = os.path.splitext(os.path.basename(f))[0]
         hook_files[name] = f
         g.node(f"hook:{name}", "hook", f"{name}.py", rel(f))
@@ -249,6 +293,8 @@ def build():
     # ADRs (files = real; references to missing ones get flagged later)
     adr_files = {}
     for f in listfiles("memory/decisions", ".md"):
+        if not _tracked(f):
+            continue
         m = re.match(r"(\d{3,})", os.path.basename(f))
         if m:
             num = m.group(1).zfill(4)
@@ -267,7 +313,8 @@ def build():
 
     # config + kernel + lint + evals
     for cfg in ("settings.json", "autonomy.json", "features.json"):
-        if os.path.isfile(os.path.join(ROOT, cfg)):
+        p = os.path.join(ROOT, cfg)
+        if os.path.isfile(p) and _tracked(p):
             g.node(f"config:{cfg}", "config", cfg, cfg)
     g.node("kernel:CLAUDE.md", "kernel", "CLAUDE.md (kernel)", "CLAUDE.md")
     if os.path.isfile(os.path.join(ROOT, "lint", "lint_harness.py")):
@@ -1897,10 +1944,13 @@ def main():
     if args.query is not None:
         sys.exit(run_query(g, warnings, args.query, args.json is not None))
 
-    # Part B reviewer: diff the CURRENT graph (g/warnings, just built at the real ROOT) against
-    # the graph at REF. Terminal + read-only; advisory exit unless --strict.
+    # Part B reviewer: diff the CURRENT graph against the graph at REF. The current side is built
+    # tracked_only so it matches what `git archive REF` feeds the REF side - a gitignored, on-disk
+    # vendored skill must not read as "added" in every diff (followup 3f3fab). Built at the real
+    # ROOT before graph_at's ROOT swap. Terminal + read-only; advisory exit unless --strict.
     if args.diff is not None:
-        sys.exit(run_diff(g, warnings, args.diff, args.strict, args.json is not None))
+        diff_g, diff_warnings, _, _ = build(tracked_only=True)
+        sys.exit(run_diff(diff_g, diff_warnings, args.diff, args.strict, args.json is not None))
 
     # Derive the flow overlay (layer + scc) in place - cheap, machine-truth, and useful in
     # every render path (text/json/html), so compute it once here, after the gate returns.
