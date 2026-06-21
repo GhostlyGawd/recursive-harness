@@ -22,6 +22,12 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
    that only scores the port's mechanics (additive? lint-clean?) is NOT a build
    decision; predict the strategic question ("is a competing copy worth
    maintaining in this trunk?"). Kernel directive 6: never fork the brain.
+   Resolve lineage DIRECTION first: a consolidation/aggregate harness is usually
+   DOWNSTREAM (it syncs FROM this repo), so building a capability INTO it forks the
+   brain, while building it in the upstream parent is legitimate and flows down.
+   (session 7d2da048, 2026-06-21: master-harness looked adoptable until its
+   LINEAGE.md showed it consolidates recursive+fable — the adopt call flipped to
+   rebuild-native+graft.)
    (session a0a4278d, 2026-06-14: ported fable's competitor-scan into a new
    recursive competitive-research skill, commit b948a8a; the user then cancelled
    the whole effort — fable's was better "in every way" — so the port was sunk

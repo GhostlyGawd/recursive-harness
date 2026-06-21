@@ -31,18 +31,18 @@ collide, make it.
   branch **`worktree-<name>`**, and switches the session's working dir into it.
   From inside a worktree you cannot nest another — only switch into an existing
   one via `path`, and that path must be under `.claude/worktrees/`.
+- **`EnterWorktree` is UNAVAILABLE under a pinned cwd (Remote Control)** — you
+  can't move yourself in, so DELEGATE file-mutating steps to an
+  `isolation:worktree` subagent; full mechanics + the run-`bin/harness`-from-main
+  caveat in §6.
 - **A separate parallel session:** the user runs `claude --worktree <name>` in
   another terminal, or `git worktree add ../<dir> -b <branch>` then `claude`
   there.
 - **Base ref:** new worktrees branch from **`origin/HEAD`** by default — a clean
   tree matching the remote, NOT your local uncommitted work. To carry unpushed
   local commits instead, set `worktree.baseRef: "head"` (project-level
-  `.claude/settings.json`, or your account config). This repo's live account
-  config (`.claude-private/accounts/<name>/settings.json`, gitignored) sets
-  `worktree.baseRef: "fresh"` — the default (branch from `origin/<default-branch>`),
-  made explicit; the version-controlled `settings.json` template carries no
-  `worktree.*` block. (Verified 2026-06-18, session 01S8mkwD — live account config
-  contradicted the prior "sets no `worktree.*` keys" claim.)
+  `.claude/settings.json`, or your account config). This repo's account config sets
+  `worktree.baseRef: "fresh"` (the default — branch from `origin/<default-branch>`).
 
 ## 2. The gotchas (this is why the skill exists)
 
@@ -207,7 +207,7 @@ Claude Code changes under us, and stale worktree knowledge is dangerous. So:
 
 - **Before reimplementing a trunk fix, `git fetch` + scan recently-merged PRs** (`gh pr list --state merged --limit 20`) — parallel chats ship the same fix, so a blind redo duplicates merged work. (retro-backlog 2026-06-19, sessions b7488db6 + dc1c3470.)
 - **Two sessions sharing one checkout race on `.git/HEAD`.** Prevent with separate worktrees (Guard C's lease now blocks a stale-HEAD mutate on main); to commit mid-race, build from git objects (`write-tree`→`commit-tree`→`push <oid>:refs/heads/…`) off a TEMP `GIT_INDEX_FILE`, never `checkout`/`reset` a HEAD a peer holds. (sessions b7488db6 + dc1c3470.)
-- **`EnterWorktree` can FAIL from a pinned / repo-root session — fall back to an isolation agent.** From a session whose cwd is pinned (a subagent cwd-override) or sitting at the repo root, BOTH forms fail: `EnterWorktree` with `name` errors "cannot create a worktree from a subagent with a cwd override," and with `path` errors "current working directory … is the repository root, not an isolated worktree." So the guard's own "use EnterWorktree" suggestion can be unavailable exactly when the main checkout is contended. Do NOT then fight the trunk-lease / cross-worktree / enforcement guards inline, hatch-by-hatch (a costly slog). Instead spawn an `Agent` with `isolation: "worktree"` and have IT do the Write + `git commit` in its own clean worktree (no cross-worktree or lease guard fires there), then from the main checkout `git push -u origin <its-branch>` and `gh pr create --head <its-branch>`. This is the higher-level sibling of the `write-tree`→`commit-tree` plumbing above — prefer it when you just need a file written and committed. (session 04fb5c5c, 2026-06-21 — writing a proposal beside a live cartograph session: 4 guards + both EnterWorktree forms failed; the isolation-agent fallback worked.)
+- **`EnterWorktree` can FAIL from a pinned / repo-root session — fall back to an isolation agent.** From a session whose cwd is pinned (a subagent cwd-override) or sitting at the repo root, BOTH forms fail: `EnterWorktree` with `name` errors "cannot create a worktree from a subagent with a cwd override," and with `path` errors "current working directory … is the repository root, not an isolated worktree." So the guard's own "use EnterWorktree" suggestion can be unavailable exactly when the main checkout is contended. Do NOT then fight the trunk-lease / cross-worktree / enforcement guards inline, hatch-by-hatch (a costly slog). Instead spawn an `Agent` with `isolation: "worktree"` and have IT do the Write + `git commit` in its own clean worktree (no cross-worktree or lease guard fires there), then from the main checkout `git push -u origin <its-branch>` and `gh pr create --head <its-branch>`. This is the higher-level sibling of the `write-tree`→`commit-tree` plumbing above — prefer it when you just need a file written and committed. Keep READS in the main checkout and run `bin/harness` from the PRIMARY checkout — the delegate's `state/` is its own tree-local copy and misses the main ledger (§2). (session 04fb5c5c, 2026-06-21 — writing a proposal beside a live cartograph session: 4 guards + both EnterWorktree forms failed; the isolation-agent fallback worked. Re-confirmed session 7d2da048, 2026-06-21.)
 
 ## Rules
 
