@@ -39,7 +39,7 @@ never a self-awarded `hit`.
 
 Corollary: a prediction that bundles a mechanical clause (the loop runs) with an acceptance
 clause (the user accepts the design) can be a mechanical HIT and an acceptance MISS at once.
-Score them separately, or wait for the user — a green mechanical result must not let you round
+Log them as TWO predictions up front (the `outcome` CLI scores one result per id), or wait for the user — a green mechanical result must not let you round
 the acceptance clause up to "hit".
 
 provenance: session 3772bd2d, 2026-06-20 — scored prediction f156c20b a "hit" (its clause:
