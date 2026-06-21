@@ -714,6 +714,69 @@ def build(tracked_only=False):
         notes.append(f"{src.split(':', 1)[1]} cites a venture decision log "
                      f"(DECISIONS.md {num}), not a harness ADR - not counted as dangling")
 
+    # ---- SDD Phase B: the spec-binding gate classes (proposal 2026-06-21, Decision E) -------
+    # Two warn classes that turn Phase A's missing-node endpoints into gateable structural rot.
+    # Both resolve EVERY pointer against MACHINE TRUTH (is the endpoint node missing=True?) and
+    # NEVER trust status: as proof - the anti-backdoor invariant. status: is descriptive and may
+    # only ratchet strictness UP. Bindings are sourced ONLY from scanned harness artifacts
+    # (skills/commands/agents/hooks/CLAUDE.md), so a venture tree contributes no binding and cannot
+    # false-positive - the harness-vs-venture distinction dangling-adr draws is satisfied here by
+    # construction (there is no venture-sourced binding to mis-flag).
+    SPEC_BLOCKING_STATUS = "shipped"   # untested-requirement strictness threshold (ratchet-up only)
+
+    def _ptr_label(nid):
+        # the stable, readable pointer form for a missing endpoint: an evals: node reports its
+        # eval-corpus path (file=), a target: node its normalised path (label) - either survives
+        # message rewording, so the fingerprint stays auditable across builds.
+        n = g.nodes.get(nid, {})
+        return n.get("file") or n.get("label") or nid.split(":", 1)[-1]
+
+    # (a) dangling-spec:<slug>:<pointer> - a specifies:/verified_by: edge whose endpoint is a
+    # missing node (a targets:/verified_by: pointer resolving to nothing on disk). The direct
+    # mirror of dangling-adr; ALWAYS fires, at ANY status. Keyed per (spec-slug, pointer) so each
+    # dangling pointer grandfathers/clears independently. (requires: edges never dangle - a
+    # requirement node is always materialised - so only the two outward pointer types are checked.)
+    seen_dangling = set()
+    for e in g.edges:
+        if e["type"] not in ("specifies", "verified_by"):
+            continue
+        if not g.nodes.get(e["target"], {}).get("missing"):
+            continue
+        slug = e["source"].split(":", 1)[1].split("/", 1)[0]  # spec:<slug> | requirement:<slug>/<rid>
+        ptr = _ptr_label(e["target"])
+        fp = f"dangling-spec:{slug}:{ptr}"
+        if fp in seen_dangling:
+            continue
+        seen_dangling.add(fp)
+        kind = "targets" if e["type"] == "specifies" else "verified_by"
+        warn(fp, f"spec {slug}: a {kind} pointer resolves to nothing on disk ({ptr}) "
+                 f"- dangling spec binding (mirror of dangling-adr)")
+
+    # (b) untested-requirement:<slug>/<rid> - an EARS requirement carrying NO verified_by edge to
+    # a REAL (non-missing) eval-corpus case: the EARS teeth. Fires ONLY when the governing spec is
+    # status: shipped (the chosen threshold; proposed/building defer it - "not done yet", which a
+    # reviewer reads as a smell, never a skipped check). dangling-spec still fires at any status,
+    # so lying downward in status: buys nothing.
+    spec_status = {nid: node.get("status", "")
+                   for nid, node in g.nodes.items() if node.get("type") == "spec"}
+    real_vb = {}   # requirement-node -> has >=1 verified_by edge to a NON-missing eval node
+    for e in g.edges:
+        if e["type"] != "verified_by" or not e["source"].startswith("requirement:"):
+            continue
+        has_real = not g.nodes.get(e["target"], {}).get("missing")
+        real_vb[e["source"]] = real_vb.get(e["source"], False) or has_real
+    for nid, node in g.nodes.items():
+        if node.get("type") != "requirement":
+            continue
+        if spec_status.get(node.get("spec", ""), "") != SPEC_BLOCKING_STATUS:
+            continue   # strictness threshold: only a SHIPPED spec's requirements must be tested
+        if real_vb.get(nid):
+            continue   # has a real verification edge -> tested
+        rid = nid.split(":", 1)[1]   # <slug>/<rid>
+        warn(f"untested-requirement:{rid}",
+             f"requirement {rid} is in a shipped spec but has no verified_by edge to a real "
+             f"eval-corpus case (untested EARS requirement)")
+
     return g, warnings, notes, wired
 
 
