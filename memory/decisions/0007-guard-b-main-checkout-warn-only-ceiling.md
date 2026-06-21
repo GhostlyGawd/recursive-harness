@@ -2,6 +2,13 @@
 
 date: 2026-06-18
 status: accepted
+superseded-by: ADR 0009 (2026-06-19), IN PART — 0007's main-checkout warn-only
+CEILING ("Guard B's main checkout stays WARN-ONLY; do NOT ship a main-checkout
+block; sound blocking is blocked on an upstream per-terminal id") was overtaken
+by Guard C (guard_trunk_lease.py), which ships a SOUND main-checkout BLOCK keyed
+on the resource's observable state (trunk HEAD lease), needing no upstream id.
+0007's NARROW finding still STANDS and ADR 0009 explicitly relies on it:
+IDENTITY-based main-checkout blocking remains unsound.
 provenance: 2026-06-18, session d7de6b55 — the `ef975c` spike ("TRUE-PREVENTION via a process-identity anchor: walk the hook's process tree to the long-lived claude PID; verify a dep-free Windows process API + PID stability across compaction/resume"). Run after PR #40 shipped the interim non-blocking warning. Investigated empirically (env vars + a real ctypes process-tree walk) and against official Claude Code docs, not recalled.
 
 ## Context
