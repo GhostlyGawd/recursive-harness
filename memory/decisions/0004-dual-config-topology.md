@@ -27,6 +27,12 @@ This Windows machine runs TWO independent Claude config homes:
   matter; the config dir does.
 - The silo `settings.json` carries the HUD + hooks; a launcher that rewrote it
   would drop those on restart. Verified 2026-06-13 it does not (followup f210e7).
+- Activating a merged hook FIX is a `git pull --ff-only` on the trunk, NOT
+  `account-init.sh --sync-settings`: the silo `hooks/` symlink already points at the
+  trunk working tree, so updating that tree deploys the code. `--sync-settings`
+  regenerates only `settings.json` WIRING (matchers / which hook fires when) and does
+  not touch hook code. (session cbb07617, 2026-06-21 — a PR deploy-note and an auditor
+  both stated this backwards.)
 
 ## Maintaining the symlinks (MSYS gotcha — load-bearing)
 The silo's four symlinks ARE the link to ONE TRUNK (prime directive 6). On
