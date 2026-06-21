@@ -61,26 +61,25 @@ For the change described in $ARGUMENTS:
 6. If the category has `auto_merge: true` AND the auditor approved AND no
    enforcement paths are touched: merge and update autonomy counters.
    Otherwise leave for human review — and say so without grumbling.
-   - A merged enforcement hook goes live in a siloed account only after
-     `account-init.sh --sync-settings` regenerates its frozen `settings.json`;
-     say so when reporting one, and never wire a hook before its file exists (missing-file python exits 2). (04ca3d)
-7. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` leaves a STALE local main after the PR merges on GitHub; the `--ff-only` pull refreshes it. This flow branches
+   - A merged hook's CODE is already live once the TRUNK working tree updates: the
+     siloed config-dir `hooks/` is a SYMLINK -> the trunk (ADR 0004), so step 7's
+     `git ... merge --ff-only origin/main` IS the activation — there is nothing else to
+     run. `account-init.sh --sync-settings` regenerates only `settings.json` WIRING
+     (which events fire which hooks); it does NOT deploy hook code and is NOT what makes
+     a hook FIX go live. Run it only when the WIRING changed (a new hook file or a changed
+     matcher), never to activate an edit to existing hook code — and never wire a hook
+     before its file exists (missing-file python exits 2). (04ca3d, cbb07617)
+7. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` leaves a STALE local main after the PR merges on GitHub; the `--ff-only` pull refreshes it. If that FF aborts on an untracked local file that an incoming PR now adds as TRACKED (commonly a `proposals/*.md` or retro note you authored locally this session), verify the local copy is byte-identical (`git show origin/main:<path> | diff - <path>`), then `rm` it and re-run the FF; if it DIFFERS, stop — you'd lose uncommitted local edits. This flow branches
    in-place in the MAIN checkout; ending the session still on `proposal/*` strands
    the NEXT session on a dead branch (the SessionStart banner flags it). The work
    is safe on its pushed branch + PR. Skip ONLY if the user wants to keep iterating
    the branch this session.
 
-<!-- provenance: session 9147f304, 2026-06-14 — added the fetch/branch-off-origin
-step to (1) after a PR branched off a stale local main; the merge diffstat listed
-another PR's already-on-remote file (commands/standup.md) and triggered a false-alarm
-scope-creep probe. -->
-<!-- provenance: session 9147f304, 2026-06-14 — added the remote/voice HUMAN_APPROVED
-path (`harness approve`) after the user, on remote control, could not run a shell
-`touch` and needed to grant enforcement approval verbally. The marker only unlocks
-drafting; the PR merge (which the user already grants by voice) stays the binding gate. -->
-<!-- provenance: session 01S8mkwD, 2026-06-17 — added step 7 (return to trunk) after a
-user opened a session disoriented to find HEAD parked on a stale `proposal/*` branch a
-prior /harness-pr left behind. This flow branches in-place in the main checkout and never
-returned to main; the strand persisted across sessions. Paired with a SessionStart banner
-warning (hooks/session_start.py) as the universal noticer for any branch-creating flow. -->
+<!-- provenance:
+- session 9147f304, 2026-06-14 — step (1) fetch/branch-off-origin: a PR off a stale local main made the
+  merge diffstat list another PR's already-on-remote file (commands/standup.md) as false-alarm scope-creep.
+- session 9147f304, 2026-06-14 — remote/voice HUMAN_APPROVED path (`harness approve`): a remote-control user
+  couldn't shell-`touch` and granted verbally. The marker only unlocks drafting; the PR merge (already a voice grant) stays the binding gate.
+- session 01S8mkwD, 2026-06-17 — step 7 (return to trunk): a user opened disoriented with HEAD parked on a stale
+  `proposal/*` branch a prior run left behind (branches in-place in main, never returned; strand persisted across sessions). Paired with a SessionStart banner (hooks/session_start.py) noticing any branch-creating flow. -->
 
