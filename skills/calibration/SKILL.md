@@ -29,6 +29,24 @@ you are not unlucky, you are lying to yourself with extra steps.
 Score EVERY prediction, especially misses — misses are where the information
 is. The SessionStart banner shows your unscored count; keep it near zero.
 
+## Don't self-grade the user's acceptance
+
+If a prediction's success clause includes the user accepting something ("user accepts",
+"<=2 rounds of correction", "no edits requested"), you may NOT score it until the user has
+actually responded to that thing. Self-declared acceptance is not an outcome — it is you
+grading from your own seat. Until the user reacts, the prediction stays `pending` (open debt),
+never a self-awarded `hit`.
+
+Corollary: a prediction that bundles a mechanical clause (the loop runs) with an acceptance
+clause (the user accepts the design) can be a mechanical HIT and an acceptance MISS at once.
+Score them separately, or wait for the user — a green mechanical result must not let you round
+the acceptance clause up to "hit".
+
+provenance: session 3772bd2d, 2026-06-20 — scored prediction f156c20b a "hit" (its clause:
+"user accepts ... with <=2 rounds of correction") minutes BEFORE the user delivered a
+fundamental, design-invalidating correction. Acceptance was self-graded from inside Claude's own
+frame; the real outcome was a miss on that clause.
+
 ## A load-bearing prediction gates shipping
 
 If a prediction underwrites the DELIVERABLE — its core behavioral claim, the
