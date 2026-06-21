@@ -48,6 +48,23 @@ impact."
   while the unit tests assert the closure exhaustively — the "contracts not counts"
   precedent.
 
+## Constrain generators to the intended input domain
+
+A property can false-fail on inputs the spec never claimed to support — and that
+is a TEST bug, not an implementation bug. Generate only inputs inside the
+contract's domain; a generator that strays outside it makes green unreachable for
+a correct implementation, and you will burn the build-to-green phase fighting your
+own test.
+
+Real example (this repo): a `repo_rel(path, root)` round-trip property generated
+random path segments, including Windows reserved device names (`LPT1`, `NUL`,
+`CON`, `COM1`…). `os.path.relpath` raises `ValueError` on those even on the SAME
+drive (verified, Python 3.12 / `nt`) — so the property was unsatisfiable by a
+correct implementation. The fix was to NARROW the generator (exclude names the
+contract never promised to handle), never to weaken an assertion or patch the
+code. The build-loop phase-3 pre-build review is exactly where this is caught,
+before a line of implementation.
+
 ## Tooling (stack-flexible)
 
 Use the property/generative library native to the stack — `hypothesis` (Python),
@@ -55,4 +72,4 @@ Use the property/generative library native to the stack — `hypothesis` (Python
 over randomized + edge inputs asserting the invariant is a valid property test.
 Keep generators hermetic (seeded, no network), like every eval.
 
-provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent.
+provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent. · 2026-06-21 (session 7d2da048): added the constrain-generators-to-domain caveat after dogfooding build-loop on repo_rel surfaced a reserved-name generator bug that made green unreachable; verified os.path.relpath raises on reserved names same-drive.
