@@ -18,6 +18,7 @@ import importlib.util
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -263,11 +264,12 @@ check(ok, "--diff --json carries every documented key")
 
 
 # ===================================================== 10. e2e: real-history node-accounting
-# B10 in-practice, made a real CONSISTENCY check (not a smoke test). Do NOT assume the working
-# tree is node-clean vs a ref: this repo carries gitignored installed skills (e.g.
-# brand-foundry), which --diff CORRECTLY surfaces as local additions. Instead assert the
-# invariant true for ANY ref: every node the diff calls 'added' is in the CURRENT graph, every
-# 'removed' node is gone from it, and the two sets are disjoint - cross-checked against an
+# B10 in-practice, made a real CONSISTENCY check (not a smoke test). The CURRENT side of a diff
+# is built tracked-only (followup 3f3fab), so this repo's gitignored installed skills (e.g.
+# brand-foundry) are EXCLUDED to match git-archive - they no longer read as local additions
+# (pinned hermetically by [11]). Assert the invariant true for ANY ref: every node the diff
+# calls 'added' is in the CURRENT graph, every 'removed' node is gone from it, and the two sets
+# are disjoint - cross-checked against an
 # independent --json node universe. Robust to history + working state; the all-empty-stub
 # burden is carried by the fixture delta tests [2]-[6], which require specific non-empty deltas.
 print("[10] e2e: real-history --diff is internally consistent with the live graph (node accounting)")
@@ -283,8 +285,54 @@ except Exception:
 check(ok, "diff node accounting is sound vs the live graph: added subset of current, removed disjoint")
 
 
+# ============================================ 11. e2e: a gitignored on-disk artifact is EXCLUDED
+# The symmetry fix (followup 3f3fab): the CURRENT side of a --diff is built tracked-only, so a
+# file present on disk but git-IGNORED (a vendored skill like brand-foundry/) is NOT read as
+# "added" - it matches what `git archive REF` feeds the other side, and its whole provenance/
+# cites cascade (the born_in session node, the cites edges) never forms. A plain UNTRACKED file
+# (a new artifact not yet committed) is NOT ignored, so it MUST still surface for review.
+print("[11] e2e: a gitignored on-disk artifact (+ its cascade) is excluded; an untracked one still surfaces")
+d, sha = make_repo({**V1, ".gitignore": "skills/vendored/\n"})
+write(os.path.join(d, "skills/vendored/SKILL.md"),
+      "---\nname: vendored\n---\n# vendored\n\n"
+      "provenance: 2026-06-21, session deadbeefcafe1 - vendored test skill\n\n"
+      "Uses skill `alpha`.\n")                       # gitignored: on disk, never committed
+write(os.path.join(d, "skills/fresh/SKILL.md"),
+      "---\nname: fresh\n---\n# fresh\n")            # untracked but NOT ignored -> reviewable
+rc, out, err = run("--root", d, "--diff", sha, "--json")
+j = json.loads(out) if rc == 0 else {}
+added = set(j.get("nodes_added", []))
+check("skill:vendored" not in added,
+      "a gitignored on-disk skill is NOT 'added' (current side is tracked-only, matching git-archive)")
+check("session:deadbeef" not in added,
+      "the gitignored skill's provenance cascade (its born_in session node) does not leak either")
+check(not any("vendored" in e["source"] or "vendored" in e["target"]
+              for e in j.get("edges_added", [])),
+      "no edge touching the gitignored skill leaks into the delta")
+check("skill:fresh" in added,
+      "a plain untracked (non-ignored) new skill IS still surfaced for review (not over-excluded)")
+
+
 # ============================================================================ cleanup + done
+def _force_rmtree(path):
+    # Windows marks git pack/object files read-only, so a plain rmtree leaves the throwaway repo
+    # behind (ignore_errors=True silently masked the leak). Clear the write bit on every file and
+    # retry before giving up.
+    for _ in range(2):
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError:
+            for dp, _dn, fns in os.walk(path):
+                for fn in fns:
+                    try:
+                        os.chmod(os.path.join(dp, fn), stat.S_IWRITE)
+                    except OSError:
+                        pass
+    shutil.rmtree(path, ignore_errors=True)
+
+
 for d in _tmpdirs:
-    shutil.rmtree(d, ignore_errors=True)
+    _force_rmtree(d)
 print(f"\n{_passed} passed, {_failed} failed")
 sys.exit(1 if _failed else 0)
