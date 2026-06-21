@@ -93,6 +93,22 @@ with tempfile.TemporaryDirectory() as d:
     if "untested-requirement:ship-spec/R1" not in (r.stdout + r.stderr):
         fail("gate blocked but did not name the untested-requirement fingerprint")
 
+# 3b. the shipped-only THRESHOLD (the other half of the ratchet): the SAME untested
+#     requirement at status: building must NOT fire untested-requirement - proposed/building
+#     defer it ("not done yet"). Pins the threshold against an OVER-strict regression that
+#     would block in-progress work by firing the class at every status.
+with tempfile.TemporaryDirectory() as d:
+    minimal_root(d)
+    binding(d, "build-spec", "building",
+            targets="targets: [skills/g/SKILL.md]\n",
+            requirements="requirements:\n  - id: R1\n    ears: \"WHEN x THE SYSTEM SHALL y\"\n")
+    r = run("--root", d, "--check", os.path.join(d, "bl.json"))
+    if r.returncode != 0:
+        fail(f"status: building blocked an untested requirement (--check exit {r.returncode}, "
+             "want 0 - shipped is the threshold): " + (r.stdout + r.stderr)[-300:])
+    if "untested-requirement" in (r.stdout + r.stderr):
+        fail("status: building named untested-requirement (over-strict; shipped-only threshold broken)")
+
 # 4. ANTI-BACKDOOR: status: proposed CANNOT suppress dangling-spec - a dangling pointer
 #    blocks at ANY status (machine truth, never trusts status:).
 with tempfile.TemporaryDirectory() as d:

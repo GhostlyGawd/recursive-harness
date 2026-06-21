@@ -30,6 +30,9 @@ asserts the spec gate's core contract still holds:
 3. Grandfathering that fixture (`--write-baseline`) **un-blocks** it — `--check` exits 0.
 4. A `status: shipped` spec with an EARS requirement carrying no `verified_by` **blocks**
    and names `untested-requirement:<slug>/<rid>`.
-5. **Anti-backdoor**: a `status: proposed` binding with a dangling pointer **still blocks**
+5. The shipped-only **threshold** holds the other way too: the same untested requirement at
+   `status: building` does **not** block (`proposed`/`building` defer `untested-requirement` —
+   it must not fire on in-progress work).
+6. **Anti-backdoor**: a `status: proposed` binding with a dangling pointer **still blocks**
    (`dangling-spec` cannot be suppressed by `status:`).
-6. A fully-resolving `status: shipped` binding does **not** false-positive — `--check` clean.
+7. A fully-resolving `status: shipped` binding does **not** false-positive — `--check` clean.
