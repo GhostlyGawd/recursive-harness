@@ -19,6 +19,14 @@ A good `--expect` is one reality can contradict: file counts, pass/fail, the
 named root cause, "user accepts without edits". "I will do a good job" is not
 a prediction, it's a mood.
 
+Beware the self-confirming `--expect`: a clause that asserts your OWN output is
+correct ("surfaces the KNOWN X", "matches the map I built") makes a "hit" prove
+only that the code reproduced your assumption — not that the assumption was right.
+Tie at least one clause to something you did NOT author: user-confirmed intent,
+external ground truth, an independent check. (2026-06-21: scored a "hit" on
+"overlap detection surfaces the known brainstorm+huashu overlap" — the "known"
+was my own hand-label, later admitted an artifact; the hit certified a mislabel.)
+
 Confidence honesty: 0.9 means 9-in-10. If your `high` bucket hits at 60%,
 you are not unlucky, you are lying to yourself with extra steps.
 
