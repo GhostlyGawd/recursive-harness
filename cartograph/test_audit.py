@@ -114,6 +114,11 @@ check(indeg.get("session:s", 0) == 0, "born_in (lineage) does not count as a ref
 check(indeg.get("state:x", 0) == 0, "touches (state write) does not count as a reference")
 check("born_in" not in ex.REF_EDGE_TYPES and "touches" not in ex.REF_EDGE_TYPES,
       "REF_EDGE_TYPES excludes lineage + state edges by construction")
+# SDD Phase A exclusion invariant (Decision B): the three spec edge types are governance,
+# not references - they must NEVER raise a target's in-degree or rescue it from dead-weight.
+check("specifies" not in ex.REF_EDGE_TYPES and "requires" not in ex.REF_EDGE_TYPES
+      and "verified_by" not in ex.REF_EDGE_TYPES,
+      "REF_EDGE_TYPES excludes the spec edge class (specifies/requires/verified_by)")
 
 
 # ===================================== 3. audit_report: end-to-end assembly on a synthetic graph

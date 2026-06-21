@@ -118,6 +118,8 @@ ROLE_BY_TYPE = {
     "session": "lineage",       # provenance ancestry
     "lint": "checkpoint",       # allosteric inhibitor
     "evals": "selection",       # only survivors propagate
+    "spec": "blueprint",        # an intent->artifact->verification binding (governs, not cites)
+    "requirement": "constraint",  # a single EARS clause the spec must satisfy
 }
 
 LOOP_HINTS = {
@@ -180,6 +182,102 @@ def frontmatter(text):
     """Return the YAML-ish frontmatter block (between leading --- fences), or ''."""
     m = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
     return m.group(1) if m else ""
+
+
+def _split_top_commas(s):
+    """Split on commas that are OUTSIDE single/double quotes, so a quoted element may itself
+    contain a comma (`'a, b', c` -> ['a, b', 'c']). A small char-scan, not a YAML parser - it
+    only needs to survive the flow-list form, but it must not silently mis-split a quoted path."""
+    parts, buf, quote = [], [], None
+    for ch in s:
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+            buf.append(ch)
+        elif ch == ",":
+            parts.append("".join(buf))
+            buf = []
+        else:
+            buf.append(ch)
+    parts.append("".join(buf))
+    return parts
+
+
+def _yaml_list(val):
+    """Parse a flow-style `[a, b, c]` or a single scalar into a list of stripped strings.
+    Frontmatter here is regex-parsed (extract.py deliberately avoids a YAML dependency for
+    CI-portability), so the binding supports the inline-flow list form Decision A uses.
+    Comma-splitting is quote-aware so a quoted element containing a comma stays intact."""
+    val = val.strip()
+    if val.startswith("[") and val.endswith("]"):
+        inner = val[1:-1]
+        return [x.strip().strip("'\"") for x in _split_top_commas(inner) if x.strip()]
+    return [val.strip("'\"")] if val else []
+
+
+def parse_binding(fm):
+    """Parse the SDD spec-binding block out of an artifact's frontmatter (Decision A).
+
+    Returns None when the frontmatter carries no `spec:` field (the dormancy contract - an
+    artifact with no binding produces no spec graph at all). Otherwise returns a dict:
+        {slug, intent, targets:[...], verified_by:[...], status,
+         requirements:[{id, ears, verified_by:[...]}, ...]}
+
+    Hand-parsed (no YAML dep, matching the rest of extract.py). Only the top-level binding
+    fields + the nested `requirements:` list are recognised; the `requirements:` block ends
+    at the first subsequent column-0 key, so it never swallows an unrelated trailing field."""
+    if not re.search(r"^spec:\s*\S", fm, re.M):
+        return None
+    b = {"slug": "", "intent": "", "targets": [], "verified_by": [],
+         "status": "", "requirements": []}
+    lines = fm.splitlines()
+    i, n = 0, len(lines)
+    while i < n:
+        line = lines[i]
+        m = re.match(r"^(spec|intent|targets|verified_by|status):\s*(.*)$", line)
+        if m:
+            key, val = m.group(1), m.group(2)
+            if key == "spec":
+                b["slug"] = val.strip().strip("'\"")
+            elif key == "intent":
+                b["intent"] = val.strip().strip("'\"")
+            elif key == "status":
+                b["status"] = val.strip().strip("'\"")
+            elif key in ("targets", "verified_by"):
+                b[key] = _yaml_list(val)
+            i += 1
+            continue
+        if re.match(r"^requirements:\s*$", line):
+            i += 1
+            cur = None
+            # consume indented requirement items until the next column-0, non-blank key
+            while i < n:
+                ln = lines[i]
+                if ln.strip() == "":
+                    i += 1
+                    continue
+                if not ln.startswith((" ", "\t")):
+                    break  # back to a top-level key -> requirements block done
+                item = re.match(r"^\s*-\s*id:\s*(.+)$", ln)
+                if item:
+                    cur = {"id": item.group(1).strip().strip("'\""),
+                           "ears": "", "verified_by": []}
+                    b["requirements"].append(cur)
+                    i += 1
+                    continue
+                fld = re.match(r"^\s*(ears|verified_by):\s*(.*)$", ln)
+                if fld and cur is not None:
+                    if fld.group(1) == "ears":
+                        cur["ears"] = fld.group(2).strip().strip("'\"")
+                    else:
+                        cur["verified_by"] = _yaml_list(fld.group(2))
+                i += 1
+            continue
+        i += 1
+    return b
 
 
 SESSION_RE = re.compile(r"session\s+([0-9a-f]{8}-[0-9a-f-]{20,})", re.I)
@@ -319,7 +417,21 @@ def build(tracked_only=False):
     g.node("kernel:CLAUDE.md", "kernel", "CLAUDE.md (kernel)", "CLAUDE.md")
     if os.path.isfile(os.path.join(ROOT, "lint", "lint_harness.py")):
         g.node("lint:lint_harness", "lint", "lint_harness.py", "lint/lint_harness.py")
-    if os.path.isdir(os.path.join(ROOT, "evals")):
+    # Eval-corpus CASES, one node per evals/corpus/<slug>/ dir (mirrors ADR per-file
+    # discovery above). SDD Phase A: a requirement/spec `verified_by:` pointer resolves to an
+    # eval-corpus CASE (Decision E), so the per-case node is what the verified_by edge lands
+    # on - the single evals:corpus node had nothing for a clause-level pointer to attach to.
+    eval_cases = set()
+    corpus_dir = os.path.join(ROOT, "evals", "corpus")
+    if os.path.isdir(corpus_dir):
+        for d in sorted(os.listdir(corpus_dir)):
+            if os.path.isdir(os.path.join(corpus_dir, d)):
+                eval_cases.add(d)
+                g.node(f"evals:{d}", "evals", f"evals/corpus/{d}",
+                       file=f"evals/corpus/{d}")
+    elif os.path.isdir(os.path.join(ROOT, "evals")):
+        # corpus dir absent but evals/ present - keep a single coarse node as a hygiene
+        # fallback so the `evals` type does not silently vanish on a corpus-less checkout.
         g.node("evals:corpus", "evals", "evals/ (regression corpus)", "evals")
 
     # known state ledgers (from bin/harness constants + literal refs)
@@ -335,12 +447,21 @@ def build(tracked_only=False):
             state_files.add(nm)
 
     foreign_adr = []  # (artifact, num) for ADR cites that resolve to a venture DECISIONS.md
+    bindings = []     # (node_id, parsed-binding) for artifacts carrying a spec: frontmatter block
 
     # ---- iterate every text artifact, harvest edges -------------------------
     def scan(node_id, path):
         text = read(path)
         fm = frontmatter(text)
         body = text[len(fm):] if fm else text
+        # SDD Phase A: a `spec:` frontmatter block binds intent->artifact->verification. The
+        # binding lives in frontmatter (a STRUCTURAL declaration, like fires_on/wires), so we
+        # parse it from `fm`, not the body. Collected here, materialised after the scan loop
+        # so every targets: pointer can resolve against a fully-discovered node set. An
+        # artifact with no spec: block parses to None and contributes nothing (dormancy).
+        _binding = parse_binding(fm)
+        if _binding and _binding.get("slug"):
+            bindings.append((node_id, _binding))
         # Strip HTML/provenance comments: a /command or `skill` ref that lives ONLY inside an
         # <!-- provenance: ... --> comment is lineage, not an active relation - counting it
         # (as nudges/cites) would contradict compute_flow() dropping born_in/references.
@@ -431,6 +552,72 @@ def build(tracked_only=False):
     for name, f in hook_files.items():
         scan(f"hook:{name}", f)
     scan("kernel:CLAUDE.md", os.path.join(ROOT, "CLAUDE.md"))
+
+    # ---- SDD Phase A: materialise the spec bindings (proposal 2026-06-21) ----------------
+    # Runs AFTER the scan loop so every targets: pointer resolves against the full node set.
+    # The three edge types (specifies/requires/verified_by) are in SPEC_EDGE_TYPES - in
+    # NEITHER REF nor DEP - so none of this perturbs in-degree / dependents / blast / orphans
+    # (Decision B). Pointers resolve by filesystem/artifact existence exactly like dangling-adr
+    # (extract.py): an absent target still draws an edge to a missing=True node, and Phase A
+    # draws the edge WITHOUT warning (the dangling-spec / untested-requirement gate is Phase B).
+    file_to_node = {}
+    for nid, node in g.nodes.items():
+        f = node.get("file")
+        if f:
+            file_to_node.setdefault(f.replace("\\", "/"), nid)
+
+    def _resolve_target(ptr):
+        """A targets: pointer (a file path) -> the artifact node id governing that file. An
+        unresolvable pointer becomes a missing=True placeholder node so the edge still draws."""
+        norm = ptr.replace("\\", "/").lstrip("./")
+        if norm in file_to_node:
+            return file_to_node[norm]
+        nid = f"target:{norm}"
+        if nid not in g.nodes:
+            g.node(nid, "target", norm, missing=True)
+        return nid
+
+    def _resolve_eval(ptr):
+        """A verified_by: pointer -> an eval-corpus CASE node (Decision E). `evals/corpus/<slug>`
+        resolves to evals:<slug>; an absent case becomes a missing=True evals node (no warn)."""
+        norm = ptr.replace("\\", "/").lstrip("./")
+        m = re.match(r"evals/corpus/([^/]+)/?$", norm)
+        slug = m.group(1) if m else norm.rsplit("/", 1)[-1]
+        nid = f"evals:{slug}"
+        if nid not in g.nodes:
+            g.node(nid, "evals", f"evals/corpus/{slug}", file=f"evals/corpus/{slug}",
+                   missing=True)
+        return nid
+
+    for src_node, b in bindings:
+        slug = b["slug"]
+        spec_id = f"spec:{slug}"
+        # NB: a spec/requirement node intentionally carries NO `file` attribute. The binding
+        # is co-located ON an artifact (tracked via `declared_in`/`declared_by`), but it is a
+        # logical overlay, not a file on disk - and giving it the artifact's `file` would make
+        # resolve_node(FILE) ambiguous between the governed artifact and its own spec node,
+        # breaking `--query governed-by FILE`. Provenance still flows via the artifact's body.
+        g.node(spec_id, "spec", slug,
+               intent=b.get("intent", ""), status=b.get("status", ""),
+               declared_by=src_node, declared_in=g.nodes.get(src_node, {}).get("file"))
+        # specifies: spec -> each governed target
+        for t in b.get("targets", []):
+            g.edge(spec_id, _resolve_target(t), "specifies")
+        # verified_by (spec altitude): spec -> each eval-corpus case
+        for v in b.get("verified_by", []):
+            g.edge(spec_id, _resolve_eval(v), "verified_by")
+        # requires + verified_by (requirement altitude)
+        for req in b.get("requirements", []):
+            rid = req.get("id", "")
+            if not rid:
+                continue
+            req_id = f"requirement:{slug}/{rid}"
+            g.node(req_id, "requirement", f"{slug}/{rid}",
+                   ears=req.get("ears", ""), spec=spec_id,
+                   declared_in=g.nodes.get(src_node, {}).get("file"))
+            g.edge(spec_id, req_id, "requires")
+            for v in req.get("verified_by", []):
+                g.edge(req_id, _resolve_eval(v), "verified_by")
 
     # (1) fires_on — settings.json hook -> lifecycle event wiring
     try:
@@ -790,9 +977,12 @@ def render_text(g, warnings, notes, wired):
         "touches": "touches     artifact -> state ledger    (state/*.jsonl) [mode]",
         "wires": "wires       config -> hook           (settings.json docks)",
         "nudges": "nudges      artifact -> command       (/cmd pointer)",
+        "specifies": "specifies   spec -> governed target   (spec: targets:)",
+        "requires": "requires    spec -> EARS requirement  (spec: requirements:)",
+        "verified_by": "verified_by spec/req -> eval-case    (spec: verified_by:)",
     }
     for et in ["fires_on", "born_in", "cites", "invokes", "spawns", "references",
-               "touches", "wires", "nudges"]:
+               "touches", "wires", "nudges", "specifies", "requires", "verified_by"]:
         es = by_etype.get(et, [])
         if not es:
             continue
@@ -937,6 +1127,11 @@ EDGE_COLORS = {
     "fires_on": "#ff5c5c", "born_in": "#6d7b8d", "cites": "#4fcf6b",
     "invokes": "#ff9f43", "spawns": "#4f9bff", "references": "#b15cff", "touches": "#f2d65c",
     "wires": "#c08457", "nudges": "#2fd0c8",
+    # SDD Phase A - the third (governance) edge class. Distinct hues so they never fall back
+    # to the gray default (#556) in the HTML render.
+    "specifies": "#e8c547",     # spec -> governed target (amber-gold)
+    "requires": "#a06cd5",      # spec -> requirement (violet)
+    "verified_by": "#3fb98f",   # spec/requirement -> eval-case (teal-green)
 }
 LOOP_LABEL = {
     "inner": "INNER · predict→act→score", "middle": "MIDDLE · /retro",
@@ -1443,6 +1638,13 @@ def render_flow_text(g, roots, fadj):
 # consumer->provider (source depends on target), so dependents are PREDECESSORS and dependencies
 # are SUCCESSORS; born_in (lineage) is never a dependency. Everything here is read-only.
 DEP_EDGE_TYPES = REF_EDGE_TYPES | {"touches"}       # excludes born_in (provenance lineage)
+# SDD Phase A (proposal 2026-06-21, Decision B): the THIRD edge class - governance, not
+# reference and not dependency. It is the born_in pattern: a spec edge in REF would silently
+# rescue its target from dead-weight/--audit; in DEP it would inflate blast-radius/dependents
+# and drop the target from orphans(). So all three are in NEITHER set, which makes the whole
+# addition arithmetic-neutral (zero existing count/closure assertion changes). The --query
+# governed-by/traces verbs walk these over a DEDICATED _spec_adj, never _dep_adj.
+SPEC_EDGE_TYPES = {"specifies", "requires", "verified_by"}
 # Provider-definition types the orphans query considers. config is deliberately EXCLUDED: a
 # config (settings.json/autonomy.json/features.json) is runtime-read, never graph-CITED, so it
 # has zero dependents BY CONSTRUCTION and would be constant noise - e.g. settings.json is the
@@ -1461,6 +1663,53 @@ def _dep_adj(g):
         fwd.setdefault(e["source"], []).append((e["target"], e["type"]))
         rev.setdefault(e["target"], []).append((e["source"], e["type"]))
     return fwd, rev
+
+
+def _spec_adj(g):
+    """Forward {src:[(tgt,via)]} + reverse {tgt:[(src,via)]} adjacency over the SPEC edge
+    class ONLY (specifies/requires/verified_by). Parallel to _dep_adj, deliberately separate:
+    spec edges are excluded from DEP (Decision B/C), so governance traversal needs its own
+    subgraph - folding it into _dep_adj would inflate blast-radius for every governed node."""
+    fwd, rev = {}, {}
+    for e in g.edges:
+        if e["type"] not in SPEC_EDGE_TYPES:
+            continue
+        fwd.setdefault(e["source"], []).append((e["target"], e["type"]))
+        rev.setdefault(e["target"], []).append((e["source"], e["type"]))
+    return fwd, rev
+
+
+def governed_by(g, nid):
+    """Reverse-walk `specifies` to the spec(s) governing a file/node (Decision D, the
+    create-vs-update check). Returns sorted spec ids, or [] for an ungoverned node."""
+    _, rev = _spec_adj(g)
+    return sorted({s for s, via in rev.get(nid, []) if via == "specifies"})
+
+
+def traces(g, spec_id):
+    """Forward-walk requires -> verified_by from a spec into its full trace tree (Decision C,
+    the Kiro traceability view): the spec's own verifications plus, per requirement, that
+    requirement's EARS clause and its verifications. Pure read; returns a plain dict."""
+    fwd, _ = _spec_adj(g)
+    spec_vbs, req_ids = [], []
+    for tgt, via in fwd.get(spec_id, []):
+        if via == "verified_by":
+            spec_vbs.append(tgt)
+        elif via == "requires":
+            req_ids.append(tgt)
+    reqs = []
+    for rid in sorted(req_ids):
+        rvbs = sorted(t for t, via in fwd.get(rid, []) if via == "verified_by")
+        reqs.append({"id": rid, "ears": g.nodes.get(rid, {}).get("ears", ""),
+                     "verified_by": rvbs})
+    return {
+        "spec": spec_id,
+        "intent": g.nodes.get(spec_id, {}).get("intent", ""),
+        "status": g.nodes.get(spec_id, {}).get("status", ""),
+        "specifies": sorted(t for t, via in fwd.get(spec_id, []) if via == "specifies"),
+        "verified_by": sorted(spec_vbs),
+        "requirements": reqs,
+    }
 
 
 def dependencies(g, nid):
@@ -1716,8 +1965,54 @@ def run_query(g, warnings, query_args, as_json):
         emit({"target": nid, "kind": kind, "result": result}, txt)
         return 0
 
+    if kind == "governed-by":
+        # Decision D: which spec(s) govern this FILE/node (reverse `specifies`). Resolve the
+        # target like the other verbs; an UNGOVERNED-but-resolvable file returns [] + exit 0
+        # (it is a valid answer, not an error). Only an unresolvable target is an error.
+        if len(rest) != 1:
+            sys.stderr.write("cartograph: --query governed-by needs exactly one FILE/target\n")
+            return 2
+        nid, cands = resolve_node(g, rest[0])
+        if nid is None:
+            sys.stderr.write(_resolve_error(rest[0], cands) + "\n")
+            return 2
+        specs = governed_by(g, nid)
+        obj = {"target": nid, "governed_by": [
+            {"id": s, "intent": g.nodes.get(s, {}).get("intent", ""),
+             "status": g.nodes.get(s, {}).get("status", "")} for s in specs]}
+        txt = f"governed-by {nid} - spec(s) that govern it ({len(specs)}):\n" + \
+              ("".join(f"  {s}\n" for s in specs) or "  (none - ungoverned)\n")
+        emit(obj, txt)
+        return 0
+
+    if kind == "traces":
+        # Decision C: the intent -> requirement -> verification tree for a SPEC.
+        if len(rest) != 1:
+            sys.stderr.write("cartograph: --query traces needs exactly one SPEC\n")
+            return 2
+        nid, cands = resolve_node(g, rest[0])
+        if nid is None:
+            sys.stderr.write(_resolve_error(rest[0], cands) + "\n")
+            return 2
+        if g.nodes.get(nid, {}).get("type") != "spec":
+            sys.stderr.write(f"cartograph: --query traces target must be a spec node "
+                             f"(got {nid}, type {g.nodes.get(nid, {}).get('type', '?')})\n")
+            return 2
+        tr = traces(g, nid)
+        lines = [f"traces {nid}  ({tr['status'] or 'no status'})",
+                 f"  intent: {tr['intent'] or '(none)'}",
+                 f"  governs: {', '.join(tr['specifies']) or '(none)'}",
+                 f"  verified_by (spec): {', '.join(tr['verified_by']) or '(none)'}",
+                 f"  requirements ({len(tr['requirements'])}):"]
+        for r in tr["requirements"]:
+            lines.append(f"    - {r['id']}: {r['ears'] or '(no EARS)'}")
+            lines.append(f"        verified_by: {', '.join(r['verified_by']) or '(NONE - untested)'}")
+        emit(tr, "\n".join(lines) + "\n")
+        return 0
+
     sys.stderr.write(f"cartograph: unknown --query kind '{kind}' "
-                     "(blast-radius|dependents|dependencies|path|orphans|node)\n")
+                     "(blast-radius|dependents|dependencies|path|orphans|node|"
+                     "governed-by|traces)\n")
     return 2
 
 
@@ -1893,8 +2188,10 @@ def main():
                          "add --json for machine output.")
     ap.add_argument("--query", nargs="+", metavar="ARG",
                     help="ORACLE: KIND [TARGET...] where KIND is blast-radius|dependents|"
-                         "dependencies|path|orphans|node (path takes two targets, orphans none). "
-                         "Read-only; add --json for machine output.")
+                         "dependencies|path|orphans|node|governed-by|traces (path takes two "
+                         "targets, orphans none; governed-by takes a FILE and returns the "
+                         "spec(s) governing it; traces takes a SPEC and returns its "
+                         "requirements + verifications). Read-only; add --json for machine output.")
     ap.add_argument("--diff", metavar="REF",
                     help="REVIEWER: structural delta between the working tree and git REF - "
                          "newly-orphaned hooks / newly-dangling ADRs (blocking) + new unreferenced "
