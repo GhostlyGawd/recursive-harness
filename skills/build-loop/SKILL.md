@@ -1,7 +1,7 @@
 ---
 name: build-loop
 description: The per-feature build→review discipline — run it on ANY non-trivial build/feature/fix/refactor (anything with a definition of done or that changes behavior) so you stop re-prompting it and stop shipping green-but-wrong code. Sequence: align on intent → criteria+predict → write FAILING example + PROPERTY tests → fresh-context review of spec+tests BEFORE coding → build to green → verify in practice end-to-end → capture eval → PR. A conductor that COMPOSES calibration/critic/verify/eval-capture — never reimplements them. Skip only trivial one-liners, pure lookups, read-only analysis.
-provenance: 2026-06-21, session 7d2da048 — codified the harness's own emergent build→review loop (cartograph/STATE.md:37, PLAN-oracle-reviewer.md) into a conductor skill after the user asked to stop re-prompting it every build. Rebuild-native+graft decision over adopting master/fable's Linear-coupled pipeline (siblings verified read-only). Grafts plan-interviewer's align-to-confirmed gate + spec-reviewer's intent-fit/over-build lens; adds the 3 missing deltas (tests-first ordering, pre-build review of spec+RED-tests, property tests). Build prediction 90b7880f.
+provenance: 2026-06-21, session 7d2da048 — codified the harness's own emergent build→review loop (cartograph/STATE.md:37, PLAN-oracle-reviewer.md) into a conductor skill after the user asked to stop re-prompting it every build. Rebuild-native+graft decision over adopting master/fable's Linear-coupled pipeline (siblings verified read-only). Grafts plan-interviewer's align-to-confirmed gate + spec-reviewer's intent-fit/over-build lens; adds the 3 missing deltas (tests-first ordering, pre-build review of spec+RED-tests, property tests). Build prediction 90b7880f. SDD Phase D (session e89c7b2c): made the phase-1/6 spec hooks mechanical (--query governed-by / verified_by write) + gate-aware (dangling-spec/untested-requirement) once the cartograph spec layer shipped (proposal 2026-06-21-spec-driven-dev.md, Phases A-C); in-place strengthen, no fork. Build prediction 0b08d80c.
 ---
 
 # Build-Loop — the per-feature build→review discipline
@@ -26,9 +26,13 @@ ship.**
    success criteria are CONFIRMED by the user, not inferred. Do NOT auto-fire
    phases 2+ until this passes, even under an explicit "build it".
 1. **CRITERIA & PREDICT.** State falsifiable success criteria; log the
-   load-bearing prediction. → skill `calibration`. GATE: a prediction id is logged
-   whose `--expect` ties ≥1 clause to something you did NOT author (user-confirmed
-   intent / external check), per calibration's self-confirming-`--expect` trap.
+   load-bearing prediction. → skill `calibration`. First run `cartograph/extract.py
+   --query governed-by <target>` (Decision D, create-vs-update): a HIT means a `spec:`
+   already governs this file — READ the criteria from its `requirements:` EARS clauses
+   and STRENGTHEN that binding; a MISS means write criteria inline (optionally author a
+   new binding). GATE: a prediction id is logged whose `--expect` ties ≥1 clause to
+   something you did NOT author (user-confirmed intent / external check), per
+   calibration's self-confirming-`--expect` trap.
 2. **RED TESTS (example + property).** Before a line of production code, write
    BOTH example/unit tests (pin known cases) AND property/invariant tests derived
    from the spec's INTENT (one property per intent clause whose falsification =
@@ -50,9 +54,12 @@ ship.**
    CLAIM — calibration).
 6. **CAPTURE.** If the result recurs, was correction-born, or encodes taste the
    user articulated, snapshot it. → skill `eval-capture` + `/run-evals` (passes
-   day-one). Where a spec artifact governs the target, write the regression's
-   back-pointer to it. GATE: a corpus case is green today, or a conscious skip is
-   stated.
+   day-one). Where a spec governs the target (phase-1's `governed-by` check), write the
+   eval-corpus case into the governing spec's — or the satisfied requirement's —
+   `verified_by:`, and ensure that case EXISTS or the `dangling-spec` gate blocks; a
+   `status: shipped` spec needs every requirement carrying a resolving `verified_by` or
+   `untested-requirement` blocks (`extract.py --check`). GATE: a corpus case is green
+   today, or a conscious skip is stated.
 7. **SHIP.** Branch + PR. Harness-artifact changes → `/harness-pr` (lint, auditor,
    body template, human merges). GATE: on a branch, prediction scored, PR opened.
 
@@ -81,10 +88,12 @@ scripts are the in-repo precedent.
   its own grading-independence + validate-live gates. This skill is the generic
   core, not a competitor; venture-build phase 4 keeps tests-as-you-go for MVP
   pace, while this loop tightens to tests-RED-first for an individual feature.
-- **Specs**: when a spec artifact governs the target, phase-1 criteria are READ
-  from it and phase-6 writes the regression back; this skill never defines the
-  spec format. With no spec system present, write the criteria inline in the
-  branch/PR.
+- **Specs**: the binding format now EXISTS (proposal `2026-06-21-spec-driven-dev.md`;
+  the cartograph spec layer — `spec:` frontmatter resolved by `extract.py --query
+  governed-by`/`traces`, gated by `--check`). Phase-1 READS criteria from a governing
+  spec's `requirements:`; phase-6 writes the regression into its `verified_by:`. This
+  skill CONSUMES that format — it never defines or forks it (routing-learnings:
+  strengthen the near-match). With no governing spec, write the criteria inline as before.
 - **cartograph oracle** (`cartograph/extract.py --context/--query`): query it for
   "what depends on this / blast radius" instead of narrating relationships.
 - Strengthen THIS skill for any loop refinement; never spawn a second methodology
