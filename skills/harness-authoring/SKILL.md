@@ -151,3 +151,14 @@ normalize to the repo drive first.
 (session dc1c3470, 2026-06-19: cp1252 repeatedly crashed the cartograph extractor on
 non-cp1252 glyphs like arrows and once truncated cartograph/extract.py to empty; its
 new eval also caught a cross-drive relpath ValueError when --json wrote to C: from the D: repo.)
+
+A CLI that ECHOES user-supplied data to stdout (a summary, tag, or note the user
+typed) cannot guarantee ASCII output even when its OWN framing strings are pure
+ASCII -- so set BOTH stdout and stderr to UTF-8 with errors=replace at the top of
+main() (`for s in (sys.stdout, sys.stderr): s.reconfigure(encoding="utf-8", errors="replace")`),
+or a stored non-cp1252 char (CJK, emoji) raises UnicodeEncodeError mid-print on a
+strict cp1252 console. ASCII framing of your own text is NOT enough once you echo
+arbitrary input.
+(session 04fb5c5c, 2026-06-21: auto-healer's heal.py had pure-ASCII framing yet
+crashed `review` on a CJK summary under PYTHONIOENCODING=cp1252; the harness-auditor
+reproduced it, and stdout/stderr errors=replace fixed it.)
