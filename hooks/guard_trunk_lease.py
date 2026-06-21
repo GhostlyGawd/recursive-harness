@@ -104,7 +104,13 @@ _GIT_TIMEOUT = 5
 # plus common file-writers in both shells. A miss only delays detection to the next
 # genuinely-checked op (see docstring KNOWN GAPS).
 _MUTATING_CMD = re.compile(
-    r"git\s+(?:checkout|switch|reset|merge|rebase|commit|stash|pull|cherry-pick"
+    # Tolerate git GLOBAL OPTIONS (-C <path>, -c k=v, --no-pager) BEFORE the subcommand: the
+    # sanctioned `git -C "$HARNESS" <subcmd>` form (commands/harness-pr.md, retro.md, Gap D) was
+    # otherwise classified a READ, so a HEAD-moving op never re-stamped the lease AND a leading
+    # HARNESS_TRUNK_LEASE_OK=1 hatch silently no-opped (the hatch sits behind _is_mutating).
+    # (session f36989d6, 2026-06-21 - narrows the heuristic miss conceded in KNOWN GAPS (2).)
+    r"git\s+(?:(?:-C|-c)\s+(?:\"[^\"]*\"|'[^']*'|\S+)\s+|--no-pager\s+)*"
+    r"(?:checkout|switch|reset|merge|rebase|commit|stash|pull|cherry-pick"
     r"|am|revert|restore|apply|clean|branch\s+-[a-zA-Z])"
     r"|\b(?:rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|mkdir|patch"
     r"|sed\s+-i|Set-Content|Add-Content|Clear-Content|Remove-Item|New-Item"
