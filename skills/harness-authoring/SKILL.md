@@ -115,16 +115,20 @@ itself enforcement-relevant — make it a constant, not env-readable.
 
 ## Editing tracked files on this Windows checkout (core.autocrlf=true)
 
-Working tree is CRLF, committed blobs are LF. Before building exact-match Edit
-`old_string`s, normalize the file CRLF→LF (or read the committed view with
-`git show HEAD:<path>`) — else the match silently fails, or a whole-file EOL
-flip pollutes the diff. A file showing "modified" may be a pure EOL artifact:
-confirm real change with `git diff --ignore-cr-at-eol` before calling the tree
-dirty (`git restore` is then content-neutral). Stage only intended files
-(`git add -- <paths>`, never `-A`) so a gitignored marker/state file can't ride
-into an enforcement-layer commit.
+Working tree is CRLF, committed blobs are LF. The Edit tool matches an LF
+`old_string` against a CRLF working-tree file fine — do NOT pre-emptively
+normalize CRLF→LF, since a whole-file EOL flip pollutes the diff (the opposite
+of the goal). Only if an exact-match Edit UNEXPECTEDLY fails to match, fall back
+to reading the committed view (`git show HEAD:<path>`) or normalizing. A file
+showing "modified" may be a pure EOL artifact: confirm real change with
+`git diff --ignore-cr-at-eol` before calling the tree dirty (`git restore` is
+then content-neutral). Stage only intended files (`git add -- <paths>`, never
+`-A`) so a gitignored marker/state file can't ride into an enforcement-layer commit.
 (session cca5ccb9, 2026-06-14: a subagent normalized two guard files CRLF→LF
-before editing; a "modified" .claude/settings.json was a pure EOL artifact.)
+before editing; a "modified" .claude/settings.json was a pure EOL artifact.
+session f36989d6, 2026-06-21: 8 exact-match Edits matched LF `old_string`s against
+CRLF cartograph/extract.py with no normalization — pre-emptive-normalize advice
+was overcautious and contradicted the no-EOL-flip rule in the same paragraph.)
 
 ## Running scripts on this Windows checkout (cp1252 default + multiple drives)
 

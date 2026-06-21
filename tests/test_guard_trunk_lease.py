@@ -236,6 +236,23 @@ try:
     rc, _, _ = run(pl("Edit", EDIT(r), r, sid="A"))
     check("non-gitignored state/ does NOT self-brick (FIX-B)", rc == 0, f"rc={rc}")
 
+    # --- 14. REGRESSION (session f36989d6, 2026-06-21): the classifier must recognize git
+    #         GLOBAL OPTIONS before the subcommand. commands/harness-pr.md + retro.md mandate the
+    #         `git -C "$HARNESS" <subcmd>` form; when it was treated as a READ, HEAD-moving ops
+    #         never re-stamped AND a leading inline hatch silently no-opped (hatch sits behind
+    #         _is_mutating). A whole /retro+PR session was lost to repeated false blocks. ---
+    r = fresh()
+    stamp(r, "A")
+    git(["checkout", "-q", "-b", "gc1"], r)        # HEAD moved since A's stamp
+    rc, _, err = run(pl("Bash", {"command": f'git -C "{r}" commit --allow-empty -m x'}, r, sid="A"))
+    check("git -C <path> <mutating-subcmd> classified mutating (blocks on mismatch)", blocked(rc, err), f"rc={rc}")
+    rc, _, _ = run(pl("Bash", {"command": f'git -C "{r}" status'}, r, sid="A"))
+    check("git -C <path> <read-subcmd> still NOT gated", rc == 0, f"rc={rc}")
+    rc, _, _ = run(pl("Bash", {"command": f'HARNESS_TRUNK_LEASE_OK=1 git -C "{r}" commit --allow-empty -m y'}, r, sid="A"))
+    check("inline hatch on a git -C command re-baselines (ALLOW)", rc == 0, f"rc={rc}")
+    rc, _, _ = run(pl("Bash", {"command": f'git -C "{r}" merge --ff-only nope'}, r, sid="A"))
+    check("after hatch re-baseline, next git -C mutating op at same state ALLOWED", rc == 0, f"rc={rc}")
+
 finally:
     for d in REPOS:
         try:
