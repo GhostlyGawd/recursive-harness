@@ -48,18 +48,21 @@ hooks/stop_retro_gate.py:53   reason: "{count} user corrections this session ...
 
 ### Evidence (this session)
 
-`harness corrections list` for the wakeup session `525e9a3e` holds exactly three entries,
-**all self-authored wakeup prompts**, none a user correction:
+`harness corrections list` for the wakeup session `525e9a3e` holds **four** entries (and
+the count keeps growing — one more per wakeup while the babysitting loop runs), **all
+self-authored wakeup prompts**, none a user correction:
 
 ```
 "Babysitting selfforge engine (background batch bznil8weu = `python forge.py run ...`)..."
 "Babysitting selfforge engine — NEW batch byt56j8xw ..."
 "Babysitting selfforge engine — batch byt56j8xw ..."
+"Babysitting selfforge engine — batch byt56j8xw ..."   # +1 each subsequent wakeup
 ```
 
 Token that matched the regex (verified): `'stop '` in *"...if you stop mid-cycle clean with
 git..."* and `'STOP '` in *"...RED-FLAG STOP (TaskStop ...)..."*. The genuine interactive
-session logged **zero** corrections.
+session logged **zero** corrections. (The growing count is itself the tell: a value that
+increments once per self-paced tick, never from human input, is not a "user correction.")
 
 ## Impact
 
@@ -100,8 +103,15 @@ if data.get("isMeta"):
 **OPEN QUESTION (must verify before drafting):** `grep -r isMeta` over the harness finds
 **no** existing use, so it is unconfirmed that `isMeta` is delivered to the hook stdin (vs.
 only living in the transcript record). The merging human (or a one-line stdin-dump probe)
-must confirm. If present → Option A is the whole fix. If absent → the correct general fix is
-to make the harness *pass* `isMeta` to the hook, NOT to fall back to content matching.
+must confirm. If present → Option A is most of the fix. If absent → the correct general fix
+is to make the harness *pass* `isMeta` to the hook, NOT to fall back to content matching.
+
+**RELIABILITY CAVEAT (auditor finding):** `isMeta` does not tag 100% of self-loop prompts
+even in the transcript — at least one "Babysitting" wakeup record carried `isMeta` *unset*
+(None), not `true`. So Option A alone may miss a fraction of the self-loop class. This is
+exactly why **C is kept as a complement, not an alternative** — together they cover the
+common self-loop prompt (A) and the specific `stop`-token over-match that does the actual
+damage (C). Ship A+C, not A alone.
 
 ### Option C — tighten the `stop` signal (complementary, content-safe)
 
