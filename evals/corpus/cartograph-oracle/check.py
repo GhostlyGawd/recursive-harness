@@ -100,13 +100,17 @@ if r.returncode == 0:
 if "Traceback" in (r.stdout + r.stderr):
     fail("bogus --context leaked a traceback (must be a clean one-line error)")
 
-# --diff self-diff: advisory exit 0 + verdict clean. NOT raw-delta-zero: gitignored
-# but on-disk artifacts (e.g. skills/brand-foundry) always read as 'added' vs git-archive.
+# --diff self-diff: advisory exit 0 + verdict clean AND a truly empty raw delta.
+# PR #91 made the --diff CURRENT side tracked-only (it compares git-tracked files
+# vs the git REF, ignoring gitignored on-disk artifacts like skills/brand-foundry),
+# so a tree diffed against itself now adds nothing — zero nodes, zero edges.
 r, d = jrun("--diff", "HEAD", "--json")
 if r.returncode != 0:
     fail("--diff HEAD (advisory) did not exit 0: " + r.stderr[-200:])
 if d.get("verdict", {}).get("clean") is not True:
     fail("self-diff verdict not clean (no rot/review finding should arise diffing a tree against itself)")
+if d.get("nodes_added") or d.get("edges_added"):
+    fail("self-diff added nodes/edges (tracked-only current side must add nothing vs itself): " + json.dumps(d)[:200])
 if run("--diff", "HEAD", "--strict").returncode != 0:
     fail("--diff HEAD --strict exited nonzero (self-diff has zero blocking findings)")
 

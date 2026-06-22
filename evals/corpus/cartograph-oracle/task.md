@@ -32,8 +32,9 @@ and `test_diff.py` check the logic exhaustively; this is the coarse
 floor that proves a later extractor still *answers* correctly across harness
 versions, so generous shapes do not false-fail on legitimate growth.
 
-Note on the self-diff: it asserts `verdict.clean`, **not** an empty raw delta.
-`skills/brand-foundry/` is gitignored but present on disk, so the live graph sees
-it while `git archive` does not — it always reads as an "added" node in any
-`--diff`. The functional contract (no rot/review finding when diffing a tree
-against itself) is what matters and is what this guards.
+Note on the self-diff: it asserts `verdict.clean` **and** a truly empty raw delta
+(zero added nodes/edges). PR #91 made the `--diff` current side tracked-only — it
+compares git-tracked files against the git REF and ignores gitignored on-disk
+artifacts (e.g. `skills/brand-foundry/`), so a tree diffed against itself adds
+nothing. Both the functional contract (no rot/review finding) and the empty delta
+are what this guards.
