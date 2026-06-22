@@ -1,0 +1,64 @@
+/* Mission Control — Phosphor Console palette, ported from lathe/design/tokens.css.
+   Literal hex (token name in the comment) for Textual-version portability.
+   Honored: warm near-black ladder (never blue/pure black); ONE amber phosphor accent, lit only
+   on live telemetry; green/red QUARANTINED to gauges; depth via surface steps + hairlines, never
+   drop-shadows; <=2 accents, no #FFF. */
+
+Screen {
+    background: #0b0907;            /* --c0 substrate floor */
+    color: #cdbfa6;                /* --ink primary engraved label */
+    layout: vertical;
+}
+
+/* ── Chrome bar — identity + session crumbs + calibration/ctx strip ─────────────────────── */
+#chrome {
+    height: 3;
+    background: #12100d;            /* --c1 console body */
+    border-bottom: solid #2a251c;  /* --line hairline (depth, not a shadow) */
+    padding: 1 1;
+    content-align: left middle;
+}
+
+/* ── Body: Signal lanes (Roster) | Detail bay ───────────────────────────────────────────── */
+#body { height: 1fr; }
+
+#lanes-col { width: 2fr; }
+#detail-col { width: 3fr; }
+
+#lanes-label, #detail-label {
+    height: 1;
+    background: #17140f;            /* --c2 raised bay */
+    color: #7c7261;                /* --ink-dim wide-tracked label */
+    text-style: bold;
+    padding: 0 1;
+}
+
+#lanes {
+    background: #0c0a08;            /* --well: inside of an instrument well */
+    border-right: solid #2a251c;   /* --line */
+    height: 1fr;
+}
+
+/* a lane row = one component. The left border reserves a cell so text never shifts on select;
+   it is well-colored (invisible) until the lane is the selected one, then lights phosphor. */
+.lane {
+    height: 1;
+    padding: 0 1;
+    background: #0c0a08;            /* --well */
+    border-left: solid #0c0a08;    /* reserved rib, invisible */
+    color: #cdbfa6;                /* --ink */
+}
+.lane.-selected {
+    background: #17140f;            /* --c2 raised bay = the live/selected lane */
+    border-left: solid #f7b23b;    /* --p phosphor selection rib (the one signal channel) */
+}
+
+#detail-body {
+    background: #12100d;            /* --c1 */
+    color: #cdbfa6;
+    padding: 1 2;
+    height: 1fr;
+}
+
+Footer { background: #12100d; color: #7c7261; }
+Footer > .footer--key { color: #f7b23b; background: #12100d; }
