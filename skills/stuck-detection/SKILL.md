@@ -45,6 +45,24 @@ third patch.
 
 > provenance: 2026-06-16 cross-Grove retro; a @swarm/ui closed-overlay full-bleed quirk was worked around 3 separate times (B2 Dialog, W3 Sheet, a site consumer; transcript 6d93d19f) before one source fix (810c8b69). The Phase-6 source fix self-correcting the build is the evidence the rule is right; the two prior recurrences are what it cost.
 
+## Worked example — switch the CAUSE class, not the surface
+
+A trunk-lease / HEAD-divergence guard keys on the session's HEAD-vs-trunk, NOT the
+write target. So changing WHERE you write (repo → Desktop) or HOW (Write tool →
+shell heredoc) is the SAME strategy class — every variant re-blocks. The real
+switch is changing the session's *relationship to the trunk*: re-baseline
+(`HARNESS_TRUNK_LEASE_OK=1`, per command) or move to a separate checkout (a
+worktree-isolated Agent). If two consecutive "fixes" both vary the surface and not
+the cause, that IS the stuck signal — stop and re-classify (this is the strike-2
+"don't re-parameterize the same class" rule applied to *guards*, not bugs).
+
+Proactive heuristic: re-classify your work-mode on transition. A read-only
+brainstorm on shared `main` is fine; the moment work turns write-heavy (prototype,
+commits, PRs) under a known-active concurrent peer, move to a worktree BEFORE the
+first block — not after the fifth.
+
+<!-- provenance: session 5bbe0b6e, 2026-06-21 — ~5 blocked writes burned varying mechanism/target before switching cause class. -->
+
 ## A recurring failure? Search the record before re-fixing
 
 Before drafting ANY fix for a failure you recognize as recurring: (a) restate the
