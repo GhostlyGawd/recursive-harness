@@ -96,25 +96,30 @@ def _write_all(path: str, recs: list) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
-def _repo_root() -> str:
+def _repo_root(start: str = "") -> str:
+    """Git toplevel of `start` (default: cwd), falling back to its abspath on any git error.
+    `git -C <start>` lets an external caller (e.g. cartograph) key by an arbitrary repo root,
+    so the repo-key derivation has exactly ONE implementation."""
+    base = start or os.getcwd()
     try:
-        out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, cwd=os.getcwd())
+        out = subprocess.run(["git", "-C", base, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True)
         if out.returncode == 0 and out.stdout.strip():
             return os.path.abspath(out.stdout.strip())
     except (OSError, ValueError):
         pass
-    return os.path.abspath(os.getcwd())
+    return os.path.abspath(base)
 
 
-def _repo_key(explicit: str = "") -> str:
-    """An explicit --repo is taken as a literal ledger key; otherwise derive from cwd.
-    Hash the normcased abspath (not os.path.relpath - it raises across drive letters)."""
+def _repo_key(explicit: str = "", root: str = "") -> str:
+    """An explicit --repo is taken as a literal ledger key; otherwise derive from `root`
+    (default cwd). Hash the normcased abspath (not os.path.relpath - it raises across drive
+    letters). cartograph imports THIS so its heal-health key can never drift from the ledger."""
     if explicit:
         return explicit
-    root = _repo_root()
-    base = os.path.basename(root.rstrip("/\\")) or "repo"
-    h = hashlib.sha1(os.path.normcase(root).encode("utf-8")).hexdigest()[:6]
+    top = _repo_root(root)
+    base = os.path.basename(top.rstrip("/\\")) or "repo"
+    h = hashlib.sha1(os.path.normcase(top).encode("utf-8")).hexdigest()[:6]
     return f"{base}-{h}"
 
 
@@ -333,8 +338,12 @@ def _metrics(bugs: list, attempts: list) -> dict:
     live = [b for b in bugs if b.get("status") in LIVE]
     recurring = _recurring(bugs)
     mean_attempts = None
-    if healed:
-        mean_attempts = round(sum(len(by_bug.get(b["id"], [])) for b in healed) / len(healed), 2)
+    if healed:  # count only SCORED attempts - an unscored 'open' attempt is not a heal effort
+        scored_n = sum(sum(1 for a in by_bug.get(b["id"], []) if a.get("outcome") in SCORED)
+                       for b in healed)
+        mean_attempts = round(scored_n / len(healed), 2)
+    # escalation latency = days from the FIRST failed attempt to `escalate route` (retro_ts):
+    # how long a root festered before being escalated to source. Only routed bugs contribute.
     spans = []
     for b in bugs:
         rt = _parse_ts(b.get("retro_ts", ""))

@@ -100,6 +100,23 @@ def test_metrics():
     check("metrics counts healed=1 wontfix=1 live=1", (m["healed"], m["wontfix"], m["live"]) == (1, 1, 1))
 
 
+def test_mean_attempts_scored_only():
+    bugs = [bug("h1", status="healed")]
+    attempts = [att("h1", "worked", "2026-01-02T00:00:00+00:00"),
+                att("h1", "open", "2026-01-03T00:00:00+00:00")]  # unscored -> must NOT count
+    m = heal._metrics(bugs, attempts)
+    check("mean_attempts_to_heal counts only SCORED attempts (1, not 2)",
+          m["mean_attempts_to_heal"] == 1.0)
+
+
+def test_repo_key_root():
+    k_default = heal._repo_key()
+    check("_repo_key(root=cwd) == default cwd-derived key (one impl)",
+          heal._repo_key(root=os.getcwd()) == k_default)
+    check("_repo_key(explicit) is taken literally",
+          heal._repo_key("literal-key") == "literal-key")
+
+
 def test_recurrence_candidates():
     bugs = [bug("c1", tags=["area:hook", "class:race"], summary="guard fires twice on edit"),
             bug("c2", tags=["area:cli"], summary="totally unrelated parser bug", status="healed")]
@@ -217,6 +234,7 @@ def main():
     try:
         print("== unit: predicates ==")
         test_stuck(); test_escalate_healing_aware(); test_metrics()
+        test_mean_attempts_scored_only(); test_repo_key_root()
         test_recurrence_candidates(); test_match()
         print("== cli ==")
         cleanup()  # fresh ledger

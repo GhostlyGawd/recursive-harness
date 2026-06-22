@@ -46,7 +46,6 @@ as such in the output so they are never mistaken for extracted facts.
 """
 import argparse
 import datetime
-import hashlib
 import io
 import json
 import os
@@ -1163,43 +1162,30 @@ def compute_overlay(g):
     }
 
 
-def _heal_repo_key(root):
-    """Mirror skills/auto-healer/heal.py _repo_key for `root`: basename + 6 hex of the
-    sha1 of the normcased git-toplevel abspath. This tiny, stable derivation is kept in
-    lockstep with heal.py; the FAILURE PREDICATES are deliberately NOT re-implemented here
-    - they are imported from heal._metrics so cartograph and /heal can never drift."""
-    try:
-        out = subprocess.run(["git", "-C", root, "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=15)
-        top = (os.path.abspath(out.stdout.strip())
-               if out.returncode == 0 and out.stdout.strip() else os.path.abspath(root))
-    except (OSError, subprocess.SubprocessError):
-        top = os.path.abspath(root)
-    base = os.path.basename(top.rstrip("/\\")) or "repo"
-    h = hashlib.sha1(os.path.normcase(top).encode("utf-8")).hexdigest()[:6]
-    return f"{base}-{h}"
-
-
 def heal_health():
     """Advisory heal-ledger vital sign for THIS repo only (never --all-repos: mixing a
     venture repo's bugs into harness health is the category error the harness-vs-venture
     boundary warns against). Reads the gitignored state/heal/<repo-key>/{bugs,attempts}.jsonl
-    DIRECTLY (no shell-out) and derives the failure metrics via heal._metrics so the
-    STUCK/RECURRING/ESCALATE definitions stay single-sourced. Fail-open: any import/read
-    error or an absent/empty ledger -> None, so it can never brick --json/--audit/--check.
-    Outcome-derived signals (stuck/escalate) come from logged attempt outcomes, not from a
-    self-reported 'healed' flag, so marking a bug healed cannot game the vital sign."""
+    DIRECTLY (no shell-out) and derives BOTH the repo-key and the failure metrics from the
+    imported heal module (heal._repo_key + heal._metrics), so the key derivation and the
+    STUCK/RECURRING/ESCALATE definitions are single-sourced - cartograph can never drift from
+    /heal. Outcome-derived signals (stuck/escalate) come from logged attempt outcomes, not a
+    self-reported 'healed' flag, so marking a bug healed cannot game the vital sign.
+    Fail-open: any import/read error or an absent/empty ledger -> None, so it can never brick
+    --json/--audit/--check. NB: the broad except also masks a genuine heal._metrics logic bug
+    as a missing vital sign - acceptable only because this is advisory/non-blocking; the gate,
+    the ledger writes, and the /retro feed never route through here."""
     try:
-        key = _heal_repo_key(ROOT)
+        heal_dir = os.path.join(ROOT, "skills", "auto-healer")
+        if heal_dir not in sys.path:
+            sys.path.insert(0, heal_dir)
+        import heal  # single-source the repo-key derivation AND the failure predicates
+        key = heal._repo_key(root=ROOT)
         d = os.path.join(ROOT, "state", "heal", key)
         bugs = read_jsonl(os.path.join(d, "bugs.jsonl"))
         attempts = read_jsonl(os.path.join(d, "attempts.jsonl"))
         if not bugs:
             return None
-        heal_dir = os.path.join(ROOT, "skills", "auto-healer")
-        if heal_dir not in sys.path:
-            sys.path.insert(0, heal_dir)
-        import heal  # single-source the failure predicates
         m = heal._metrics(bugs, attempts)
         return {
             "repo_key": key,

@@ -205,12 +205,12 @@ check(("no auto-prune" in mr.lower()) or ("never auto" in mr.lower())
 # ===================================== 8. heal-health vital sign (auto-healer v2 synergy)
 print("[8] heal_health(): repo-key agrees with heal.py, advisory firewall, fail-open")
 sys.path.insert(0, os.path.join(ROOT, "skills", "auto-healer"))
-import heal  # the single-source predicate module heal_health imports
+import heal  # the single-source module heal_health imports (repo-key AND predicates)
 
-# (a) the drift risk: cartograph's repo-key derivation must match heal.py's exactly.
-# test cwd is cartograph/, whose git toplevel is ROOT -> heal._repo_key() keys to ROOT.
-check(ex._heal_repo_key(ROOT) == heal._repo_key(),
-      "cartograph _heal_repo_key(ROOT) == heal.py _repo_key() (no key drift)")
+# (a) single key implementation: heal_health keys via heal._repo_key(root=ROOT); keying by
+# ROOT must equal the cwd-derived key when cwd's git toplevel is ROOT (test cwd is cartograph/).
+check(heal._repo_key(root=ROOT) == heal._repo_key(),
+      "heal._repo_key(root=ROOT) == cwd-derived key (one key impl, no drift)")
 
 # (b) audit_report always carries the heal_health key + meta count (None on clean trunk).
 g2 = ex.Graph()
@@ -222,7 +222,7 @@ check("heal_health" in rep2 and "heal_escalate_count" in rep2["meta"],
 # (c) populated path on a fixture root: a recurring+failed bug -> escalate_count 1,
 # advisory + non-mutating. Reads the ledger at ex.ROOT; predicates come from heal._metrics.
 with tempfile.TemporaryDirectory() as d:
-    key = ex._heal_repo_key(d)
+    key = heal._repo_key(root=d)
     hd = os.path.join(d, "state", "heal", key)
     write(os.path.join(hd, "bugs.jsonl"),
           json.dumps({"id": "b1", "status": "recurred", "recurrences": 1,
