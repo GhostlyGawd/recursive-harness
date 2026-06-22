@@ -227,6 +227,52 @@ def _is_ref(cwd: str, operand: str) -> bool:
     return _git(["rev-parse", "--verify", "--quiet", operand], cwd) is not None
 
 
+# Leading shell env-assignment: NAME=VALUE (e.g. `FOO=bar git ...`). A bare such token
+# before `git` must not defeat the classifier (auditor 2026-06-21 under-block).
+_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+def _strip_grouping(tokens: list) -> list:
+    """Strip leading/trailing shell-grouping wrappers from a segment so a subshell or
+    brace group can't hide a revert from the classifier (auditor 2026-06-21 under-block).
+    Handles a leading `(`/`{` and a trailing `)`/`}` whether they are their own tokens
+    (`( git checkout x )`) or fused to the adjacent token (`(git ... x)`). Conservative:
+    strips at most the outer wrapper pair; leaves everything else intact."""
+    if not tokens:
+        return tokens
+    toks = list(tokens)
+    # Leading opener: standalone `(`/`{`, or fused like `(git`, `{git`.
+    while toks:
+        head = toks[0]
+        if head in ("(", "{"):
+            toks.pop(0)
+            continue
+        if head and head[0] in ("(", "{"):
+            stripped = head.lstrip("({")
+            if stripped:
+                toks[0] = stripped
+            else:
+                toks.pop(0)
+            break
+        break
+    # Trailing closer: standalone `)`/`}` (optionally with a trailing `;`), or fused
+    # like `x)`, `x;` -> `x`. A `;` separating group end is shell noise here.
+    while toks:
+        tail = toks[-1]
+        if tail in (")", "}", ";"):
+            toks.pop()
+            continue
+        if tail and tail[-1] in (")", "}", ";"):
+            stripped = tail.rstrip(")};")
+            if stripped:
+                toks[-1] = stripped
+            else:
+                toks.pop()
+            break
+        break
+    return toks
+
+
 def _is_revert_with_pathspec(tokens: list):
     """Classify a `git checkout`/`git restore` invocation. Returns one of:
       None                     -> not a dangerous revert (branch create / not our
@@ -244,8 +290,22 @@ def _is_revert_with_pathspec(tokens: list):
     paths, so any restore operand qualifies as `paths`."""
     if not tokens:
         return None
+    # Normalize away two parser-bypass wrappers before classification (auditor 2026-06-21):
+    #   (1) a subshell / brace group: `( git checkout x )` or `{ git checkout x; }` --
+    #       strip leading `(`/`{` and trailing `)`/`}`, whether standalone tokens or
+    #       fused to git / the last operand (e.g. `(git` ... `x)`).
+    #   (2) leading shell env-assignments: `FOO=bar git checkout x` -- skip any leading
+    #       NAME=VALUE tokens so the real `git` token is the one classified.
+    tokens = _strip_grouping(tokens)
+    if not tokens:
+        return None
     # Strip a leading `git` and any global options (-C <path>, -c k=v, --no-pager, -P).
     i = 0
+    # Skip leading NAME=VALUE env-assignments (`FOO=bar git ...`).
+    while i < len(tokens) and _ASSIGN_RE.match(tokens[i]):
+        i += 1
+    if i >= len(tokens):
+        return None
     if tokens[i] == "git":
         i += 1
     else:
@@ -270,6 +330,14 @@ def _is_revert_with_pathspec(tokens: list):
     # --- git restore: always a path op. A restore with at least one non-flag operand
     #     (or an explicit `.`) is a path revert. ---
     if sub == "restore":
+        # INDEX-ONLY restore is non-destructive to the worktree (auditor 2026-06-21
+        # over-block): `git restore --staged`/`--cached <file>` only unstages, losing
+        # NO uncommitted worktree work -> ALLOW. But `--worktree`/`-W` (even alongside
+        # --staged) DOES touch the worktree -> keep blocking when dirty.
+        touches_worktree = ("--worktree" in rest) or ("-W" in rest)
+        index_only = ("--staged" in rest) or ("--cached" in rest)
+        if index_only and not touches_worktree:
+            return None  # index-only -> no worktree work at risk -> allow
         if "--" in rest:
             operands = rest[rest.index("--") + 1:]
         else:
@@ -397,7 +465,11 @@ def _arm_b_dirty_revert(data: dict) -> int:
 
     # Split the flat token list into git-command segments on shell separators so a
     # `foo && git checkout x` is handled by the `git checkout x` part.
-    for seg in _split_segments(tokens):
+    for raw_seg in _split_segments(tokens):
+        # Strip shell-grouping wrappers up front (auditor 2026-06-21) so a subshell --
+        # `( git checkout x )` -- doesn't hide the `git` token from the membership check
+        # or from _effective_cwd's `-C` scan below.
+        seg = _strip_grouping(raw_seg)
         if "git" not in seg:
             continue
         classified = _is_revert_with_pathspec(seg)

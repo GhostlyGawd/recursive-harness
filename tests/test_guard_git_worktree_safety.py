@@ -241,6 +241,58 @@ try:
     check("(f) CLAUDE_DISCARD_OK=1 git checkout <dirty file> -> ALLOW", rc == 0,
           f"rc={rc} err={err[:90]}")
 
+    # =====================================================================
+    # ARM B — auditor 2026-06-21 fixes (restore --staged over-block; env-prefix
+    # + subshell under-blocks). The fixed bare `git checkout <dirty>` BLOCK above
+    # (case a) is the baseline these calibrate against.
+    # =====================================================================
+
+    # (g) `git restore --staged <STAGED file>` -> ALLOW (index-only, loses no worktree
+    #     work). Make foundry.mjs clean+committed, then STAGE a fresh modification so
+    #     the path shows in `git status --porcelain` -- the OLD code would have BLOCKED.
+    _git(["checkout", "--", "foundry.mjs"], rb)        # clean (real git, bypass hook)
+    write_file(rb, "foundry.mjs", "staged change to be unstaged via --staged\n")
+    _git(["add", "foundry.mjs"], rb)                   # now STAGED (dirty in index)
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "git restore --staged foundry.mjs"}})
+    check("(g) git restore --staged <staged file> -> ALLOW (index-only)", rc == 0,
+          f"rc={rc} err={err[:90]}")
+    # (g') the --cached spelling is likewise index-only -> ALLOW
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "git restore --cached foundry.mjs"}})
+    check("(g') git restore --cached <staged file> -> ALLOW (index-only)", rc == 0,
+          f"rc={rc} err={err[:90]}")
+
+    # (h) `git restore --staged --worktree <dirty file>` -> BLOCK: --worktree DOES touch
+    #     the working tree, so it can lose uncommitted work even alongside --staged.
+    _git(["restore", "--staged", "foundry.mjs"], rb)   # unstage (real git, bypass hook)
+    write_file(rb, "foundry.mjs", "dirty worktree work --staged --worktree would WIPE\n")
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "git restore --staged --worktree foundry.mjs"}})
+    check("(h) git restore --staged --worktree <dirty file> -> BLOCK (touches worktree)",
+          blocked(rc, err), f"rc={rc} err={err[:90]}")
+
+    # (i) leading env-assignment no longer bypasses the parser: `FOO=bar git checkout
+    #     <dirty tracked file>` -> BLOCK (OLD code bailed on tokens[0] != 'git').
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "FOO=bar git checkout foundry.mjs"}})
+    check("(i) FOO=bar git checkout <dirty file> -> BLOCK (env-prefix no bypass)",
+          blocked(rc, err), f"rc={rc} err={err[:90]}")
+
+    # (j) subshell wrapper no longer bypasses the parser: `( git checkout <dirty file> )`
+    #     -> BLOCK (OLD code: segment led with '(' so 'git' wasn't tokens[0]).
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "( git checkout foundry.mjs )"}})
+    check("(j) ( git checkout <dirty file> ) -> BLOCK (subshell no bypass)",
+          blocked(rc, err), f"rc={rc} err={err[:90]}")
+
+    # (k) regression guard: a PLAIN worktree `git restore <dirty file>` (no --staged)
+    #     still BLOCKS -- the fix #1 allow must not leak to worktree-touching restores.
+    rc, out, err = run(rb, {"cwd": rb, "tool_name": "Bash",
+                            "tool_input": {"command": "git restore foundry.mjs"}})
+    check("(k) git restore <dirty file> (no --staged) -> still BLOCK", blocked(rc, err),
+          f"rc={rc} err={err[:90]}")
+
     # arm B fail-open: malformed stdin on a Bash payload -> exit 0
     p = subprocess.run([sys.executable, hook], input="not json{{",
                        capture_output=True, text=True)
