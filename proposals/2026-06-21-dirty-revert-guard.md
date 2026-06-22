@@ -1,6 +1,6 @@
 # Proposal — `guard_dirty_revert`: block `git checkout`/`restore` that discards uncommitted work
 
-- **Status:** DRAFT / for human approval. Nothing built (the agent cannot — see below).
+- **Status:** RESOLVED 2026-06-21 → folded into hooks/guard_git_worktree_safety.py (combined with the retired guard_branch_first, net hook count 0 per correction 31). See proposals/2026-06-21-guard-cluster-consolidation.md.
 - **Date:** 2026-06-21
 - **Source:** /retro of session `6ccd3cee` (brand-foundry M3 build). Mined event 1, confidence 0.85.
 - **Touches the enforcement layer** (`hooks/`, `settings.json`) → an agent is mechanically blocked from
