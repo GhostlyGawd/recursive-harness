@@ -942,12 +942,15 @@ def audit_report(g, warnings, today=None):
     dead.sort(key=lambda x: x["id"])
     rot = sorted(({"fingerprint": w["fingerprint"], "message": w["message"]} for w in warnings),
                  key=lambda r: r["fingerprint"])
+    heal = heal_health()       # advisory heal-ledger vital sign (None if no ledger)
     return {
         "structural_rot": rot,
         "dead_weight": dead,
+        "heal_health": heal,
         "meta": {
             "rot_count": len(rot),
             "dead_weight_count": len(dead),
+            "heal_escalate_count": (heal or {}).get("escalate_count", 0),
             "advisory": True,      # audit never blocks (exit 0 always)
             "mutates": False,      # audit never writes to the repo
             "age_threshold_days": DEAD_WEIGHT_AGE_DAYS,
@@ -980,6 +983,20 @@ def render_audit_text(report):
             P(f"        {d['reason']}")
     else:
         P("    (none - every skill/agent is referenced, used, or too recent to be rot)")
+    P("")
+    heal = report.get("heal_health")
+    if heal:
+        P("  heal-health (advisory vital sign - this repo's bug ledger, never blocks):")
+        P(f"    {heal['n_bugs']} bugs ({heal['live']} live, {heal['healed']} healed)  "
+          f"recurrence_rate={heal['recurrence_rate']}  "
+          f"stuck={heal['stuck_count']}  escalate={heal['escalate_count']}")
+        if heal.get("mean_attempts_to_heal") is not None:
+            P(f"    mean attempts-to-heal={heal['mean_attempts_to_heal']}  "
+              f"escalation_latency={heal.get('mean_escalation_latency_days')}d")
+        P("    a RISING recurrence_rate month-over-month (memory/heal/<label>/) is the "
+          "harness healing worse - mine it via /retro.")
+    else:
+        P("  heal-health: no bug ledger for this repo yet (clean slate or unused).")
     return "\n".join(out) + "\n"
 
 
@@ -1141,7 +1158,46 @@ def compute_overlay(g):
         },
         "corrections_total": len(corrections),
         "followups_open": open_fu,
+        "heal": heal_health(),
     }
+
+
+def heal_health():
+    """Advisory heal-ledger vital sign for THIS repo only (never --all-repos: mixing a
+    venture repo's bugs into harness health is the category error the harness-vs-venture
+    boundary warns against). Reads the gitignored state/heal/<repo-key>/{bugs,attempts}.jsonl
+    DIRECTLY (no shell-out) and derives BOTH the repo-key and the failure metrics from the
+    imported heal module (heal._repo_key + heal._metrics), so the key derivation and the
+    STUCK/RECURRING/ESCALATE definitions are single-sourced - cartograph can never drift from
+    /heal. Outcome-derived signals (stuck/escalate) come from logged attempt outcomes, not a
+    self-reported 'healed' flag, so marking a bug healed cannot game the vital sign.
+    Fail-open: any import/read error or an absent/empty ledger -> None, so it can never brick
+    --json/--audit/--check. NB: the broad except also masks a genuine heal._metrics logic bug
+    as a missing vital sign - acceptable only because this is advisory/non-blocking; the gate,
+    the ledger writes, and the /retro feed never route through here."""
+    try:
+        heal_dir = os.path.join(ROOT, "skills", "auto-healer")
+        if heal_dir not in sys.path:
+            sys.path.insert(0, heal_dir)
+        import heal  # single-source the repo-key derivation AND the failure predicates
+        key = heal._repo_key(root=ROOT)
+        d = os.path.join(ROOT, "state", "heal", key)
+        bugs = read_jsonl(os.path.join(d, "bugs.jsonl"))
+        attempts = read_jsonl(os.path.join(d, "attempts.jsonl"))
+        if not bugs:
+            return None
+        m = heal._metrics(bugs, attempts)
+        return {
+            "repo_key": key,
+            "n_bugs": m["n_bugs"], "live": m["live"], "healed": m["healed"],
+            "recurrence_rate": m["recurrence_rate"], "stuck_count": m["stuck_count"],
+            "escalate_count": m["escalate_count"],
+            "mean_attempts_to_heal": m["mean_attempts_to_heal"],
+            "mean_escalation_latency_days": m["mean_escalation_latency_days"],
+            "advisory": True, "mutates": False,
+        }
+    except Exception:
+        return None
 
 
 # ----------------------------------------------------------- Phase 3: git birth dates

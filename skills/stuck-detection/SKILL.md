@@ -66,11 +66,13 @@ first block — not after the fifth.
 ## A recurring failure? Search the record before re-fixing
 
 Before drafting ANY fix for a failure you recognize as recurring: (a) restate the
-core problem in one sentence, and (b) find where the recurrence is already
-documented — grep `memory/decisions/` for an ADR on it. If a prior ADR REJECTED a
-class of fix, the new fix must escape that wall by a DIFFERENT mechanism, not
-iterate on the rejected one. Skipping this re-proposes a smarter version of a fix
-that already failed.
+core problem in one sentence, (b) pull the cross-session ledger —
+`python3 skills/auto-healer/heal.py match --file <f> --error "..."` — and do NOT
+repeat any hypothesis it lists as already falsified, and (c) find where the
+recurrence is already documented — grep `memory/decisions/` for an ADR on it. If a
+prior ADR REJECTED a class of fix, the new fix must escape that wall by a DIFFERENT
+mechanism, not iterate on the rejected one. Skipping this re-proposes a smarter
+version of a fix that already failed.
 
 > provenance: 2026-06-19, session 2b5c4d70 — recurring trunk-HEAD collisions were
 > already documented in ADR 0007, which had rejected actor-identity blocking.
@@ -93,3 +95,4 @@ record (pull it via `/heal`, never pushed). The boundary is symmetric — see
 auto-healer's "Boundary vs stuck-detection".
 
 <!-- provenance: 2026-06-21, follow-up 27cd1f — reciprocal cross-link to auto-healer (PR #98). The auto-healer SKILL.md already pointed here ("Boundary vs stuck-detection") one-directionally; this closes the loop so the in-session ladder also feeds the cross-session ledger. -->
+<!-- provenance: 2026-06-21, session 908de0ac — added the RECALL half: "search the record before re-fixing" now pulls `heal.py match` for falsified hypotheses, not just the ADR grep. Kept as a PULL (agent runs it at its about-to-fix moment), never an auto-fire, per the auto-healer v2 synergy audit. -->

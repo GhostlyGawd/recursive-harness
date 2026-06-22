@@ -7,16 +7,23 @@ For $ARGUMENTS (default: review the current repo):
 
 1. `python3 skills/auto-healer/heal.py review` — the current repo's web. Add
    `--all-repos` to survey every tracked repo, or `--repo <key>` to target one by
-   its ledger key.
+   its ledger key. `--json` emits the same predicates for a machine consumer;
+   `--escalate-only` narrows to the /retro feed (and `/retro` step 1 pulls exactly
+   that).
 2. Read the sections in the order printed: ESCALATE TO SOURCE and STUCK first —
    these are the bandaid risks costing the most — then RECURRING, then the
    CLUSTERS. A tag cluster of >=2 live bugs is the "same bug in a different shape"
-   signal the ledger exists to expose.
+   signal the ledger exists to expose. A `NO EVAL GUARD` mark means a healed-yet-
+   recurring bug has no regression eval — propose one via /capture-eval.
 3. For each ESCALATE / STUCK item the user wants to act on: restate the root in
    one sentence, then route via /retro — mechanical cause -> propose a hook;
    knowledge gap -> skill/reference; design flaw -> ADR. Grep memory/decisions/
    first; a prior ADR may have rejected this fix class (see stuck-detection).
-4. Capture is NOT part of this command. To log bugs/attempts while debugging, use
-   the auto-healer skill's heal.py bug/attempt commands.
+   Once routed, `heal.py escalate route <id> --session <this session>` so it stops
+   re-escalating every /heal (it stays healing-aware: a new failed attempt or an
+   unhealed status re-surfaces it).
+4. Capture is NOT part of this command. To log while debugging, use the
+   auto-healer skill's one-shot `heal.py fix --outcome ...`; to recall prior
+   falsified hypotheses before a re-fix, `heal.py match --file/--error`.
 5. Report only the delta the user cares about — do not recite the whole ledger
    unless asked. Surface-on-demand is the entire point.

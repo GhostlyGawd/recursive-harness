@@ -14,19 +14,25 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    Gather signal for THIS session:
    - `"$HARNESS/bin/harness" corrections list`
    - `"$HARNESS/bin/harness" stats` — note this session's unscored ids; score them now.
-2. Spawn the **retro-miner** agent with the transcript path and the correction
-   lines. Take its <=3 events; veto only with a stated reason.
-   (Resolve THIS session's transcript reliably before handing it over: read
-   `state/session_owners.json` for the live `session_id` of this cwd, or take the
-   newest-mtime `*.jsonl` under the account's `projects/<cwd-key>/` dir. Do NOT
-   infer the session id from agent temp-dir / task-output paths — that id is a
-   persistent grouping decoupled from the live session, and inferring from it
-   mined the WRONG prior session on 2026-06-21, wasting a full miner pass.)
+   - `python3 "$HARNESS/skills/auto-healer/heal.py" review --escalate-only --json`
+     — cross-session recurring roots with a failed fix (the autophagic feed). These
+     are eligible signal, counted within the <=3-event bar below — not on top of it.
+2. Spawn the **retro-miner** agent with the transcript path, the correction
+   lines, AND the heal ESCALATE records. Take its <=3 events; veto only with a
+   stated reason. (Resolve THIS session's transcript reliably before handing it
+   over: read `state/session_owners.json` for the live `session_id` of this cwd, or
+   take the newest-mtime `*.jsonl` under the account's `projects/<cwd-key>/` dir. Do
+   NOT infer the session id from agent temp-dir / task-output paths — that id is a
+   persistent grouping decoupled from the live session, and inferring from it mined
+   the WRONG prior session on 2026-06-21, wasting a full miner pass.)
 3. For each accepted event, run the routing tree (skill: routing-learnings) and
    draft the artifact per skill: harness-authoring, on branch
    `retro/$(date +%F)-<slug>` of the harness repo
    (`git -C "$HARNESS" checkout -b retro/$(date +%F)-<slug> origin/main`).
-   $ARGUMENTS may name a specific learning to prioritize.
+   $ARGUMENTS may name a specific learning to prioritize. If an accepted event came
+   from a heal ESCALATE, stamp it routed once the artifact is drafted:
+   `python3 "$HARNESS/skills/auto-healer/heal.py" escalate route <bug-id> --session <session_id>`
+   — so it stops re-surfacing on every /heal (healing-aware: a new failure re-opens it).
 4. `python3 "$HARNESS/lint/lint_harness.py"` — fix violations before proceeding.
 5. Spawn the **harness-auditor** agent on the diff. Address every finding;
    `requires-human` and enforcement-layer changes stay as draft PRs.
@@ -63,3 +69,8 @@ Bash calls, and bin/ is enforcement-locked so there is no shared shim to source.
 opened a session stranded on a stale `proposal/*` branch a prior harness flow left behind;
 /retro branches in-place on `retro/<date>-<slug>` the same way and never returned to main.
 Paired with the SessionStart banner warning (hooks/session_start.py). -->
+<!-- provenance: 2026-06-21, session 908de0ac — wired the heal->/retro autophagic loop
+(steps 1-3): the ESCALATE feed (recurring + failed fix) is now machine-readable signal for
+the miner, and accepted events get stamped `escalate route` so a routed root stops
+re-surfacing. Closes the loop the auto-healer SKILL only documented in v1. -->
+
