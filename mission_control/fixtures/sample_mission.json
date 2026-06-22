@@ -1,0 +1,157 @@
+{
+  "structure": {
+    "nodes": [],
+    "edges": [],
+    "node_count": 112,
+    "edge_count": 234
+  },
+  "work": {
+    "by_component": {
+      "cli:bin/harness": {
+        "component": {
+          "id": "cli:bin/harness",
+          "type": "cli",
+          "file": "bin/harness"
+        },
+        "followups": [
+          {
+            "id": "0403ae",
+            "text": "cartograph --mission: cli:* subcommands share the bin/harness path",
+            "task": "",
+            "ts": "2026-06-22"
+          },
+          {
+            "id": "e95127",
+            "text": "autonomy.json count drift: records skills=5/commands=4, actual differs",
+            "task": "",
+            "ts": "2026-06-22"
+          },
+          {
+            "id": "1d30be",
+            "text": "bin/harness state ops silently target a worktree empty state/ when cwd is a worktree",
+            "task": "",
+            "ts": "2026-06-21"
+          }
+        ]
+      },
+      "skill:stuck-detection": {
+        "component": {
+          "id": "skill:stuck-detection",
+          "type": "skill",
+          "file": "skills/stuck-detection/SKILL.md"
+        },
+        "followups": [
+          {
+            "id": "b80478",
+            "text": "worked in shared main checkout despite EnterWorktree; BLOCKED on lease churn",
+            "task": "",
+            "ts": "2026-06-19"
+          }
+        ]
+      },
+      "hook:guard_trunk_lease.py": {
+        "component": {
+          "id": "hook:guard_trunk_lease.py",
+          "type": "hook",
+          "file": "hooks/guard_trunk_lease.py"
+        },
+        "followups": [
+          {
+            "id": "512398",
+            "text": "_MUTATING_CMD: 2 pre-existing classifier nits (out of scope, PR #95)",
+            "task": "",
+            "ts": "2026-06-21"
+          },
+          {
+            "id": "f963e5",
+            "text": "hint names only EnterWorktree as the escape; add subagent/pinned-cwd caveat",
+            "task": "",
+            "ts": "2026-06-22"
+          }
+        ]
+      },
+      "skill:build-loop": {
+        "component": {
+          "id": "skill:build-loop",
+          "type": "skill",
+          "file": "skills/build-loop/SKILL.md"
+        },
+        "proposals": [
+          "proposals/2026-06-21-spec-driven-dev.md"
+        ]
+      },
+      "agent:critic": {
+        "component": {
+          "id": "agent:critic",
+          "type": "agent",
+          "file": "agents/critic.md"
+        },
+        "proposals": [
+          "proposals/2026-06-21-mission-control-tui.md"
+        ]
+      }
+    },
+    "unscoped": {
+      "followups": [
+        {
+          "id": "a8ee80",
+          "text": "evals corpus commit-message is a flaky enforcement gate",
+          "task": "",
+          "ts": "2026-06-14"
+        }
+      ]
+    },
+    "proposals": [
+      {
+        "path": "proposals/2026-06-21-mission-control-tui.md",
+        "name": "2026-06-21-mission-control-tui",
+        "status": "PROPOSAL",
+        "concerns": [
+          "agent:critic"
+        ]
+      },
+      {
+        "path": "proposals/2026-06-21-spec-driven-dev.md",
+        "name": "2026-06-21-spec-driven-dev",
+        "status": "All phases",
+        "concerns": [
+          "skill:build-loop"
+        ]
+      }
+    ],
+    "followups_open": 7,
+    "in_flight": {
+      "branch": "feat/mission-control-p1-tui",
+      "session_owner": "de0e3d65",
+      "active_sessions": 2,
+      "trunk_lease_holders": [
+        {
+          "session_id": "fa7d1457",
+          "branch": "main"
+        }
+      ]
+    }
+  },
+  "health": {
+    "predictions": {
+      "total": 125,
+      "hit": 100,
+      "miss": 25,
+      "unscored": 1,
+      "hit_rate": 0.8,
+      "by_category": {}
+    },
+    "corrections_total": 0,
+    "structural_rot": 0,
+    "skill_fires": {},
+    "eval_cases": {
+      "total": 7,
+      "present": 7
+    }
+  },
+  "meta": {
+    "node_count": 112,
+    "edge_count": 234,
+    "view": "mission"
+  }
+}
