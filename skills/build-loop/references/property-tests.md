@@ -82,6 +82,20 @@ This is also a **build-loop phase-3** instruction: when the critic reviews an
 orchestration suite, its job is to attempt a *token-correct, data-wrong* cheat. If it
 goes green, the suite is prompt-archaeology — harden with closure tests before building.
 
+## A threshold guard must pin BOTH sides
+
+A check guarding a CONDITIONAL gate — one that fires ABOVE a threshold and stays
+silent BELOW it — must assert both directions, or it is green-but-hollow against half
+its failure modes (the symmetric twin of prompt-archaeology). Pin the POSITIVE (it
+fires when it should — catches the gate going dead) AND the NEGATIVE (it stays silent
+when it should not — catches an OVER-STRICT regression that fires everywhere and breaks
+in-progress work). A positive-only guard passes while the gate quietly tightens to block
+everything. Worked case: `evals/corpus/spec-binding/check.py` first pinned only that
+`untested-requirement` FIRES at `status: shipped`, not that it stays silent at
+`status: building` — a regression firing the class at every status would have passed;
+the fix was a `status: building` fixture asserting `--check` exits 0 (session d68234ea,
+caught by a fresh-context critic on the committed guard, not by first-pass green).
+
 ## Constrain generators to the intended input domain
 
 A property can false-fail on inputs the spec never claimed to support — and that
@@ -106,4 +120,4 @@ Use the property/generative library native to the stack — `hypothesis` (Python
 over randomized + edge inputs asserting the invariant is a valid property test.
 Keep generators hermetic (seeded, no network), like every eval.
 
-provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent. · 2026-06-21 (session 7d2da048): added the constrain-generators-to-domain caveat after dogfooding build-loop on repo_rel surfaced a reserved-name generator bug that made green unreachable; verified os.path.relpath raises on reserved names same-drive. · 2026-06-21 (session 6ccd3cee): added the output-closure section for prompt-emitting / agent-orchestration units after a build-loop phase-3 critic wrote a 30/30-green cheat (right tokens, garbage data) against a prompt-archaeology suite in the brand-foundry M3 build; SC3.12b (run the real contract passCondition on returned output) killed it.
+provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent. · 2026-06-21 (session 7d2da048): added the constrain-generators-to-domain caveat after dogfooding build-loop on repo_rel surfaced a reserved-name generator bug that made green unreachable; verified os.path.relpath raises on reserved names same-drive. · 2026-06-21 (session 6ccd3cee): added the output-closure section for prompt-emitting / agent-orchestration units after a build-loop phase-3 critic wrote a 30/30-green cheat (right tokens, garbage data) against a prompt-archaeology suite in the brand-foundry M3 build; SC3.12b (run the real contract passCondition on returned output) killed it. · 2026-06-21 (session d68234ea): added the two-sided-threshold-guard rule after a fresh-context critic on the SDD Phase C spec-binding guard caught it pinned only the fires-above side (untested-requirement at status:shipped), not silent-below (status:building) — an over-strict regression would have passed.
