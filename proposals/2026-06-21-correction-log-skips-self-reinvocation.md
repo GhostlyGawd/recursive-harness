@@ -1,8 +1,15 @@
 # Proposal: the correction detector logs the harness's OWN self-re-invocations as user corrections
 
 - **Date:** 2026-06-21
-- **Status:** PROPOSAL — one open question (does `isMeta` reach the hook stdin?) blocks
-  the final form of the fix. Resolve that, then a one-branch enforcement PR implements it.
+- **Status:** RESOLVED 2026-06-21 → implemented via PR `proposal/2026-06-21-correction-log-autonomy`.
+  Open question answered: **`isMeta` is NOT delivered to the `UserPromptSubmit` hook stdin** (Claude
+  Code hooks docs, verified 2026-06-21 — schema is `session_id, transcript_path, cwd, permission_mode,
+  hook_event_name, prompt` + optional `agent_id, agent_type, effort`), so **Option A is dead**.
+  `permission_mode` is also unusable: the silo runs `defaultMode: bypassPermissions`
+  (`templates/account-settings.json`), so the human and the engine share the same mode. Final fix
+  (all content-SHAPE, Option B phrase-denylist stays rejected): **(i)** skip sub-agent prompts
+  (`agent_id`/`agent_type`); **(ii)** Option C tighten the bare `stop` token; **(iii)** honor a
+  SIGNAL only inside the prompt's opening window (`prompt[:280]`).
 - **Origin:** session e89c7b2c, 2026-06-20/21. A long autonomous-engine babysitting run
   drove its own cadence with `ScheduleWakeup`. The correction detector logged the agent's
   three self-authored wakeup prompts as "user corrections," and the Stop retro-gate then
