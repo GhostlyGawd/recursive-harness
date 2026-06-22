@@ -39,3 +39,5 @@ jobs:
           python3 cartograph/test_diff.py
           python3 cartograph/test_audit.py
           python3 cartograph/test_hardening.py
+          python3 cartograph/test_spec.py
+          python3 cartograph/test_spec_gate.py
