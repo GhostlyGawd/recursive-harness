@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: Create + manage git worktrees in this harness — when to isolate vs when one is overhead, how to EnterWorktree/ExitWorktree (they live at .claude/worktrees/<name>), and the gotchas that bite here: results don't auto-merge to main; state/ is gitignored so `harness` writes in a worktree miss the main ledger; committed memory/ rides in; shared DB/ports aren't isolated; the guard protects the trunk, not a worktree's own copies. Use whenever a second session opens, independent tasks fan out, or file-mutating agents run beside other work — the user never asks for a worktree or recites a gotcha.
-provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test. · 2026-06-19 (session 0081d05a): added §3 batch-prune-under-concurrency + Guard-A-loop gotchas, from a cleanup whose stale-snapshot plan mispredicted (prediction a7cf091e, miss). · 2026-06-21 (session 04fb5c5c): §6 — EnterWorktree fails from a pinned/repo-root session in both forms; added the isolation-agent Write+commit fallback. From a proposal written beside a concurrent cartograph session (4 guards + both EnterWorktree forms blocked).
+provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test. · 2026-06-19 (session 0081d05a): added §3 batch-prune-under-concurrency + Guard-A-loop gotchas, from a cleanup whose stale-snapshot plan mispredicted (prediction a7cf091e, miss). · 2026-06-21 (session 04fb5c5c): §6 — EnterWorktree fails from a pinned/repo-root session in both forms; added the isolation-agent Write+commit fallback. From a proposal written beside a concurrent cartograph session (4 guards + both EnterWorktree forms blocked). · 2026-06-22 (session 5bc7a495): §3 — a `locked` worktree can be held by the session's OWN long-lived host (not a peer); detect via a process-ancestry walk from `$PID`, reclaim self-held locks with `git worktree unlock`→`remove` (never kill the pid). From a 20→3 worktree GC where pid 36648 turned out to be this session's host.
 ---
 
 # Worktree — isolate parallel work without clobbering
@@ -116,34 +116,28 @@ Two paths with two different bars — don't conflate them:
 - **`claude --worktree` and `-p` non-interactive runs are NOT auto-cleaned.**
   Manual: `git worktree remove <path>` (`--force` to discard changes), then
   `git worktree prune`.
-- A running agent's worktree is held with `git worktree lock` so concurrent
-  cleanup can't yank it.
 - **Before removing, reconcile this worktree's gitignored `state/`** (see §2) —
   cleanup discards it.
-- **Pruning a BATCH of stale worktrees/branches — rule-driven, not list-driven.**
-  Branch/worktree state is non-stationary while another session is live: it can
-  swap a worktree's branch, push, open a PR, or delete a branch mid-pass. So (1)
-  treat any `git worktree list` / `git branch -vv` survey as a SNAPSHOT — re-read
-  it immediately before each destructive batch, not once at the start; (2) drive
-  each delete off a RULE ("merged into `main` AND not pinned by a worktree AND no
-  open PR"), never off a memorized list of names; (3) lean on git's own refusals
-  as the real safety net — `git worktree remove` (no `--force`) refuses a dirty
-  tree, `git branch -d` (not `-D`) refuses an unmerged branch — let them refuse
-  rather than pre-judging. Spot live sessions by comparing `.jsonl` mtimes under
-  the config `projects/*<repo>*` dirs. (session 0081d05a, 2026-06-19 — a concurrent
-  session swapped a worktree's branch and opened a PR mid-cleanup; the snapshot
-  plan mispredicted 6 worktrees / 18 branches, got 5 / 16; prediction a7cf091e
-  scored a miss.)
-- **Guard A's `git worktree` exemption is matched per shell-segment, at the
-  segment START — so a loop breaks it.** A batch loop (`for w in …; do git
-  worktree remove ".claude/worktrees/$w"; done`) is BLOCKED: after the guard
-  splits on `;`, the loop-BODY segment leads with `do` (a conditional body leads
-  with `then`), not `git worktree`, so the exemption never fires — and the
-  `.claude/worktrees/` reference in that body then trips the foreign-worktree match
-  (true whether the path is a literal or an unexpanded `$w`). Run each `git
-  worktree remove "<literal path>"` as its OWN command — each then leads with `git
-  worktree` and is exempt; `&&`-chaining them works too, since every chained
-  segment still leads with `git worktree`. (session 0081d05a, 2026-06-19.)
+- **Pruning a BATCH is rule-driven, not list-driven.** State is non-stationary
+  while a peer session is live (it can swap a branch, push, or open a PR mid-pass),
+  so: re-read the `git worktree list` / `git branch -vv` SNAPSHOT before each
+  destructive batch; drive each delete off a RULE ("merged into `main` AND not
+  pinned by a worktree AND no open PR"), never a memorized name list; and lean on
+  git's own refusals (`git worktree remove` without `--force` refuses a dirty tree;
+  `git branch -d` not `-D` refuses an unmerged branch). Run each `git worktree
+  remove "<literal path>"` as its OWN command — a `for … do git worktree remove …`
+  loop is BLOCKED (Guard A's exemption matches the segment START, and the loop body
+  leads with `do`). Spot live peers by `.jsonl` mtimes under `projects/*<repo>*`.
+- **A `locked` worktree may be held by THIS session's own long-lived host, not a
+  dead peer** — locks leak from `isolation:worktree` agents and outlive them. Before
+  reaping one or killing the holder pid, walk the current shell's process-ancestry
+  (PowerShell: `Win32_Process.ParentProcessId` from `$PID` up): if the holder is an
+  ANCESTOR it's your own session, and killing it ends the conversation. Reclaim
+  self-held locks losslessly with `git worktree unlock "<path>"` → `git worktree
+  remove "<path>"` (never `--force`/kill), or let them free on the next CLI restart.
+- Full batch-GC empirics — the snapshot/rule/refusal discipline, the Guard-A loop
+  trap, `git branch -d`'s merged-into-HEAD pitfall, and lock self-vs-peer
+  diagnostics (with provenance) — live in `references/cleanup.md`.
 
 ## 4. Windows / this repo's housekeeping
 
