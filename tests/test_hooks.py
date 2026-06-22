@@ -183,6 +183,24 @@ rc, out, _ = run("log_correction.py",
 after3 = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
 check("correction logger ignores task-notifications", rc == 0 and after3 == after2, f"{after2}->{after3}")
 
+# resolved 2026-06-21 (proposal correction-log-skips-self-reinvocation): selfforge autonomous
+# engine flooded the ledger. (a) sub-agent prompts are never corrections; (b) a real correction
+# leads with its signal -- a long machine prompt buries an incidental token; (c) bare engine-control
+# "stop" is not a correction, but "stop doing that" is.
+rc, _, _ = run("log_correction.py", {"prompt": "no, that's wrong", "session_id": sess, "agent_type": "critic"})
+after_sa = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
+check("correction logger skips sub-agent prompts", rc == 0 and after_sa == after3, f"{after3}->{after_sa}")
+buried = "You are the planner for the autonomous engine. " + ("Recite the goal hierarchy. " * 12) + "If you stop mid-cycle, clean with git reset."
+rc, _, _ = run("log_correction.py", {"prompt": buried, "session_id": sess})
+after_b = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
+check("correction logger skips buried-signal bootstrap", rc == 0 and after_b == after_sa, f"{after_sa}->{after_b}")
+rc, _, _ = run("log_correction.py", {"prompt": "Stop looping", "session_id": sess})
+after_sl = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
+check("correction logger skips bare engine-control 'Stop looping'", rc == 0 and after_sl == after_b, f"{after_b}->{after_sl}")
+rc, _, _ = run("log_correction.py", {"prompt": "stop doing that, it's the wrong table", "session_id": sess})
+after_sd = sum(1 for _ in open(log, encoding="utf-8")) if os.path.exists(log) else 0
+check("correction logger still logs real 'stop doing that'", rc == 0 and after_sd == after_sl + 1, f"{after_sl}->{after_sd}")
+
 # stop gate: blocks at threshold, then only once
 for _ in range(2):
     run("log_correction.py", {"prompt": "no, stop, undo that", "session_id": sess})

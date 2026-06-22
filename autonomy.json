@@ -1,16 +1,16 @@
 {
   "_doc": "Graduated autonomy ledger. A category may flip auto_merge to true only when proposed >= 20 and accepted/proposed >= 0.95, via /meta-retro, via PR. 'enforcement' (hooks, lint, evals, autonomy.json, settings.json, .github) is graduable: false FOREVER — the lint rejects any change to that.",
-  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts.",
+  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts. 2026-06-21 reconcile (/meta-retro, session 04fb5c5c): skills 5->11, commands 4->6 to match current trunk inventory (skills count - 6 seed; commands count - 6 seed); agents 0 and memory 3 unchanged; no graduation (all < 20).",
   "categories": {
     "skills": {
-      "proposed": 5,
-      "accepted": 5,
+      "proposed": 11,
+      "accepted": 11,
       "auto_merge": false,
       "graduable": true
     },
     "commands": {
-      "proposed": 4,
-      "accepted": 4,
+      "proposed": 6,
+      "accepted": 6,
       "auto_merge": false,
       "graduable": true
     },

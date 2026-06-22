@@ -23,7 +23,7 @@ HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(HARNESS_ROOT, "state", "corrections.jsonl")
 
 SIGNALS = re.compile(
-    r"\b(no[,.]|that'?s (wrong|not what)|not what i (meant|asked|wanted)|stop[,. ]"
+    r"\b(no[,.]|that'?s (wrong|not what)|not what i (meant|asked|wanted)|stop (doing|that|it|now)"
     r"|undo|revert that|i (said|meant|asked for)|why did you|you (ignored|missed|changed)"
     r"|don'?t do that|wrong (file|direction|approach)|again[,.]? (no|wrong))\b",
     re.IGNORECASE,
@@ -44,7 +44,20 @@ def main() -> int:
     # corrections.jsonl entries that falsely trip the Stop retro gate. (followup 216b37)
     if prompt.lstrip().startswith("<task-notification"):
         return 0
-    if not SIGNALS.search(prompt):
+    # Sub-agent prompts and autonomous prompt streams are not user corrections. The selfforge
+    # autonomous engine flooded this ledger (bootstrap + ScheduleWakeup prompts). `isMeta` is NOT
+    # on the UserPromptSubmit hook stdin (Claude Code hooks docs, verified 2026-06-21), and the silo
+    # runs defaultMode=bypassPermissions so permission_mode can't separate human from engine. So
+    # discriminate on what remains, content-SHAPE not phrase-denylist (proposal
+    # 2026-06-21-correction-log-skips-self-reinvocation.md):
+    #  - a prompt arriving inside a sub-agent (agent_id/agent_type set) is orchestrator->agent, never
+    #    a user correction;
+    #  - a real reactive correction LEADS with its signal ("No, that's wrong ..."); a long
+    #    machine-authored bootstrap buries an incidental token (a deep "if you stop ...") hundreds of
+    #    chars in, so only honor a SIGNAL inside the prompt's opening window.
+    if data.get("agent_id") or data.get("agent_type"):
+        return 0
+    if not SIGNALS.search(prompt[:280]):
         return 0
     session = data.get("session_id", "?")
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
