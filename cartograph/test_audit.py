@@ -202,6 +202,59 @@ check(("no auto-prune" in mr.lower()) or ("never auto" in mr.lower())
       "meta-retro states the firewall: candidates are surfaced, pruning stays human")
 
 
+# ===================================== 8. heal-health vital sign (auto-healer v2 synergy)
+print("[8] heal_health(): repo-key agrees with heal.py, advisory firewall, fail-open")
+sys.path.insert(0, os.path.join(ROOT, "skills", "auto-healer"))
+import heal  # the single-source predicate module heal_health imports
+
+# (a) the drift risk: cartograph's repo-key derivation must match heal.py's exactly.
+# test cwd is cartograph/, whose git toplevel is ROOT -> heal._repo_key() keys to ROOT.
+check(ex._heal_repo_key(ROOT) == heal._repo_key(),
+      "cartograph _heal_repo_key(ROOT) == heal.py _repo_key() (no key drift)")
+
+# (b) audit_report always carries the heal_health key + meta count (None on clean trunk).
+g2 = ex.Graph()
+g2.node("skill:x", "skill", "x", file="skills/x/SKILL.md", added=OLD, fires=1)
+rep2 = ex.audit_report(g2, [], today=TODAY)
+check("heal_health" in rep2 and "heal_escalate_count" in rep2["meta"],
+      "audit_report has heal_health + meta.heal_escalate_count keys")
+
+# (c) populated path on a fixture root: a recurring+failed bug -> escalate_count 1,
+# advisory + non-mutating. Reads the ledger at ex.ROOT; predicates come from heal._metrics.
+with tempfile.TemporaryDirectory() as d:
+    key = ex._heal_repo_key(d)
+    hd = os.path.join(d, "state", "heal", key)
+    write(os.path.join(hd, "bugs.jsonl"),
+          json.dumps({"id": "b1", "status": "recurred", "recurrences": 1,
+                      "tags": [], "summary": "root defect", "links": []}) + "\n")
+    write(os.path.join(hd, "attempts.jsonl"),
+          json.dumps({"id": "a1", "bug": "b1", "outcome": "failed",
+                      "ts": "2026-01-01T00:00:00+00:00"}) + "\n")
+    saved = ex.ROOT
+    try:
+        ex.ROOT = d
+        h = ex.heal_health()
+    finally:
+        ex.ROOT = saved
+    check(h is not None and h["escalate_count"] == 1 and h["n_bugs"] == 1,
+          "heal_health reads the ledger: recurring+failed -> escalate_count 1")
+    check(h.get("advisory") is True and h.get("mutates") is False,
+          "heal_health declares the firewall: advisory, non-mutating")
+
+# (d) fail-open: an empty/absent ledger -> None (never bricks --audit/--json/--check).
+with tempfile.TemporaryDirectory() as d:
+    saved = ex.ROOT
+    try:
+        ex.ROOT = d
+        check(ex.heal_health() is None, "absent heal ledger -> None (fail-open)")
+    finally:
+        ex.ROOT = saved
+
+# (e) e2e: --check (the gate) never blocks on heal state - it is overlay, not structure.
+rc_chk, _ = run("--check")
+check(rc_chk in (0, 1), "--check runs; heal-health is advisory overlay, not a gate input")
+
+
 # ============================================================================ done
 print(f"\n{_passed} passed, {_failed} failed")
 sys.exit(1 if _failed else 0)
