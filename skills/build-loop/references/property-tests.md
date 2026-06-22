@@ -48,6 +48,40 @@ impact."
   while the unit tests assert the closure exhaustively — the "contracts not counts"
   precedent.
 
+## When the unit EMITS prompts / orchestrates agents — bind on OUTPUT, not prose
+
+A feature whose job is to *drive agents* (build a prompt, fan out, return structured
+results) invites two tests that look like they bind intent but don't:
+
+- **Prompt-archaeology:** asserting a token appears in an agent's prompt string
+  (`assert /sourceArtifact/.test(plannerPrompt)`). Proves you wrote a word — not
+  that the system *behaves*. The prompt can recite a rule the code then ignores.
+- **Shape-validation:** running a schema check (`validateOutput`) on the return.
+  Proves the envelope is well-formed — not that its *content* is right.
+
+A suite built only from these is green-but-hollow: an implementation that emits the
+right tokens with **wrong data** passes every assertion. The binding test is
+**OUTPUT-CLOSURE** — run the feature's REAL contract `passCondition` against the
+ACTUAL returned data, the same check the rest of the system trusts:
+
+Intent clause: "every synthesized direction grows from the product's own material
+(synthesis, not selection)." Prompt-grep proves the planner was *told* to; closure
+proves the OUTPUT obeys: `for (d of result.directions) assert(seedMaterial.has(d.sourceArtifact))`,
+and run the contract's own `auditable-chain` passCondition on `result.directions`.
+A cheat that emits schema-valid directions with garbage `sourceArtifact` passes
+prompt+shape and **fails closure** — which is exactly the 30/30-green cheat a
+build-loop phase-3 critic built against a prompt-archaeology suite (brand-foundry M3,
+SC3.12b is the closure test that killed it). Rule: **for every intent clause currently
+bound "prompt-only", add one closure assertion that the intent holds of the OUTPUT.**
+
+> Drive the stub through the harness's own fake-`agent()` (zero token cost) and feed
+> the planner *valid* directions via an injectable impl, so an honest pass-through
+> goes green while an output-corrupting cheat goes red.
+
+This is also a **build-loop phase-3** instruction: when the critic reviews an
+orchestration suite, its job is to attempt a *token-correct, data-wrong* cheat. If it
+goes green, the suite is prompt-archaeology — harden with closure tests before building.
+
 ## Constrain generators to the intended input domain
 
 A property can false-fail on inputs the spec never claimed to support — and that
@@ -72,4 +106,4 @@ Use the property/generative library native to the stack — `hypothesis` (Python
 over randomized + edge inputs asserting the invariant is a valid property test.
 Keep generators hermetic (seeded, no network), like every eval.
 
-provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent. · 2026-06-21 (session 7d2da048): added the constrain-generators-to-domain caveat after dogfooding build-loop on repo_rel surfaced a reserved-name generator bug that made green unreachable; verified os.path.relpath raises on reserved names same-drive.
+provenance: 2026-06-21, session 7d2da048 — the one net-new procedure backing build-loop phase 2; no prior harness artifact covers property-based testing (verified by grep). Cites the cartograph "contracts not counts" check scripts as the in-repo precedent. · 2026-06-21 (session 7d2da048): added the constrain-generators-to-domain caveat after dogfooding build-loop on repo_rel surfaced a reserved-name generator bug that made green unreachable; verified os.path.relpath raises on reserved names same-drive. · 2026-06-21 (session 6ccd3cee): added the output-closure section for prompt-emitting / agent-orchestration units after a build-loop phase-3 critic wrote a 30/30-green cheat (right tokens, garbage data) against a prompt-archaeology suite in the brand-foundry M3 build; SC3.12b (run the real contract passCondition on returned output) killed it.
