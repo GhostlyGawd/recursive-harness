@@ -73,6 +73,22 @@ edits, read-only analysis. Under-firing returns you to re-prompting; over-firing
 taxes quick tasks — phase 0's confirm-gate is what stops it firing on an
 ambiguous ask.
 
+## Verifying on this Windows checkout (cp1252)
+
+Ad-hoc `python3 -c "...open()..."` verify one-liners default to cp1252 here and
+crash two ways: READING a byte undefined in cp1252 (e.g. `0x8f`, from
+`open(f).read()`), and PRINTING a char cp1252 can't encode (arrows →, em-dashes,
+CJK from ledger data) to a strict console. It bites in phases 4–5 AND on the late
+ship commands (push/PR/score), where it is easy to drop the flag after a clean run. Prefix EVERY inline-python verify command with
+`PYTHONUTF8=1`; to read a file's contents prefer `python3 -m py_compile <f>` over
+`open(f).read()`. This is the THROWAWAY-command side; making a COMMITTED script
+robust (`open(encoding="utf-8")`, reconfigure stdout) lives in skill
+`harness-authoring` "Running scripts on this Windows checkout" — don't duplicate
+it. Do NOT reach for a global `PYTHONUTF8` env override: it masks a non-robust
+committed script that then breaks in CI / another env, defeating that robustness.
+(session 908de0ac, 2026-06-21: inline `ast.parse(open(...))` + a later command that
+dropped the flag crashed cp1252 3× during an otherwise-clean auto-healer build/verify.)
+
 ## Property tests bind green to intent (the one new procedure)
 
 An example test can certify your own assumption; a property derived from the
