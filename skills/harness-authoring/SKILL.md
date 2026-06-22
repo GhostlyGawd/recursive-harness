@@ -136,6 +136,15 @@ session f36989d6, 2026-06-21: 8 exact-match Edits matched LF `old_string`s again
 CRLF cartograph/extract.py with no normalization — pre-emptive-normalize advice
 was overcautious and contradicted the no-EOL-flip rule in the same paragraph.)
 
+The same autocrlf gotcha bites TESTS, not just edits: any test or `--check` that
+compares a COMMITTED text file against freshly GENERATED content passes on the
+authoring machine yet FALSE-FAILS on a clean checkout / CI — the committed-LF file is
+checked out CRLF while a generator emits LF. Normalize EOL on BOTH sides before
+comparing (`s.replace(/\r\n/g,"\n")`); a drift gate must catch CONTENT drift, not
+line-ending churn. Prove it by feeding the comparator a CRLF copy. (session 1a5cff26,
+2026-06-22: a generated-docs drift test — committed `.md` == generator output — would
+have false-failed on every fresh clone until the comparison was EOL-normalized.)
+
 ## Running scripts on this Windows checkout (cp1252 default + multiple drives)
 
 Python here defaults to cp1252, not UTF-8. Any script that reads/writes files

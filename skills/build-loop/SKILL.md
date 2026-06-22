@@ -97,6 +97,24 @@ proves intent, not just example-pass. The authoring bar + worked examples live i
 references/property-tests.md. The cartograph evals' "contracts not counts" check
 scripts are the in-repo precedent.
 
+## Fan-out refactors with a static-equivalence contract
+
+When N independent files need the SAME semantics-preserving refactor (a codemod, a
+rename, composing a shared layer), dispatch one subagent per file IN PARALLEL — but
+replace post-hoc verification (the orchestrator diffing each result) with a
+correctness-BY-CONSTRUCTION contract each agent must satisfy and PROVE:
+  1. Hand it the canonical mapping (old value → new symbol) as an explicit table.
+  2. Rule: apply a swap ONLY where EVERY property the element sets EXACTLY equals the
+     target's; otherwise leave it local. "When in doubt, leave local." Forbid swaps
+     that ADD or remove a property — that changes computed output (not semantics-preserving).
+  3. Require a per-swap proof line in the report (`old == new: YES`) + a mechanical gate
+     (lint / type-check / suite) that must PASS.
+The proof obligation is what makes parallel fan-out safe WITHOUT a human diffing each
+result: the orchestrator reconciles only the REPORTED exceptions, then runs the full
+suite ONCE (the cold green of phase 4-5). (session 1a5cff26, 2026-06-22: 7 surface
+files retrofitted to compose a shared CSS component layer — 7/7 returned clean, agents
+even refused swaps that would ADD a line-height the element lacked.)
+
 ## Relationships (one name per concept — never fork)
 
 - **venture-build** is the multi-session, Linear-managed, scaffold+ledger SUPERSET
