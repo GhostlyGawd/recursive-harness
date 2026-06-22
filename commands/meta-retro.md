@@ -17,7 +17,11 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    (orphan hooks / dangling ADRs — same fingerprints the gate blocks on) and
    `dead_weight` (skill/agent that is unreferenced *and* unused *and* > 90d old —
    the same three-part bar this step already applies, computed mechanically so you
-   prune from evidence, not by eyeball). The audit is **advisory only**: it exits 0,
+   prune from evidence, not by eyeball). It also reports `heal_health` (advisory:
+   recurrence_rate, stuck/escalate counts, mean attempts-to-heal for THIS repo);
+   diff `memory/heal/<label>/` month-over-month for the trend — a RISING
+   recurrence_rate is the harness healing worse, and the next thing to mine. The
+   audit is **advisory only**: it exits 0,
    mutates nothing, and never prunes. Candidates are surfaced for human judgment;
    pruning stays your decision (a map that could delete its own nodes to look clean
    is the reward-hack the kernel forbids). On the young trunk it correctly reports

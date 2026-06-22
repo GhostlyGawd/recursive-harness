@@ -9,6 +9,12 @@ description: Garbage-collect harness memory — roll up hot state, decay stale u
    `"$HARNESS/bin/harness" gc --days 30` — rolls cold state/ records into
    memory/calibration/<YYYY-MM>.json (versioned). Unscored predictions are
    never silently archived; score or explicitly drop them first (/calibrate).
+   Then roll up heal-health the same way (it is NOT part of bin/harness gc):
+   `python3 "$HARNESS/skills/auto-healer/heal.py" rollup --label recursive-harness --trim-days 90`
+   — versions a stats-only digest into memory/heal/<label>/<YYYY-MM>.json and decays
+   resolved `healed` records older than 90d (NEVER wontfix — that is falsified-hypothesis
+   memory). Stats only, never raw prose; lessons still route via /retro. Commit on the
+   same `gc/$(date +%F)` branch.
 2. **User-model decay pass** over memory/user-model.md:
    - duplicates/near-duplicates → merge, sum evidence, keep latest date;
    - `last:` older than 90d and evidence < 3 → move to memory/archive/
@@ -21,3 +27,8 @@ description: Garbage-collect harness memory — roll up hot state, decay stale u
    (`git -C "$HARNESS"`) and PR it (memory edits are auditable like any other harness change).
 5. Report: records rolled, entries merged/retired, anything needing the
    user's confirmation. Ask the confirmation questions now, while they're here.
+
+<!-- provenance: 2026-06-21, session 908de0ac — added the heal-health rollup to step 1
+(auto-healer v2). Deliberately a heal.py subcommand, NOT an extension of the write-locked
+bin/harness gc; writes stats-only to memory/heal/, decays healed (never wontfix). -->
+

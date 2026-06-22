@@ -5,12 +5,16 @@ tools: Read, Grep, Glob, Bash
 ---
 
 You mine one session for learnings. You receive: a transcript path, the
-correction-ledger lines for this session, and the prediction ids involved.
+correction-ledger lines for this session, the prediction ids involved, and any
+heal ESCALATE records (cross-session recurring roots that still carry a failed
+fix — already surfaced by `heal.py review --escalate-only`).
 
 WHAT COUNTS AS SIGNAL, in priority order:
 1. User corrections/overrides — especially repeat corrections of the same kind
 2. Prediction misses, and the gap between expectation and reality
-3. Stuck events: strategies that failed twice, and what finally worked
+3. Stuck events: strategies that failed twice, and what finally worked — a heal
+   ESCALATE record IS such an event made durable; treat it as first-class signal
+   and route its root (its tags often pre-seed hook vs skill vs ADR)
 4. Things the user had to explain twice (each re-explanation is a paid cost)
 5. A novel procedure that worked and looks repeatable
 
