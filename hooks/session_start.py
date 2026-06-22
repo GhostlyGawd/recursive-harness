@@ -77,9 +77,24 @@ def _branch_warning(session_cwd):
         if ahead and ahead.isdigit() and int(ahead) > 0:
             return (f"[harness] (!) local {branch} has DIVERGED from origin/{branch} "
                     f"({behind} behind, {ahead} ahead) - reconcile before branching")
-        return (f"[harness] (!) local {branch} is {behind} commit(s) behind "
+        # Behind, NOT diverged: ACT instead of suggest, but SAFELY. Gate on a CLEAN
+        # tracked tree first -- auto-advancing a dirty tree is unsafe (could surprise
+        # an in-progress edit). `status --porcelain --untracked-files=no` is exactly ""
+        # only when no tracked change is staged or unstaged; any error -> None -> warn.
+        warn = (f"[harness] (!) local {branch} is {behind} commit(s) behind "
                 f"origin/{branch} (a PR likely merged on GitHub) - "
                 f"`git pull --ff-only` to refresh local trunk")
+        status = _git(["status", "--porcelain", "--untracked-files=no"], session_cwd)
+        if status != "":
+            return warn  # dirty tracked tree (or git error -> None) -> fail safe to advisory
+        # Clean tree: NETWORK-FREE fast-forward of local trunk to the ALREADY-FETCHED
+        # origin ref. NOT `git pull` (that hits the network and can block/fail a session
+        # start -- a SessionStart hook must never touch the network). `merge --ff-only`
+        # advances local main from what was already fetched, no network.
+        if _git(["merge", "--ff-only", f"origin/{branch}"], session_cwd) is not None:
+            return (f"[harness] refreshed local {branch}: fast-forwarded {behind} commit(s) to "
+                    f"origin/{branch} (was behind a merged PR)")
+        return warn  # not actually fast-forwardable -> fail safe to advisory
     # A non-main branch: stranded-branch warning (the in-place retro/PR flows
     # branch in place and may end the session without returning to trunk).
     try:

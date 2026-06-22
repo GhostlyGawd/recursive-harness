@@ -19,7 +19,12 @@ Run the retrospection procedure (skill: retrospection). Concretely:
      are eligible signal, counted within the <=3-event bar below — not on top of it.
 2. Spawn the **retro-miner** agent with the transcript path, the correction
    lines, AND the heal ESCALATE records. Take its <=3 events; veto only with a
-   stated reason.
+   stated reason. (Resolve THIS session's transcript reliably before handing it
+   over: read `state/session_owners.json` for the live `session_id` of this cwd, or
+   take the newest-mtime `*.jsonl` under the account's `projects/<cwd-key>/` dir. Do
+   NOT infer the session id from agent temp-dir / task-output paths — that id is a
+   persistent grouping decoupled from the live session, and inferring from it mined
+   the WRONG prior session on 2026-06-21, wasting a full miner pass.)
 3. For each accepted event, run the routing tree (skill: routing-learnings) and
    draft the artifact per skill: harness-authoring, on branch
    `retro/$(date +%F)-<slug>` of the harness repo

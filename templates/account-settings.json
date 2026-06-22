@@ -85,11 +85,20 @@
         ]
       },
       {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_branch_first.py\""
+            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_git_worktree_safety.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_trunk_lease.py\""
           }
         ]
       }
@@ -110,6 +119,24 @@
           {
             "type": "command",
             "command": "python3 \"{{REPO_ROOT}}/hooks/log_skill_use.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/post_merge_return_to_trunk.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/guard_trunk_lease.py\""
           }
         ]
       }

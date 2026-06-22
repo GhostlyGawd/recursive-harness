@@ -18,8 +18,8 @@
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_isolation.py"}]},
       {"matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]},
-      {"matcher": "Edit|Write|MultiEdit|NotebookEdit",
-       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_branch_first.py"}]},
+      {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_git_worktree_safety.py"}]},
       {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_trunk_lease.py"}]}
     ],

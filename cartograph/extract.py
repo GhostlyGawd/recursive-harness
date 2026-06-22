@@ -2268,6 +2268,262 @@ def run_diff(cur_g, cur_warnings, ref, strict, as_json):
     return 1 if (strict and rep["verdict"]["blocking"] > 0) else 0
 
 
+# ============================================================ Mission Control (P0 data layer)
+# A read-only JOIN that overlays three layers onto the EXISTING component nodes, keyed by the
+# node's `file` path. It introduces NO node, NO edge, and NO new relation type into the graph -
+# the join lives ENTIRELY in the emitted payload (a `concerns` association is a payload field,
+# never a g.edge), so in-degree / dependents / blast-radius / orphans / the gate are byte-for-byte
+# identical to a run without --mission. The three layers:
+#   structure  - the nodes+edges cartograph already extracts, reused as-is (build_payload form).
+#   work       - per component: open followups that concern it, proposal Status, git in-flight.
+#   health     - calibration/predictions, recent corrections, eval status (reuses compute_overlay).
+# Best-effort association ONLY: a datum that cannot be tied to a component honestly goes to the
+# "unscoped" bucket; we never fabricate a link. Any unavailable datum is OMITTED, never faked.
+
+# A followup/proposal is associated to at most this many components, so one item that name-drops
+# many paths does not spam every bucket - the strongest signal (a literal file path) wins, and a
+# weak signal (a bare artifact name) only applies when no path matched. Keeps the join honest.
+def _component_nodes(g):
+    """The component nodes the mission view keys on: every node backed by a real file on disk
+    (skill/command/agent/hook/adr/cli/config/kernel/lint/evals with a `file`). Sessions, state
+    ledgers, lifecycle events, and spec/requirement overlay nodes carry no own file and are
+    excluded - they are not 'components' a followup or proposal is filed against."""
+    comps = {}
+    for nid, n in g.nodes.items():
+        f = n.get("file")
+        if not f or n.get("missing"):
+            continue
+        comps[nid] = n
+    return comps
+
+
+def _norm_path(p):
+    return (p or "").replace("\\", "/").strip().lstrip("./")
+
+
+def _associate_text(text, comps, name_index):
+    """Best-effort {component-nid} a free-text work item concerns. STRONGEST signal first:
+    any literal component FILE PATH mentioned in the text wins; only if NONE match do we fall
+    back to a bare unique artifact NAME (word-boundary). Returns a (possibly empty) set - an
+    empty set means 'unscoped', never a guess. Pure string scan; never raises."""
+    if not text:
+        return set()
+    low = text.replace("\\", "/").lower()
+    hits = set()
+    for nid, n in comps.items():
+        f = _norm_path(n.get("file")).lower()
+        if f and f in low:
+            hits.add(nid)
+    if hits:
+        return hits
+    # weak fallback: a bare artifact name, but ONLY if it is unambiguous (one component owns it)
+    for name, nids in name_index.items():
+        if len(nids) != 1:
+            continue
+        if re.search(r"(?<![\w/-])" + re.escape(name) + r"(?![\w/-])", text):
+            hits.add(nids[0])
+    return hits
+
+
+def _name_index(comps):
+    """bare-name -> [nid,...] over component nodes, so a name shared by two components is known
+    to be ambiguous (and therefore NOT used as a weak association signal)."""
+    idx = {}
+    for nid in comps:
+        nm = nid.split(":", 1)[-1]
+        idx.setdefault(nm, []).append(nid)
+    return idx
+
+
+def proposal_status(text):
+    """The human Status of a proposal, read from its `- **Status:** <...>` markdown bullet (the
+    convention every proposals/*.md uses), reduced to the leading STATE WORD (DRAFT/PROPOSAL/
+    SHIPPED/...). Returns "" when no status line is present. Deliberately NOT the YAML `status:`
+    key (proposals carry no frontmatter; an SDD code-fence example contains a `status:` line that
+    is documentation, not the doc's own state) - so we anchor on the bold-bullet form only."""
+    m = re.search(r"^\s*[-*]\s*\*\*status:?\*\*\s*[:\-]?\s*(.+)$", text, re.M | re.I)
+    if not m:
+        return ""
+    raw = m.group(1).strip()
+    # the state word is the leading token up to the first separator (em dash / slash / period)
+    word = re.split(r"[—\-/.,(]", raw, 1)[0].strip()
+    return word
+
+
+def mission_proposals(comps, name_index):
+    """Every proposals/*.md as a work item: its filename, parsed Status, and the component(s) it
+    best-effort concerns (by file-path or unique-name mention in its body). No proposal node is
+    created in the graph; this is payload-only. A proposal that names no component is unscoped."""
+    items = []
+    for f in listfiles("proposals", ".md"):
+        text = read(f)
+        items.append({
+            "path": rel(f),
+            "name": os.path.splitext(os.path.basename(f))[0],
+            "status": proposal_status(text),
+            "concerns": sorted(_associate_text(text, comps, name_index)),
+        })
+    return sorted(items, key=lambda x: x["path"])
+
+
+def mission_followups(comps, name_index):
+    """Open followups (status != done) folded by the component they concern. Association is
+    best-effort: first the `task` tag if it matches a component name/file, else a path/name hit in
+    the followup TEXT. Anything uncategorized lands in the returned `unscoped` list - we never
+    invent an association. Returns (by_component {nid:[items]}, unscoped [items], open_count).
+    Reads state/followups.jsonl if present; an absent ledger yields empty results, not an error."""
+    rows = read_jsonl(os.path.join(ROOT, "state", "followups.jsonl"))
+    by_component, unscoped, open_count = {}, [], 0
+    for r in rows:
+        if r.get("status") == "done":
+            continue
+        open_count += 1
+        item = {"id": r.get("id"), "text": r.get("text", ""),
+                "task": r.get("task", ""), "ts": r.get("ts")}
+        targets = set()
+        # strongest: an explicit task tag that IS a component name (unique) or file path
+        task = (r.get("task") or "").strip()
+        if task:
+            if task in name_index and len(name_index[task]) == 1:
+                targets.add(name_index[task][0])
+            else:
+                tnorm = _norm_path(task).lower()
+                for nid, n in comps.items():
+                    if _norm_path(n.get("file")).lower() == tnorm:
+                        targets.add(nid)
+        # fall back to the free text only when the tag gave nothing
+        if not targets:
+            targets = _associate_text(r.get("text", ""), comps, name_index)
+        if targets:
+            for nid in targets:
+                by_component.setdefault(nid, []).append(item)
+        else:
+            unscoped.append(item)
+    return by_component, unscoped, open_count
+
+
+def git_inflight():
+    """The in-flight signal git/state carry, all best-effort (any datum that is unavailable is
+    OMITTED from the dict, never faked): the current branch; the active session owner of THIS
+    root from state/session_owners.json; and the open trunk-lease holders from state/trunk-lease/.
+    Read-only - it only inspects git + the gitignored state/ ledgers."""
+    info = {}
+    try:
+        proc = subprocess.run(["git", "-C", ROOT, "rev-parse", "--abbrev-ref", "HEAD"],
+                              capture_output=True, text=True, timeout=15)
+        if proc.returncode == 0 and proc.stdout.strip():
+            info["branch"] = proc.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # session_owners.json: keys are absolute, lower-cased repo paths -> {session_id, pid, ...}
+    owners_path = os.path.join(ROOT, "state", "session_owners.json")
+    if os.path.isfile(owners_path):
+        try:
+            owners = json.loads(read(owners_path))
+        except (json.JSONDecodeError, ValueError):
+            owners = None
+        if isinstance(owners, dict):
+            key = ROOT.replace("\\", "/").rstrip("/").lower()
+            for k, v in owners.items():
+                if k.replace("\\", "/").rstrip("/").lower() == key and isinstance(v, dict):
+                    if v.get("session_id"):
+                        info["session_owner"] = v.get("session_id")
+                    break
+            info["active_sessions"] = sum(1 for v in owners.values() if isinstance(v, dict))
+    # trunk-lease/: one json per session currently holding (or having held) the trunk lease
+    lease_dir = os.path.join(ROOT, "state", "trunk-lease")
+    if os.path.isdir(lease_dir):
+        holders = []
+        for fn in sorted(os.listdir(lease_dir)):
+            if not fn.endswith(".json"):
+                continue
+            try:
+                ld = json.loads(read(os.path.join(lease_dir, fn)))
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if isinstance(ld, dict) and ld.get("session_id"):
+                holder = {"session_id": ld["session_id"]}
+                branch = (ld.get("fp") or {}).get("head_sym")
+                if branch:
+                    holder["branch"] = branch
+                holders.append(holder)
+        if holders:
+            info["trunk_lease_holders"] = holders
+    return info
+
+
+def mission_health(g, overlay, warnings):
+    """The health layer. REUSES compute_overlay()'s already-derived calibration/predictions +
+    corrections totals rather than re-deriving them (the prediction/correction ledgers are not
+    per-component, so these are harness-wide health, honestly reported as such), and folds in the
+    structural-rot count + the per-eval-case node presence the graph already carries. Any datum
+    the overlay could not compute is simply absent. Pure read."""
+    health = {
+        "predictions": overlay.get("predictions"),
+        "corrections_total": overlay.get("corrections_total"),
+        "structural_rot": len(warnings),
+        "skill_fires": overlay.get("skill_fires", {}),
+    }
+    # eval status: the corpus CASE nodes the structure layer already discovered (a real case has
+    # no `missing` flag; a case named only by a verified_by pointer with no dir does).
+    eval_cases = sorted(nid for nid, n in g.nodes.items() if n.get("type") == "evals")
+    if eval_cases:
+        health["eval_cases"] = {
+            "total": len(eval_cases),
+            "present": sum(1 for nid in eval_cases if not g.nodes[nid].get("missing")),
+        }
+    return health
+
+
+def build_mission_payload(g, overlay, warnings, notes, stamp):
+    """The single unified Mission Control payload: structure (nodes/edges as cartograph already
+    extracts) + work (followups/proposals folded by component, git in-flight) + health. Computed
+    on demand and printed to stdout - NEVER written to a static mission.json (drift discipline:
+    the graph is single-sourced, so is this view). Additive: it consumes the existing graph and
+    overlay read-only and emits a NEW shape beside them."""
+    comps = _component_nodes(g)
+    name_index = _name_index(comps)
+    fu_by_component, fu_unscoped, fu_open = mission_followups(comps, name_index)
+    proposals = mission_proposals(comps, name_index)
+    proposals_by_component = {}
+    for p in proposals:
+        for nid in p["concerns"]:
+            proposals_by_component.setdefault(nid, []).append(p["path"])
+
+    # per-component work block: ONLY components that actually have associated work appear, so the
+    # payload stays a join result, not a full N-by-empty matrix.
+    work_components = {}
+    for nid in comps:
+        block = {}
+        if fu_by_component.get(nid):
+            block["followups"] = fu_by_component[nid]
+        if proposals_by_component.get(nid):
+            block["proposals"] = proposals_by_component[nid]
+        if block:
+            block["component"] = {"id": nid, "type": comps[nid].get("type"),
+                                  "file": comps[nid].get("file")}
+            work_components[nid] = block
+
+    return {
+        "structure": {
+            "nodes": list(g.nodes.values()),
+            "edges": g.edges,
+            "node_count": len(g.nodes),
+            "edge_count": len(g.edges),
+        },
+        "work": {
+            "by_component": work_components,
+            "unscoped": {"followups": fu_unscoped},
+            "proposals": proposals,
+            "followups_open": fu_open,
+            "in_flight": git_inflight(),
+        },
+        "health": mission_health(g, overlay, warnings),
+        "meta": {"node_count": len(g.nodes), "edge_count": len(g.edges),
+                 "view": "mission", **stamp},
+    }
+
+
 def main():
     global ROOT
     ap = argparse.ArgumentParser(
@@ -2318,6 +2574,14 @@ def main():
     ap.add_argument("--strict", action="store_true",
                     help="with --diff: exit 1 if any BLOCKING finding exists (for CI). "
                          "Default is advisory (exit 0) - the --check gate stays the sole blocker.")
+    ap.add_argument("--mission", action="store_true",
+                    help="MISSION CONTROL: print (to stdout) a single unified JSON payload that "
+                         "JOINS three read-only layers onto the existing component nodes - "
+                         "structure (the extracted graph) + work (open followups & proposals "
+                         "folded by the component they concern, plus git in-flight signal) + "
+                         "health (calibration/corrections/eval summary). Additive & read-only: "
+                         "introduces no node/edge/relation, so all graph math is unchanged. "
+                         "Computed on demand - never written to a static mission.json.")
     ap.add_argument("--quiet", action="store_true", help="suppress the text dump")
     args = ap.parse_args()
 
@@ -2359,6 +2623,16 @@ def main():
         sys.exit(run_context(g, warnings, args.context, args.json is not None))
     if args.query is not None:
         sys.exit(run_query(g, warnings, args.query, args.json is not None))
+
+    # Mission Control: a terminal, read-only JOIN printed as one JSON payload. It needs the live
+    # overlay (compute_overlay) for the health layer; like --audit that pass only READS the
+    # gitignored state/ ledgers. Computed on demand and emitted to stdout - never persisted, so
+    # there is no static mission.json to drift. Additive: the graph itself is untouched.
+    if args.mission:
+        overlay = compute_overlay(g)
+        payload = build_mission_payload(g, overlay, warnings, notes, build_stamp())
+        sys.stdout.write(json.dumps(payload, indent=2) + "\n")
+        return
 
     # Part B reviewer: diff the CURRENT graph against the graph at REF. The current side is built
     # tracked_only so it matches what `git archive REF` feeds the REF side - a gitignored, on-disk
