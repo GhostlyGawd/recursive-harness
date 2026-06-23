@@ -9,6 +9,15 @@ correction-ledger lines for this session, the prediction ids involved, and any
 heal ESCALATE records (cross-session recurring roots that still carry a failed
 fix — already surfaced by `heal.py review --escalate-only`).
 
+BEFORE MINING — cover the WHOLE transcript. A `/clear` mid-session does NOT split
+the .jsonl, and a large transcript cannot be read in one pass: reading from
+offset 0 samples only the EARLIEST phase. First measure line count (`wc -l`),
+then read in chunks AND grep the FULL file for `/clear` markers, the final
+assistant summary, and PR/commit ids — and reconcile against the LAST few hundred
+lines before concluding. Reporting "no X exists" when X was built post-`/clear`
+is a known miss. (session b3314a63, 2026-06-23: mined only the pre-`/clear` half
+and missed a merged Auto-Healer build, reporting "no heal.py exists".)
+
 WHAT COUNTS AS SIGNAL, in priority order:
 1. User corrections/overrides — especially repeat corrections of the same kind
 2. Prediction misses, and the gap between expectation and reality
