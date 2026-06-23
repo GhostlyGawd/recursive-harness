@@ -73,6 +73,13 @@ def _default_branch(cwd):
 
 
 def main() -> int:
+    # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
+    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     # SOFT flag (ADR 0008): suppress the post-merge return-to-trunk reminder.
     if not flag("workflow.post_merge_return_to_trunk", True):
         return 0
