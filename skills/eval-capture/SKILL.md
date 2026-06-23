@@ -33,6 +33,14 @@ Skip: one-offs, secrets/proprietary data (sanitize or skip), pure lookups.
 - Keep cases hermetic: no network, no machine-specific paths, fixtures < 50KB.
 - Tag `category` to match prediction categories so calibration stats and eval
   results join up in /meta-retro.
+- **Leakage check (behavioral evals).** An eval that claims to test "the agent
+  used system X" is confounded if X's answer is pre-taught. Before finalizing,
+  grep the loaded `skills/`, `hooks/`, and `memory/decisions/` for the expected
+  answer; if an artifact that loads for this task already teaches it, the eval
+  passes WITHOUT exercising the capability — choose a fixture whose solution is
+  NOT pre-taught. Writing a fidelity constraint is not satisfying it: verify the
+  chosen fixture against it. (session 0d0fe086, 2026-06-22: a cp1252 recall eval
+  used the single most pre-taught fix in the repo.)
 
 Verify in-session before committing: run /run-evals <slug> (fresh subagent
 performs the task, no headless — ADR 0003) and confirm it passes today. A case that fails on day one
