@@ -30,8 +30,42 @@ import sys
 import uuid
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE = os.path.join(ROOT, "state")
+_TREE_STATE = os.path.join(ROOT, "state")  # this script's OWN checkout (git-absent fallback)
 MEMORY = os.path.join(ROOT, "memory")
+
+
+def _resolve_state_dir(start=None):
+    """Resolve state/ to the MAIN checkout via `git rev-parse --git-common-dir`, so a
+    worktree's ledgers (predict/outcome/followup/corrections/retro-done/gc/fleet) join the
+    ONE canonical log instead of a tree-local state/ that is gitignored and vanishes on
+    worktree cleanup (follow-ups 1d30be + d72eec). Run git against the SCRIPT's dir (never
+    cwd) for foreign-cwd safety; `start` overrides it (injectable for tests). Fall back to
+    _TREE_STATE if git is absent/errors; never raises.
+
+    Cost note: this runs ONE `git rev-parse` per CLI invocation (it sets STATE at import).
+    Accepted because no hook spawns bin/harness — the hooks write state/ directly — so only
+    interactive CLI calls pay it, never a hot per-tool-use loop. A git-free PATH-only fast
+    path (cf. hooks/inject_kernel._repo_root) is deferred to the shared-path-util extraction
+    (follow-up 3939d8): bin/ is off the hooks/ import path, so inlining _WT_RE here now would
+    just duplicate it."""
+    scriptdir = start or os.path.dirname(os.path.abspath(__file__))
+    try:
+        out = subprocess.run(
+            ["git", "-C", scriptdir, "rev-parse", "--git-common-dir"],
+            capture_output=True, text=True, timeout=5,
+        )
+        common = out.stdout.strip()
+        if out.returncode == 0 and common:
+            if not os.path.isabs(common):
+                common = os.path.normpath(os.path.join(scriptdir, common))
+            return os.path.join(os.path.dirname(common), "state")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return _TREE_STATE
+
+
+# state/ resolves to the MAIN checkout (single canonical ledger) — see _resolve_state_dir.
+STATE = _resolve_state_dir()
 
 PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
 CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
@@ -142,27 +176,7 @@ def _coerce_feature(raw: str):
         return raw
 
 
-# ---------------------------------------------------------------- fleet state resolver
-def _resolve_state_dir() -> str:
-    """Option A (state-single-ledger): resolve state/ to the MAIN checkout via git, so a
-    worktree's fleet events join the ONE canonical log instead of a tree-local state/ that
-    vanishes on cleanup. Run git against THIS script's dir (never cwd) for foreign-cwd
-    safety; fall back to this tree's STATE if git is absent/errors. This is the single
-    resolver — the fleet engine holds none of its own (audit revision #2)."""
-    scriptdir = os.path.dirname(os.path.abspath(__file__))
-    try:
-        out = subprocess.run(
-            ["git", "-C", scriptdir, "rev-parse", "--git-common-dir"],
-            capture_output=True, text=True, timeout=5,
-        )
-        common = out.stdout.strip()
-        if out.returncode == 0 and common:
-            if not os.path.isabs(common):
-                common = os.path.normpath(os.path.join(scriptdir, common))
-            return os.path.join(os.path.dirname(common), "state")
-    except (OSError, subprocess.SubprocessError):
-        pass
-    return STATE
+# (_resolve_state_dir moved above, beside STATE, so every ledger constant derives from it)
 
 
 # ---------------------------------------------------------------- predict
