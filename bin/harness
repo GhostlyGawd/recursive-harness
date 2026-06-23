@@ -15,6 +15,8 @@ Subcommands:
   retro-done   add | list | has — DURABLE ledger of retro'd sessions (persists past
                session end, unlike the ephemeral retro_gate_* flag); feeds /retro-backlog.
   gc           Roll hot state older than N days into versioned monthly summaries.
+  fleet        emit | feed | reap — lateral-coordination event channel for agents
+               (append-only, typed, self-reaping; resolves the one canonical state/).
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -23,6 +25,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import subprocess
 import sys
 import uuid
 
@@ -137,6 +140,29 @@ def _coerce_feature(raw: str):
         return float(raw) if "." in raw else int(raw)
     except ValueError:
         return raw
+
+
+# ---------------------------------------------------------------- fleet state resolver
+def _resolve_state_dir() -> str:
+    """Option A (state-single-ledger): resolve state/ to the MAIN checkout via git, so a
+    worktree's fleet events join the ONE canonical log instead of a tree-local state/ that
+    vanishes on cleanup. Run git against THIS script's dir (never cwd) for foreign-cwd
+    safety; fall back to this tree's STATE if git is absent/errors. This is the single
+    resolver — the fleet engine holds none of its own (audit revision #2)."""
+    scriptdir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        out = subprocess.run(
+            ["git", "-C", scriptdir, "rev-parse", "--git-common-dir"],
+            capture_output=True, text=True, timeout=5,
+        )
+        common = out.stdout.strip()
+        if out.returncode == 0 and common:
+            if not os.path.isabs(common):
+                common = os.path.normpath(os.path.join(scriptdir, common))
+            return os.path.join(os.path.dirname(common), "state")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return STATE
 
 
 # ---------------------------------------------------------------- predict
@@ -528,6 +554,55 @@ def cmd_features(args) -> int:
     return 1
 
 
+# ---------------------------------------------------------------- fleet
+def cmd_fleet(args) -> int:
+    """Lateral-coordination event channel (emit | feed | reap) over the canonical state/.
+    Thin adapter: resolve the one canonical state dir, then delegate to the stdlib-only
+    fleet engine. See proposals/2026-06-22-agent-mail-product.md."""
+    sys.path.insert(0, ROOT)  # fleet/ lives at the repo root
+    try:
+        from fleet import eventlog as el
+    except ImportError as exc:
+        print(f"fleet engine unavailable: {exc}", file=sys.stderr)
+        return 1
+    state_dir = _resolve_state_dir()
+    if args.action == "emit":
+        if not args.kind:
+            print("emit needs a KIND (claim|release|progress|handoff|note|...)", file=sys.stderr)
+            return 1
+        payload = {}
+        if args.payload:
+            try:
+                payload = json.loads(args.payload)
+            except json.JSONDecodeError:
+                print("--payload must be a JSON object", file=sys.stderr)
+                return 1
+        ev = el.emit(state_dir, args.kind, actor=(args.actor or None),
+                     target=(args.target or None), payload=payload, ttl_s=args.ttl)
+        print(f"fleet: emitted {ev['kind']} ({ev['id']})")
+        return 0
+    if args.action == "feed":
+        feed = el.read_feed(state_dir, window_s=args.window,
+                            exclude_actor=(args.actor or None))
+        if args.json:
+            print(json.dumps(feed, ensure_ascii=False, indent=2))
+            return 0
+        if not feed:
+            print("fleet: no live events in the window.")
+            return 0
+        for e in feed:
+            t = dt.datetime.fromtimestamp(e["ts"], dt.timezone.utc).strftime("%H:%M:%S")
+            tgt = f" [{e['target']}]" if e.get("target") else ""
+            print(f"  {t}  {e['actor'][:8]}  {e['kind']}{tgt}  {e.get('payload') or ''}")
+        return 0
+    if args.action == "reap":
+        kept, dropped = el.compact(state_dir)
+        print(f"fleet: reaped {dropped} stale, {kept} live remain.")
+        return 0
+    print(f"unknown fleet action {args.action!r} (emit|feed|reap)", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -596,6 +671,18 @@ def main() -> int:
     sp.add_argument("key", nargs="?", default="")
     sp.add_argument("value", nargs="?", default="")
     sp.set_defaults(fn=cmd_features)
+
+    sp = sub.add_parser("fleet", help="lateral-coordination event channel (emit|feed|reap)")
+    sp.add_argument("action", choices=["emit", "feed", "reap"])
+    sp.add_argument("kind", nargs="?", default="",
+                    help="event kind for emit (claim|release|progress|handoff|note|...)")
+    sp.add_argument("--target", default="", help="addressing key: resource | work-unit | handle")
+    sp.add_argument("--payload", default="", help="JSON object payload (emit)")
+    sp.add_argument("--ttl", type=float, default=3600.0, help="seconds-to-live (emit)")
+    sp.add_argument("--actor", default="", help="actor token; on feed, hides your own events")
+    sp.add_argument("--window", type=float, default=900.0, help="feed window seconds")
+    sp.add_argument("--json", action="store_true", help="feed as JSON")
+    sp.set_defaults(fn=cmd_fleet)
 
     args = p.parse_args()
     return args.fn(args)
