@@ -46,14 +46,16 @@ collide, make it.
 - **Results do NOT auto-merge.** Changes live on `worktree-<name>`, isolated.
   Reaching `main` is deliberate: review the diff, open a PR (ONE TRUNK, kernel
   prime directive 6). Never assume worktree work has reached `main`.
-- **`state/` is gitignored, and the `harness` CLI is tree-local.** `state/*` is
-  not copied into a worktree, and `bin/harness` roots at its OWN tree
-  (`ROOT = dirname(dirname(os.path.abspath(__file__)))`), creating `state/` on
-  demand. So `./bin/harness predict|outcome|corrections|followup` run *inside* a
-  worktree write to the worktree's own `state/` — they miss the main ledger and
-  vanish when the worktree is removed. **Run the harness CLI from the PRIMARY
-  checkout**, or reconcile `state/` before cleanup. This log is the kernel's
-  self-knowledge; splitting it is silent prediction/correction debt.
+- **`state/` is gitignored and per-checkout, but the `harness` CLI resolves to the
+  MAIN ledger.** `state/*` is not copied into a worktree. As of follow-up 1d30be,
+  `bin/harness` resolves `state/` to the MAIN checkout via `_resolve_state_dir()`
+  (git `--git-common-dir`), so `./bin/harness predict|outcome|corrections|followup|gc`
+  run *inside* a worktree write to the ONE canonical ledger — no longer the
+  worktree's throwaway `state/`. **Caveat (residual):** the enforcement HOOKS
+  (`log_skill_use`, `session_start`/`session_end`) still root state at their OWN tree,
+  so skill-usage and similar logged *during a worktree session* write tree-local and
+  vanish on cleanup until that locked half is fixed (tracked with 3939d8/d72eec). The
+  ledger is the kernel's self-knowledge; a split is silent prediction/correction debt.
 - **`memory/` is committed → it rides in automatically.** It's part of the
   checkout, so every worktree has the team memory natively. No junction needed.
 - **Shared runtime is NOT isolated.** Same DB, ports, services across worktrees.
