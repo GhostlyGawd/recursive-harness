@@ -100,6 +100,16 @@ live owner — same class, caught again by the harness-auditor, removed for a fi
 compile-time TTL.) A tunable that moves a guard's eviction/staleness threshold is
 itself enforcement-relevant — make it a constant, not env-readable.
 
+## Mentioning the enforcement marker in a commit/PR body
+
+When a commit message or PR body must MENTION the enforcement-unlock marker token
+(quoting directive 5, an ADR, or a guard's own message), never put that literal
+token in the Bash command line — the enforcement guard's prose-scan reads it as a
+self-grant and BLOCKS the command. Write the body to a temp file and pass it by
+reference: `git commit -F FILE` / `gh pr create --body-file FILE`, which keeps the
+token out of the command text. (session 6390db39, 2026-06-19: an inline heredoc
+that quoted the marker was blocked; the guard's own block message gave the fix.)
+
 ## Per-type notes
 
 - **Agents**: define what context they get — and what they must NOT get. Any
