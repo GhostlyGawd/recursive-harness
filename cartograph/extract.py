@@ -2303,16 +2303,24 @@ def _norm_path(p):
 
 def _associate_text(text, comps, name_index):
     """Best-effort {component-nid} a free-text work item concerns. STRONGEST signal first:
-    any literal component FILE PATH mentioned in the text wins; only if NONE match do we fall
-    back to a bare unique artifact NAME (word-boundary). Returns a (possibly empty) set - an
-    empty set means 'unscoped', never a guess. Pure string scan; never raises."""
+    a literal UNIQUE component FILE PATH mentioned in the text wins. A path SHARED by >1
+    component (bin/harness backs every cli:* node) is ambiguous - it can't say WHICH component
+    is meant - so it is EXCLUDED from path-matching (de-weight, 0403ae); only if no unique path
+    matches do we fall back to a bare unique artifact NAME (word-boundary). Returns a (possibly
+    empty) set - an empty set means 'unscoped', never a guess. Pure string scan; never raises."""
     if not text:
         return set()
     low = text.replace("\\", "/").lower()
+    # files backing >1 component are ambiguous from a bare path mention - exclude them (0403ae)
+    file_counts = {}
+    for n in comps.values():
+        f = _norm_path(n.get("file")).lower()
+        if f:
+            file_counts[f] = file_counts.get(f, 0) + 1
     hits = set()
     for nid, n in comps.items():
         f = _norm_path(n.get("file")).lower()
-        if f and f in low:
+        if f and file_counts.get(f, 0) == 1 and f in low:
             hits.add(nid)
     if hits:
         return hits
