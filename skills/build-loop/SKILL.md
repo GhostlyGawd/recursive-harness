@@ -14,7 +14,7 @@ build (STATE.md:41 — 3 bugs survived green unit tests, caught only in practice
 and the re-prompting tax this skill exists to remove.
 
 Canonical token (use these exact phase names everywhere): **align → criteria →
-red tests → pre-build review → build to green → verify in practice → capture →
+red tests → pre-build review → build to green → post-build review → verify in practice → capture →
 ship.**
 
 ## The funnel (phase · falsifiable gate · who owns it)
@@ -47,11 +47,24 @@ ship.**
 4. **BUILD TO GREEN.** Write code until the full suite passes — cold, not cached.
    On the SECOND identical failure, → skill `stuck-detection` (stop, switch
    strategy class, don't re-parameterize). GATE: full suite green in a clean run.
-5. **VERIFY IN PRACTICE.** Run the real thing end-to-end — the actual tool /
-   trigger / environment, not a proxy. → builtin `/verify`. Then score the
-   load-bearing prediction on the REAL path. GATE: the prediction scores hit on
-   the real path (green gates verify the ARTIFACTS; only the live run verifies the
-   CLAIM — calibration).
+5. **POST-BUILD REVIEW → VERIFY IN PRACTICE.** FIRST, after cold-green and BEFORE
+   the live run, spawn a fresh-context reviewer on the IMPLEMENTATION (not the
+   spec): the phase-3 critic reviewed tests that had no code to be wrong yet, so
+   green + a happy-path run can still hide a green-but-wrong impl. → agent `critic`;
+   for an enforcement-layer change the `harness-auditor` is MANDATORY. Treat a
+   suggested FIX as a HYPOTHESIS, not a patch — apply it against the FULL suite,
+   since a fix aimed at one finding can violate a contract another test pins; bind
+   every confirmed finding with a regression test. THEN run the real thing
+   end-to-end — the actual tool / trigger / environment, not a proxy → builtin
+   `/verify`, and score the load-bearing prediction on the REAL path. GATE:
+   impl-review findings are regression-bound + addressed, AND the prediction scores
+   hit on the real path (green gates verify the ARTIFACTS; only the live run
+   verifies the CLAIM — calibration). (session 21078e9b, 2026-06-23: every
+   pre-build critic found only test-coverage gaps; ALL real code bugs — 2
+   selection-follow bugs + 3 enforcement-guard bypasses — surfaced only in the
+   post-build impl critic + auditor, and one critic's own suggested fix broke a
+   contract a prior test caught; prediction 6b1e4a12 missed exactly the 'reviews
+   force no rework' clause.)
 6. **CAPTURE.** If the result recurs, was correction-born, or encodes taste the
    user articulated, snapshot it. → skill `eval-capture` + `/run-evals` (passes
    day-one). Where a spec governs the target (phase-1's `governed-by` check), write the

@@ -130,6 +130,18 @@ that quoted the marker was blocked; the guard's own block message gave the fix.)
   DIFFERENT hole. (session 86f913c0, 2026-06-17: a fd-dup relaxation `>{1,2}(?!&)`
   over-excluded `>&FILE`, leaving a real write into protected bin/; the round-2
   auditor caught it empirically and `>{1,2}(?!&[0-9-])` was the verified fix.)
+  When a NEW guard's detection (path-in-repo scoping, the mutating-verb set, the
+  deny-decision shape) OVERLAPS an existing hardened guard, REUSE or mirror that
+  guard's logic — never re-derive it. Re-derivation silently reproduces bugs the
+  hardened guard already fixed AND documents: a whitespace token-split of a Bash
+  command fails OPEN on a repo path containing a space ("GitHub Projects"), because
+  `root in token` never matches the split fragment — scan the WHOLE command for the
+  basename/prefix instead (guard_enforcement_layer.py). If a shared util is not yet
+  extracted, make the divergence deliberate + documented and file the refactor.
+  (session 21078e9b, 2026-06-23: a staged anti-scratchpad guard re-rolled a
+  token-split and reproduced the spaced-path fail-open on this very repo, and missed
+  writers the hardened set already covers — sed -i / truncate / ln / python `open(...,'w')`;
+  only the harness-auditor caught it.)
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
 - **Multi-stage skill SUITES** (a gated pipeline of skills/phases — e.g.
