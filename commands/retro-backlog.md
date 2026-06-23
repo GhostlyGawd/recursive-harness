@@ -44,7 +44,13 @@ Default (no args): this harness repo's sessions from the last 14 days, capped at
    correction-ledger lines). Each miner returns its ≤3 highest-signal events
    (event / evidence / route / artifact / draft / provenance / confidence). This
    multi-session fan-out is exactly what Workflow is for; keep the default
-   concurrency cap.
+   concurrency cap. GOTCHA: for a static candidate list, inline it as a `const`
+   literal in the workflow script body — twice it arrived `undefined` when passed via
+   the Workflow tool's `args` and the launch spent 0 agents then threw `ITEMS.map is
+   not a function` (sessions 6390db39 + 2026-06-23). `args` passing DOES work in
+   general (venture-build's workflows read `args.*` fine), so this is a robustness
+   choice, not a ban: inline the static list, or if you pass `args`, guard that it
+   arrived populated before mapping it.
 
 6. CONSOLIDATE across sessions BEFORE drafting (a barrier): a learning that recurs
    across many sessions is ONE artifact, not N. De-dupe by root cause, merge the

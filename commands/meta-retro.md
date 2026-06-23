@@ -41,7 +41,15 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
 2. **Override scan**: corrections that contradict an existing artifact mean
    the artifact is wrong. `"$HARNESS/bin/harness" corrections list --last 100`, grep against
    skills/ and user-model claims. Wrong artifact → fix or kill, don't append a
-   contradicting sibling.
+   contradicting sibling. ALSO sweep for UN-ROUTED MANDATES: corrections that are
+   directives/meta-principles (especially ones addressed to a command like
+   /meta-retro) with NO corresponding skill/hook/proposal/ADR. A dated mandate
+   older than ~1 day with no tracking artifact is a prime-directive-2 routing miss
+   — route it this session, and check whether a SIBLING artifact was built that
+   VIOLATES it. The contradiction scan catches wrong artifacts; this catches
+   directives that should HAVE BECOME one. (session 4d9f23e6, 2026-06-21: a dated
+   "consolidate the git guards, do NOT add a sibling" mandate sat un-routed 2 days
+   while an additive guard proposal was built against it.)
 3. **Calibration drift**: `"$HARNESS/bin/harness" stats`. Any category overconfident by >15
    points → add a dated note to memory/calibration/notes.md and check whether
    that category has eval coverage; if not, that's the next eval-capture.
