@@ -101,6 +101,30 @@ FIRST attempt used `.worktreeinclude` and failed — it can't carry a nested-rep
 dir (prediction 55b1735b miss). Submodule was rejected (empty in fresh worktrees
 + trunk-coupling); subtree was rejected (would break in-place own-repo dev).
 
+## Packaging a MULTI-skill distributable — use the plugin format
+
+The decision tree picks the git-NESTING mechanism; this picks the PACKAGING when
+the sub-project is a bundle of several skills (plus its own commands/agents) meant
+to be distributed and invoked as a unit. Package it as a Claude Code **plugin**,
+not as skills hand-nested under one `skills/<name>/` dir:
+
+- Give it a `.claude-plugin/plugin.json` manifest (`name` is the only field the
+  validator REQUIRES; it only WARNS on missing `version`/`description`/`author`, so
+  add those for a release-quality plugin). Put its skills at
+  `<plugin>/skills/<skill>/SKILL.md`, and use `${CLAUDE_PLUGIN_ROOT}` for any path a
+  component references inside itself. Validate with `claude plugin validate <path>`.
+- A plugin's skills are invoked **namespaced** as `<plugin>:<skill>` (e.g.
+  `prospector:validate`). The namespacing is mandatory and isolating — a plugin
+  skill is NOT merged into the bare top-level skill namespace. (Verified against
+  the Claude Code plugins reference, 2026-06-23.)
+- To ALSO develop the plugin in place as its own repo and ride it into every
+  worktree, combine this with decision-tree node 3 (gitignore + materialize-hook
+  via `worktree-repos.json`) — packaging and nesting are orthogonal choices.
+
+(session 16494681, 2026-06-20: placing the 5-skill `prospector` bundle needed a
+dedicated claude-code-guide agent to recover the plugin spec from scratch, because
+no skill covered multi-skill packaging.)
+
 ## Rules
 - Name the discriminator out loud before picking: *worktree auto-presence?*,
   *who owns history?*, *develop-in-place or consume?* — those decide it.
