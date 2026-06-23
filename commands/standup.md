@@ -24,7 +24,10 @@ a. `git fetch --prune origin` FIRST. Without it `--merged` lies: on 2026-06-13
    unmerged. Always judge merged-ness against a freshly-fetched origin/main.
 b. If local main is BEHIND origin/main and the tree is clean: `git merge --ff-only`.
    If main has local-only commits, or the tree is dirty, skip and report — never
-   force it.
+   force it. If the `--ff-only` aborts on an untracked local file an incoming PR now
+   adds as TRACKED, confirm redundancy — byte-identical, or EOL-only via
+   `git show origin/main:<path> | diff --strip-trailing-cr - <path>` — then `rm` it and
+   retry; stop if it has REAL local edits.
 c. Delete merged LOCAL branches with `git branch -d` (NEVER -D: -d refuses
    anything unmerged, which is the safety net). Never the current branch or main.
    Anything -d refuses, list under "kept (unmerged)" with its name — do not force.

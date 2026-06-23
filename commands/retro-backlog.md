@@ -80,7 +80,10 @@ Default (no args): this harness repo's sessions from the last 14 days, capped at
 
 11. **Return to trunk AND refresh it:** `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main` (branch-hygiene + don't rot local trunk: a bare `checkout main` leaves a STALE local main once a PR merges on GitHub; this
     flow branches in-place like /retro, so ending on `retro/*` would strand the
-    next session).
+    next session). If the FF aborts on an untracked local file an incoming PR now adds as
+    TRACKED, confirm redundancy — byte-identical, or EOL-only via
+    `git show origin/main:<path> | diff --strip-trailing-cr - <path>` — then `rm` it and
+    re-run; stop if it has REAL local edits.
 
 <!-- provenance: session 9856a41f, 2026-06-19 — created after a forensic sweep
 (workflow wf_8058e958) found the harness had NO durable record of which sessions
