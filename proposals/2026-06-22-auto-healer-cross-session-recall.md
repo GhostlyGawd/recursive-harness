@@ -2,7 +2,7 @@
 
 - **Status:** REVISED. The original (auto-fire recall-on-touch + behavioral Eval B) was **REJECTed** by harness-auditor; the verdict + must-fix constraints are recorded below and accepted in full. This revision keeps only the sound, mostly-unlocked half (**Part A**) and quarantines the contested locked half (**Part B**). Nothing is built.
 - **Date:** 2026-06-22
-- **Source session:** `1a5cff26-ac33-4cf2-9b25-22111aded093`. User stress-tested whether the auto-healer covers the common cross-session case (a bug shipped as "fixed" that recurs in the same area a later session); stuck-detection rarely fires for it, so the ledger stays empty (0 bugs verified).
+- **Source session:** `0d0fe086-5faa-4f26-bbea-7d2dc1ddda91`. User stress-tested whether the auto-healer covers the common cross-session case (a bug shipped as "fixed" that recurs in the same area a later session); stuck-detection rarely fires for it, so the ledger stays empty (0 bugs verified).
 - **Predictions:** `ec9a836a` — *mechanism is sound; the gap is triggering, not mechanism* → **HIT** (Eval A validated PASS in a scratch ledger; auditor independently reproduced it). `7b255e38` — *harness-auditor will not clean-approve* → **HIT** (verdict: REJECT). Behavioral-eval prediction: **withdrawn** (Eval B removed — see below); followup `d738f9` updated.
 
 ---
@@ -38,7 +38,7 @@ This delivers "capture worked fixes so the cross-session ledger actually receive
 {
   "date": "2026-06-22",
   "category": "coding",
-  "source_session": "1a5cff26-ac33-4cf2-9b25-22111aded093",
+  "source_session": "0d0fe086-5faa-4f26-bbea-7d2dc1ddda91",
   "origin": "heal cross-session recall floor; user triggering-gap thread; prediction ec9a836a"
 }
 ```
@@ -110,4 +110,4 @@ Do not advance the original design to a build. Must-fix constraints, and how thi
 3. *Redesign Eval B around a non-pre-taught gotcha, or delete it.* → Deleted; replacement criteria recorded.
 4. *Reframe the "ledger is never queried" problem.* → Corrected ("What the auditor corrected", #1).
 
-<!-- provenance: 2026-06-22, session 1a5cff26 — user asked across four turns whether the auto-healer covers cross-session same-area bugs, serves the repo goal, and is synergistic. Mechanism validated (prediction ec9a836a HIT). Original design (auto-fire recall + Eval B) REJECTed by harness-auditor (prediction 7b255e38 HIT); revised here to the unlocked capture-via-/retro slice + validated Eval A, with the auto-fire and a non-confounded behavioral eval quarantined for an explicit future rebuttal. Routes to /retro for the learnings (eval-fidelity self-violation; arguing a strawman vs a named prior decision). -->
+<!-- provenance: 2026-06-22, session 0d0fe086 — user asked across four turns whether the auto-healer covers cross-session same-area bugs, serves the repo goal, and is synergistic. Mechanism validated (prediction ec9a836a HIT). Original design (auto-fire recall + Eval B) REJECTed by harness-auditor (prediction 7b255e38 HIT); revised here to the unlocked capture-via-/retro slice + validated Eval A, with the auto-fire and a non-confounded behavioral eval quarantined for an explicit future rebuttal. Routes to /retro for the learnings (eval-fidelity self-violation; arguing a strawman vs a named prior decision). -->
