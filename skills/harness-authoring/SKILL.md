@@ -50,6 +50,17 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
    zero sources were read, DISCARD the synthesis and fetch directly. (session
    5af1bbc4, 2026-06-18: a read-skills-docs workflow returned a full docs digest with
    urlsRead:[] / "Discovered 0 canonical doc URLs"; only that field exposed the fabrication.)
+   The same gate covers claims about the HARNESS'S OWN code, not just external tools: any
+   "X is shared by / already wired to / consumed by Y" sentence in a plan, proposal, or PR
+   body is a FACTUAL claim a fresh-context auditor WILL check against the call sites. Grep
+   the call sites first and write the present-tense truth ("`fleet` is the FIRST consumer;
+   the ledger migration is separate work"), never the intended end-state as if it already
+   shipped. When an audit returns "revise" on an over-claim, the fix must RE-SWEEP the whole
+   artifact for the same claim-class before re-submitting — one over-claim found means look
+   for its siblings. (session 453daf00, 2026-06-22: a plan asserted a new state-resolver was
+   "shared by the existing ledgers" when only one caller used it; the agent fixed one
+   sentence after audit-1 but the v2 plan still carried the claim, caught only by audit-2 —
+   prediction 87b42efa MISS.)
 
 ## Budgets (lint-enforced — they are quality pressure, not bureaucracy)
 
