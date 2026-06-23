@@ -53,7 +53,7 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    Then report to the user: events found, routes chosen, PR links. One line each.
    If nothing met the signal bar, SAY SO and stop — empty retros are honest;
    padded ones poison the trunk.
-8. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` returns to a possibly-STALE local main — a PR merged on GitHub isn't there until pulled — so the `--ff-only` refresh keeps the next run from re-proposing already-merged work. /retro branches
+8. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` returns to a possibly-STALE local main — a PR merged on GitHub isn't there until pulled — so the `--ff-only` refresh keeps the next run from re-proposing already-merged work. If that FF aborts on an untracked local file an incoming PR now adds as TRACKED (e.g. a `proposals/*.md` you wrote this session), confirm the local copy is redundant — byte-identical, or EOL-only via `git show origin/main:<path> | diff --strip-trailing-cr - <path>` — then `rm` it and re-run; stop if it has REAL local edits. /retro branches
    in-place on `retro/<date>-<slug>`; ending the session still on it strands the
    NEXT session on a dead branch (the SessionStart banner flags this, but don't
    create the mess). The drafted work is safe on its pushed branch + PR. If the
