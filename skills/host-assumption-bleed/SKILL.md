@@ -40,6 +40,20 @@ not, if you replace the human with checks the system cannot fake:
 
 That set is what the user actually wanted; the human-gated design was the wrong reflex.
 
+## Scope — governance only, NOT storage / packaging / integration
+
+This skill is about the GOVERNANCE cage (human-approval gate / write-locked layer /
+human-seeded backlog). It does NOT license shedding a capability's STORAGE, PACKAGING, or
+INTEGRATION coupling — "host-neutral core, multi-provider stores, MCP/SDK wrappers,
+ship-as-its-own-repo" is a SEPARATE decision (extracting a harness capability into a
+product). Per ONE-TRUNK + the user-model taste that a public/product repo never couples to
+the private harness, the harness's incident-proven NATIVE increment sequences FIRST; the
+product wrapper is demand-pulled by real external interest, never built ahead of the
+capability it wraps. Citing this skill to justify product-first scaffolding is the over-read
+to catch. (session 453daf00, 2026-06-22: invoked this skill to strip storage/integration
+coupling and sequence a product scaffold before the native need; the auditor's "revise"
+flagged both the over-read and the inverted sequencing.)
+
 ## Falsifiable trigger
 
 If, on a build-for-the-user task, you are about to write "requires human approval" /
