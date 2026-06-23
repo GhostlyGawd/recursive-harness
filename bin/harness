@@ -529,6 +529,14 @@ def cmd_features(args) -> int:
 
 
 def main() -> int:
+    # cp1252 consoles (Windows) crash when a subcommand echoes a non-latin1 char
+    # (e.g. an arrow in a correction note) - degrade unencodable output to '?'
+    # instead of dying mid-write, as skills/auto-healer/heal.py already does. (bug 1860a068)
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
