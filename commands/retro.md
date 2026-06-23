@@ -17,6 +17,10 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    - `python3 "$HARNESS/skills/auto-healer/heal.py" review --escalate-only --json`
      — cross-session recurring roots with a failed fix (the autophagic feed). These
      are eligible signal, counted within the <=3-event bar below — not on top of it.
+   - CAPTURE this session's genuine bug-fixes into the heal ledger (skill:
+     auto-healer — `heal.py fix --outcome worked`, dead-ends as `--outcome failed`):
+     a worked first-try fix never trips stuck-detection, so it is otherwise never
+     logged. BUG fixes only, recurrence-guarded; never features/refactors (junk-drawer).
 2. Spawn the **retro-miner** agent with the transcript path, the correction
    lines, AND the heal ESCALATE records. Take its <=3 events; veto only with a
    stated reason. (Resolve THIS session's transcript reliably before handing it
