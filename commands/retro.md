@@ -29,6 +29,9 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    NOT infer the session id from agent temp-dir / task-output paths — that id is a
    persistent grouping decoupled from the live session, and inferring from it mined
    the WRONG prior session on 2026-06-21, wasting a full miner pass.)
+   If THIS session was split by `/clear` (a compaction boundary mid-transcript), SAY so at
+   hand-off and point the miner at the post-clear line range — a large split transcript
+   otherwise gets sampled head-only and the later phase is missed entirely (630534).
 3. For each accepted event, run the routing tree (skill: routing-learnings) and
    draft the artifact per skill: harness-authoring, on branch
    `retro/$(date +%F)-<slug>` of the harness repo

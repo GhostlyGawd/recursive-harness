@@ -41,7 +41,13 @@ OUTPUT: a YAML list, <=3 items, highest-signal first:
     provenance: session id + date
     confidence: 0.0-1.0 that this generalizes beyond today
 
-RULES: If fewer than 3 real events exist, return fewer — padding a retro with
-weak learnings pollutes the harness, and the lint can't catch judgment errors,
-only format ones. If two events share a root cause, merge them: one cause, one
-artifact. Never route to "memory" or free prose; those options don't exist.
+RULES: Cover the WHOLE transcript — a long session may carry a `/clear` /
+compaction boundary that splits it into phases, and the most recent, highest-signal
+work is often AFTER the last /clear. `grep -n` for clear / summary / compaction
+markers and mine the LATEST phase as thoroughly as the head; never sample only the
+start of a large transcript (2026-06-21: a /clear-split session was mined
+pre-clear-only, missing the entire post-clear build). If fewer than 3 real events
+exist, return fewer — padding a retro with weak learnings pollutes the harness, and
+the lint can't catch judgment errors, only format ones. If two events share a root
+cause, merge them: one cause, one artifact. Never route to "memory" or free prose;
+those options don't exist.
