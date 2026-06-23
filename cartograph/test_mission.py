@@ -252,6 +252,27 @@ check(mission["structure"]["edge_count"] == plain["meta"]["edge_count"],
       f"edge_count matches plain run ({plain['meta']['edge_count']})")
 
 
+# ===================================================== 11. shared-file de-weight (0403ae)
+# bin/harness backs EVERY cli:* node, so a bare "bin/harness" path mention used to associate a
+# proposal/followup to all 12 cli components at once (over-weighting the shared file). A bare
+# shared-file path can't say WHICH subcommand, so it must NOT spam them all; a UNIQUE file path,
+# and a unique subcommand NAME, must still associate.
+print("[11] shared-file de-weight: a bare bin/harness mention does not spam every cli:* node")
+_shared_comps = {
+    "cli:predict": {"file": "bin/harness"},
+    "cli:outcome": {"file": "bin/harness"},
+    "cli:stats":   {"file": "bin/harness"},
+    "skill:widget": {"file": "skills/widget/SKILL.md"},
+}
+_ni = ex._name_index(_shared_comps)
+check(ex._associate_text("rework bin/harness error handling", _shared_comps, _ni) == set(),
+      "a bare shared-file (bin/harness) path associates to NO cli node, not all 3")
+check(ex._associate_text("fix skills/widget/SKILL.md typo", _shared_comps, _ni) == {"skill:widget"},
+      "a UNIQUE file path still associates (strong signal preserved)")
+check(ex._associate_text("the predict subcommand is wrong", _shared_comps, _ni) == {"cli:predict"},
+      "a unique subcommand NAME still associates to that one cli node (name fallback intact)")
+
+
 # ============================================================================ done
 print(f"\n{_passed} passed, {_failed} failed")
 sys.exit(1 if _failed else 0)
