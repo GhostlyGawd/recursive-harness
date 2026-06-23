@@ -58,6 +58,14 @@ Walk the tree top-down; first match wins.
 - One learning, one artifact. If it seems to need two, it is two learnings.
 - A decision with alternatives that were rejected → also write a short ADR in
   memory/decisions/NNNN-slug.md so future-you doesn't relitigate it.
+- **Precedent check before changing a subsystem's mechanism.** Before drafting a
+  hook/skill/ADR that alters how an existing subsystem works, grep
+  `memory/decisions/` AND the target's SKILL + provenance comments for that
+  mechanism. If a prior audit/ADR rejected it, rebut THAT named decision on its
+  own terms — not a generic restatement of it. Re-running a decision already made
+  (the rejected line is often already in your own earlier grep output) costs a full
+  auditor pass to re-derive. (session 0d0fe086, 2026-06-22: re-proposed an auto-fire
+  recall hook that stuck-detection had already rejected by name.)
 
 <!-- provenance: /retro-backlog 2026-06-19, session b7488db6 — after the agent
 reflexively proposed "add a hook+skill" for a recurring git-base papercut, the
