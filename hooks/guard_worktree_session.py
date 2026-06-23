@@ -473,6 +473,13 @@ def _block(entry: dict, tree: str, now: float) -> None:
 
 
 def main() -> int:
+    # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
+    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     if _hatch_enabled():
         return 0
     try:

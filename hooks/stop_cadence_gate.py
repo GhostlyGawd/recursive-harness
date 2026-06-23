@@ -86,6 +86,13 @@ def _sessions_since(epoch) -> int:
 
 
 def main() -> int:
+    # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
+    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     # SOFT flag (ADR 0008): disable the multi-session retro cadence nudge.
     if not flag("nudges.cadence_gate", True):
         return 0
