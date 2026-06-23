@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import APP_NAME, CHANNEL, data
+from . import APP_NAME, CHANNEL, data, feed
 from .app import MissionControl
 
 
@@ -34,11 +34,15 @@ def main(argv=None) -> int:
 
     if args.json:
         loader = lambda: data.load_payload(args.json)  # noqa: E731
+        feed_loader = None   # offline/demo payload carries no live feed
     else:
         root = args.root
         loader = lambda: data.load_mission(root=root)  # noqa: E731
+        # the Terminal lens reads the canonical fleet log (read-only); resolves MAIN/state from a
+        # worktree so it sees the shared coordination log, not the tree-local empty one.
+        feed_loader = feed.make_loader(root=root)
 
-    MissionControl(loader, name_label=APP_NAME, channel=CHANNEL).run()
+    MissionControl(loader, feed_loader=feed_loader, name_label=APP_NAME, channel=CHANNEL).run()
     return 0
 
 

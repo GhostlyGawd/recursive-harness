@@ -168,3 +168,142 @@ def inflight_summary(payload: dict) -> dict:
 def structure_summary(payload: dict) -> dict:
     s = payload.get("structure") or {}
     return {"nodes": s.get("node_count"), "edges": s.get("edge_count")}
+
+
+# ═══════════════════════════════════════════════════ P2 · the Graph (Map) lens view-model
+# The Map renders the SAME components as the Roster, grouped by their 3-loop membership and gauged
+# by the SAME work-pressure model (one model, two faces). Pure derivation from the payload: no edge
+# invented, no node fabricated; an empty payload degrades to empty (the lanes' honesty contract).
+@dataclass
+class GraphNode:
+    """One Map node = one component node, with its loop, gauge state, and edge degree."""
+
+    nid: str
+    name: str
+    type: str
+    loop: str          # "" when the node carries no loop tag
+    file: str
+    state: str = STATE_NOMINAL
+    out_deg: int = 0
+    in_deg: int = 0
+
+
+def adjacency(payload: dict) -> dict:
+    """`{nid: {"out": [target,...], "in": [source,...]}}` derived from `structure.edges` ONLY.
+
+    Keyed by the UNION of node ids and edge endpoints, so conservation (sum of out-degrees == sum of
+    in-degrees == edge count) and closure (every edge s->t has t in out[s] AND s in in[t]) are TOTAL
+    even for a dangling endpoint - the dangling node gets a key recording who points at it. No edge
+    is invented; an isolated node has empty in/out. Empty payload -> {}."""
+    s = payload.get("structure") or {}
+    adj: dict = {}
+
+    def _slot(nid):
+        if nid not in adj:
+            adj[nid] = {"out": [], "in": []}
+        return adj[nid]
+
+    for n in s.get("nodes") or []:
+        nid = n.get("id")
+        if nid is not None:
+            _slot(nid)
+    for e in s.get("edges") or []:
+        src, tgt = e.get("source"), e.get("target")
+        if src is None or tgt is None:
+            continue
+        _slot(src)["out"].append(tgt)
+        _slot(tgt)["in"].append(src)
+    return adj
+
+
+def graph_nodes(payload: dict, sort: str = "pressure") -> list:
+    """Component nodes (a real `file`, not `missing`) as Map nodes, each gauged by the SAME
+    `_derive_state` the Roster lanes use - so a component reports one state across both lenses.
+    Ordered grouped-by-loop (loop order = first appearance) then faults-first within the loop, so the
+    flat order is deterministic and matches `graph_by_loop`'s rendering. Empty payload -> []."""
+    s = payload.get("structure") or {}
+    by_comp = (payload.get("work") or {}).get("by_component") or {}
+    adj = adjacency(payload)
+    raw: list = []
+    loop_order: list = []
+    for n in s.get("nodes") or []:
+        nid = n.get("id")
+        f = n.get("file")
+        if not nid or not f or n.get("missing"):
+            continue
+        blk = by_comp.get(nid) or {}
+        a = adj.get(nid) or {"out": [], "in": []}
+        loop = n.get("loop") or ""
+        if loop not in loop_order:
+            loop_order.append(loop)
+        raw.append(GraphNode(
+            nid=nid,
+            name=_short_name(nid),
+            type=n.get("type") or (nid.split(":", 1)[0] if ":" in nid else "node"),
+            loop=loop,
+            file=f,
+            state=_derive_state(blk.get("followups") or [], blk.get("proposals") or []),
+            out_deg=len(a["out"]),
+            in_deg=len(a["in"]),
+        ))
+    loop_rank = {lp: i for i, lp in enumerate(loop_order)}
+    if sort == "name":
+        raw.sort(key=lambda g: (loop_rank.get(g.loop, 9), g.name))
+    else:  # "pressure": faults first within each loop (triage order, same as the lanes)
+        raw.sort(key=lambda g: (loop_rank.get(g.loop, 9), _SORT_ORDER.get(g.state, 9), g.name))
+    return raw
+
+
+def graph_by_loop(payload: dict, sort: str = "pressure") -> list:
+    """The Map nodes bucketed into ordered loop groups: `[(loop, [GraphNode, ...]), ...]`. Every Map
+    node lands in exactly one group (a partition of `graph_nodes`); a node with no loop tag goes to a
+    named '—' bucket, never dropped. Empty payload -> []."""
+    groups: dict = {}
+    order: list = []
+    for g in graph_nodes(payload, sort=sort):
+        key = g.loop or "—"
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(g)
+    return [(k, groups[k]) for k in order]
+
+
+# ═══════════════════════════════════════════════════════ P3 · the Proof counters (Console)
+# The harness-wide health, projected into labelled big readouts. Honesty contract (same as
+# --mission): a datum that is absent - INCLUDING a present sub-dict with a None field - renders "—"
+# with tone "none", NEVER a fabricated 0. Only UNSCORED carries a judgement: unscored predictions
+# are debt (the kernel says so), so its tone is "warn" iff > 0.
+@dataclass
+class ProofCounter:
+    key: str
+    value: str
+    tone: str   # "ok" | "warn" | "none"
+
+
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def proof_counters(payload: dict) -> list:
+    h = payload.get("health") or {}
+    preds = h.get("predictions") or {}
+    evals = h.get("eval_cases") or {}
+    hit, total, unscored = preds.get("hit_rate"), preds.get("total"), preds.get("unscored")
+    corr = h.get("corrections_total")
+    ev_p, ev_t = evals.get("present"), evals.get("total")
+
+    counters = [
+        ProofCounter("CAL", f"{round(hit * 100)}%" if _is_num(hit) else "—",
+                     "ok" if _is_num(hit) else "none"),
+        # EVALS needs BOTH fields real, else dash - never `present or 0`/`0/total` (the fake-zero hole)
+        ProofCounter("EVALS", f"{ev_p}/{ev_t}" if _is_num(ev_p) and _is_num(ev_t) else "—",
+                     "ok" if _is_num(ev_p) and _is_num(ev_t) else "none"),
+        ProofCounter("PRED", str(total) if _is_num(total) else "—",
+                     "ok" if _is_num(total) else "none"),
+        ProofCounter("UNSCORED", str(unscored) if _is_num(unscored) else "—",
+                     ("warn" if unscored > 0 else "ok") if _is_num(unscored) else "none"),
+        ProofCounter("CORR", str(corr) if _is_num(corr) else "—",
+                     "ok" if _is_num(corr) else "none"),
+    ]
+    return counters

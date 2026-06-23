@@ -53,6 +53,59 @@ Screen {
     border-left: solid #f7b23b;    /* --p phosphor selection rib (the one signal channel) */
 }
 
+/* ── Map lens (P2): loop dividers + Map node rows, sharing the lane's selection language ──── */
+.loop-head {
+    height: 1;
+    padding: 0 1;
+    background: #0c0a08;            /* --well */
+    color: #7c7261;                /* --ink-dim wide-tracked loop label */
+    text-style: bold;
+}
+/* a Map node row mirrors the lane's reserved-rib selection so switching lenses never shifts text */
+.gnode {
+    height: 1;
+    padding: 0 1;
+    background: #0c0a08;            /* --well */
+    border-left: solid #0c0a08;    /* reserved rib, invisible */
+    color: #cdbfa6;                /* --ink */
+}
+.gnode.-selected {
+    background: #17140f;            /* --c2 raised bay = the live/selected node */
+    border-left: solid #f7b23b;    /* --p phosphor selection rib (the one signal channel) */
+}
+
+/* ── Proof readouts (P3): big calibration/eval counters, Console lens only ─────────────────── */
+#proof-label {
+    height: 1;
+    background: #17140f;            /* --c2 raised bay */
+    color: #7c7261;                /* --ink-dim wide-tracked label */
+    text-style: bold;
+    padding: 0 1;
+}
+#proof {
+    height: 3;
+    background: #12100d;            /* --c1 */
+    color: #cdbfa6;
+    padding: 1 2;
+    border-bottom: solid #2a251c;  /* --line hairline (depth, not a shadow) */
+}
+
+/* ── Terminal live-feed ticker (P4): Console lens only, newest-first ───────────────────────── */
+#terminal-label {
+    height: 1;
+    background: #17140f;            /* --c2 raised bay */
+    color: #7c7261;                /* --ink-dim wide-tracked label */
+    text-style: bold;
+    padding: 0 1;
+}
+#terminal {
+    height: 8;
+    background: #0c0a08;            /* --well: the live channel */
+    color: #cdbfa6;
+    padding: 1 2;
+    border-bottom: solid #2a251c;  /* --line hairline */
+}
+
 #detail-body {
     background: #12100d;            /* --c1 */
     color: #cdbfa6;
