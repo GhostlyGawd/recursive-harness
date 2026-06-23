@@ -8,6 +8,7 @@ Verifies the invariants the synergy audit required:
   - review prints ESCALATE before RECURRING (the documented contract)
   - `fix` requires --outcome (no default-worked) and refuses a silent duplicate mint
   - rollup rolls up BEFORE trimming, and never decays wontfix
+  - match surfaces a prior FALSIFIED hypothesis + worked fix (the cross-session recall floor)
 
 Run: python3 skills/auto-healer/test_heal.py   (exit 0 = all pass)
 Unit tests are deterministic (hand-built records, explicit timestamps); CLI tests
@@ -224,6 +225,27 @@ def test_cli_rollup():
               "escalate_count" in d and "summary" not in d and "bugs" not in d)
 
 
+def test_cli_match_recall_surface():
+    # The cross-session recall floor: capture a FAILED attempt (the falsified
+    # hypothesis) + a worked fix on the same bug in "session A", then a cold
+    # `match` in "session B" must surface BOTH — the negative space is the point.
+    run("fix", "--summary", "parser.py crashes on cp1252 input",
+        "--tags", "file:parser.py,class:encoding",
+        "--hypothesis", "input is always utf-8", "--fix", "decode utf-8", "--outcome", "failed")
+    bid = None
+    for line in run("bug", "list").stdout.splitlines():
+        if "parser.py crashes on cp1252" in line:
+            bid = line.strip().split("]")[0].lstrip("[ ")
+            break
+    check("recall-surface: seeded bug found", bool(bid))
+    run("fix", "--bug", bid, "--hypothesis", "console is cp1252",
+        "--fix", "reconfigure stdout errors=replace", "--outcome", "worked")
+    out = run("match", "--file", "parser.py", "--error", "cp1252").stdout.lower()
+    check("recall-surface: match surfaces the falsified hypothesis (negative space)",
+          "falsified" in out and "always utf-8" in out)
+    check("recall-surface: match surfaces the worked fix", "errors=replace" in out)
+
+
 def cleanup():
     for p in (os.path.join(heal.HARNESS_ROOT, "state", "heal", TEST_REPO),
               os.path.join(heal.HARNESS_ROOT, "memory", "heal", TEST_LABEL)):
@@ -243,6 +265,7 @@ def main():
         test_cli_escalate_first_and_single_source()
         test_cli_stats_json()
         test_cli_rollup()
+        test_cli_match_recall_surface()
     finally:
         cleanup()
     print()
