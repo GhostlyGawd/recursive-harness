@@ -5,6 +5,8 @@
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_start.py"}]},
       {"matcher": "startup|resume|clear",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/materialize_worktree_repos.py"}]},
+      {"matcher": "startup|resume|clear|compact",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/inject_kernel.py"}]},
       {"matcher": "resume|clear",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/guard_worktree_session.py"}]}
     ],
