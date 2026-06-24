@@ -67,6 +67,15 @@
         ]
       },
       {
+        "matcher": "Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/forbid_scratchpad.py\""
+          }
+        ]
+      },
+      {
         "matcher": "Read|Glob|Grep|Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
         "hooks": [
           {
