@@ -52,11 +52,12 @@ jobs:
       - name: Retro-completion ledger tests
         if: ${{ !cancelled() }}
         run: python3 tests/test_retro_done.py
-      - name: Harness state-dir, command-recipe & CI-coverage consistency tests
+      - name: Harness state-dir, command-recipe, settings-parity & CI-coverage consistency tests
         if: ${{ !cancelled() }}
         run: |
           python3 tests/test_harness_state_dir.py
           python3 tests/test_command_refresh_recipe.py
+          python3 tests/test_settings_parity.py
           python3 tests/test_ci_coverage.py
       - name: Subsystem tests (fleet event-log, mission-control, auto-healer)
         if: ${{ !cancelled() }}
