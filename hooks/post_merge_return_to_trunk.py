@@ -17,6 +17,13 @@ dirty the hook explicitly says DO NOT switch, investigate first. (Surfacing via
 exit 2 + stderr is how this harness's guards feed a must-heed message back to the
 model; the tool already ran, so this cannot and does not block it.)
 
+From a LINKED worktree the return instruction differs: a bare `git switch
+<default>` checks the default branch OUT into the linked worktree and leaves the
+PRIMARY checkout detached on an old commit, so <default> migrates between
+worktrees and the next `git switch <default>` fails ("already used by worktree").
+There the hook instead says `git switch --detach origin/<default>`, which returns
+to trunk's commit without moving the <default> ref off the primary checkout.
+
 Exit 0 (silent) on: not a `gh pr merge`; already on the default branch; detached
 / not a git work tree; or ANY error — a hook must never brick a session, so it
 fails open. Exit 2 with a directive on stderr only when HEAD is left off trunk.
@@ -27,8 +34,13 @@ after a bare `gh pr merge --delete-branch` (run outside /harness-pr, so the
 step-7 instruction never fired) bounced HEAD onto a sibling session's branch
 carrying uncommitted work. Routed to a hook because an always-rule is mechanical
 enforcement, not command-local prose (routing-learnings).
+provenance: 2026-06-24, follow-up 1c9cea — the instruction was unconditionally
+`git switch <default>`, which INSIDE a linked worktree migrates <default> into
+that worktree and detaches+rots the primary checkout, breaking the next session's
+return. Made worktree-aware (--detach origin/<default> from a linked worktree).
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -72,6 +84,25 @@ def _default_branch(cwd):
     return "main"
 
 
+def _in_linked_worktree(cwd):
+    """True if `cwd` is inside a LINKED git worktree (not the primary checkout).
+
+    In a linked worktree `git rev-parse --git-dir` points inside
+    `<primary>/.git/worktrees/<name>` while `--git-common-dir` points at the
+    shared `<primary>/.git`; in the primary checkout the two resolve to the SAME
+    path. Either may come back relative to cwd, so resolve both to absolute real
+    paths before comparing. Best-effort: any failure -> False (treat as primary,
+    keeping the existing safe instruction)."""
+    gd = _git(["rev-parse", "--git-dir"], cwd)
+    cd = _git(["rev-parse", "--git-common-dir"], cwd)
+    if not gd or not cd:
+        return False
+    try:
+        return os.path.realpath(os.path.join(cwd, gd)) != os.path.realpath(os.path.join(cwd, cd))
+    except Exception:
+        return False
+
+
 def main() -> int:
     # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
     # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
@@ -106,8 +137,21 @@ def main() -> int:
         if branch == default:
             return 0  # already on trunk -> nothing to do
 
+        linked = _in_linked_worktree(cwd)
         dirty = bool(_git(["status", "--porcelain"], cwd))
-        if dirty:
+        if dirty and linked:
+            print(
+                f"[harness] A PR was just merged, but HEAD is on '{branch}', not "
+                f"'{default}', the working tree has uncommitted changes, AND you are "
+                f"inside a LINKED worktree.\n"
+                f"DO NOT auto-switch: investigate the uncommitted changes first "
+                f"(git status; whose changes are these?). When you DO return to trunk "
+                f"from a linked worktree use `git switch --detach origin/{default}` — "
+                f"NEVER a bare `git switch {default}`, which checks {default} OUT into "
+                f"this worktree and leaves the PRIMARY checkout detached on an old commit.",
+                file=sys.stderr,
+            )
+        elif dirty:
             print(
                 f"[harness] A PR was just merged, but HEAD is on '{branch}', not "
                 f"'{default}', AND the working tree has uncommitted changes.\n"
@@ -115,6 +159,19 @@ def main() -> int:
                 f"onto {default}, and they may belong to other/parallel work "
                 f"(the 2026-06-18 incident). Investigate first (git status; whose "
                 f"changes are these?), then return to trunk deliberately.",
+                file=sys.stderr,
+            )
+        elif linked:
+            print(
+                f"[harness] A PR was just merged and HEAD is on '{branch}', not "
+                f"'{default}', and you are inside a LINKED worktree. Return to trunk "
+                f"WITHOUT migrating {default} into this worktree: "
+                f"`git fetch origin && git switch --detach origin/{default}`.\n"
+                f"(Do NOT run a bare `git switch {default}` from a linked worktree: it "
+                f"checks {default} OUT here and leaves the PRIMARY checkout detached on "
+                f"an old commit, so {default} migrates between worktrees and the next "
+                f"`git switch {default}` fails with 'already used by worktree'. "
+                f"`--detach origin/{default}` keeps {default} pinned to the primary checkout.)",
                 file=sys.stderr,
             )
         else:

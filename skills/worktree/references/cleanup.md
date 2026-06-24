@@ -30,6 +30,26 @@ the main checkout (`git -C "<trunk>" branch -d …`) where `HEAD=main`, so the
 ancestry check uses the right base. Never `-D`-force to defeat the refusal.
 (session 5bc7a495, 2026-06-22.)
 
+## Returning to trunk from a worktree — `--detach`, never `git switch main`
+
+`git switch main` inside a LINKED worktree checks `main` OUT into that worktree and
+detaches the PRIMARY checkout onto an old commit. Three effects compound: `main`
+"migrates" into the worktree, the primary checkout rots on a stale commit, and the
+NEXT `git switch main` anywhere fails with `fatal: 'main' is already used by worktree
+'<path>'`. Return instead with:
+
+```
+git fetch origin && git switch --detach origin/main
+```
+
+which lands on trunk's commit WITHOUT moving the `main` ref off the primary checkout.
+`hooks/post_merge_return_to_trunk.py` detects a linked worktree by comparing
+`git rev-parse --git-dir` against `--git-common-dir` (they differ in a linked
+worktree, match in the primary) and prints the `--detach` form there, the plain
+`git switch main && fetch && merge --ff-only` form in the primary checkout.
+(follow-up 1c9cea, 2026-06-24 — a recurring strand where `/harness-pr` step 7's
+return-to-trunk run from a worktree migrated `main` and stranded the next session.)
+
 ## Guard A's `git worktree` exemption is matched per shell-segment — a loop breaks it
 
 Guard A exempts `git worktree` commands, but the match is at the segment START. A
