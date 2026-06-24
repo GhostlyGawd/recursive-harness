@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # fetch-depth: 0 pulls FULL history (not a shallow clone): cartograph's
+        # test_diff.py walks real commit history, so a shallow checkout fails it.
         with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
@@ -19,15 +21,35 @@ jobs:
         run: python3 lint/lint_harness.py
       - name: Hook behavior tests
         run: python3 tests/test_hooks.py
-      - name: Concurrency guard tests (Guard A + B worktree, Guard C trunk-lease)
+      - name: Kernel-injection & session-start hook tests
+        run: |
+          python3 tests/test_inject_kernel.py
+          python3 tests/test_session_start_autoact.py
+      - name: Concurrency guard tests (worktree isolation + session, trunk-lease, git-worktree safety)
         run: |
           python3 tests/test_guard_worktree_isolation.py
           python3 tests/test_guard_worktree_session.py
           python3 tests/test_guard_trunk_lease.py
+          python3 tests/test_guard_git_worktree_safety.py
+      - name: Worktree-repo materialization tests
+        run: python3 tests/test_materialize_worktree_repos.py
       - name: Feature-flag layer tests (ADR 0008)
         run: python3 tests/test_features.py
       - name: Retro-completion ledger tests
         run: python3 tests/test_retro_done.py
+      - name: Harness state-dir, command-recipe & CI-coverage consistency tests
+        run: |
+          python3 tests/test_harness_state_dir.py
+          python3 tests/test_command_refresh_recipe.py
+          python3 tests/test_ci_coverage.py
+      - name: Subsystem tests (fleet event-log, mission-control, auto-healer)
+        run: |
+          python3 fleet/test_eventlog.py
+          python3 mission_control/test_smoke.py
+          python3 mission_control/test_console.py
+          python3 mission_control/test_feed.py
+          python3 mission_control/test_graph.py
+          python3 skills/auto-healer/test_heal.py
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run
       - name: Cartograph structural-rot gate (Part B) + full test suite
@@ -41,3 +63,4 @@ jobs:
           python3 cartograph/test_hardening.py
           python3 cartograph/test_spec.py
           python3 cartograph/test_spec_gate.py
+          python3 cartograph/test_mission.py
