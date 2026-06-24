@@ -16,6 +16,16 @@ you swept. This command exists because the user approved the same sweep repeated
   calibration (SessionStart banner), recent corrections
   (state/corrections.jsonl), cadence (sessions since /meta-retro, retro gate pending).
 Lead with a 2-3 line TL;DR, then sections: Shipped / Open / Health / Suggested next.
+- Live view (optional): the same followup / health / inflight signals render in the
+  read-only Mission Control console — offer `"$HARNESS/bin/harness" mission-control --root "$HARNESS"`
+  (Phosphor Console TUI; needs `textual`). Point `--root` at `"$HARNESS"` so it reads the LIVE
+  trunk ledger, not a worktree's gitignored-empty `state/` (which renders zeros). Mention it; do
+  not auto-launch — it is an interactive TUI, not a report line.
+
+<!-- provenance: followup 18a805 (2026-06-22, Mission Control gated bundle PR #143/#136); the
+proposal had /standup compose with the TUI. Verb `harness mission-control --root` confirmed live
+on origin/main 2026-06-24; --root LIVE-render validated (followup 24969d: 54 lanes, calib n=155). -->
+
 
 ## 2. Sweep (do it — every step here is safe and recoverable)
 Order matters; step (a) is non-negotiable.
