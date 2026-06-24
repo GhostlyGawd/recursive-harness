@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """PreToolUse guard: no NEW ad-hoc scratchpads (Mission Control P5 — the anti-STATE.md guard).
 
-STAGED for /harness-pr: this file is authored under proposals/ because hooks/ is write-locked; on
-merge a human moves it to `hooks/forbid_scratchpad.py` and registers it as a PreToolUse hook in
-settings.json (see the sibling README.md). HARNESS_ROOT is `dirname(dirname(__file__))`, so once it
-lives at hooks/ it resolves to the repo root — exactly like guard_enforcement_layer.py.
+Registered as a PreToolUse hook in settings.json (matcher Write|Bash). HARNESS_ROOT is
+`dirname(dirname(__file__))`, so from hooks/ it resolves to the repo root — exactly like
+guard_enforcement_layer.py. (Merged via the Mission Control gated bundle; see
+proposals/2026-06-23-mission-control-gated-bundle/README.md.)
 
 WHY (the Contrarian half of the Mission Control synthesis): the instrument must never compete with a
 stale hand-rolled scratchpad. 3+ projects independently hand-rolled cross-session STATE.md /

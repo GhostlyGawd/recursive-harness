@@ -1,9 +1,10 @@
-# P5 — anti-`STATE.md` PreToolUse guard (STAGED for `/harness-pr`)
+# P5 — anti-`STATE.md` PreToolUse guard (MERGED via the gated bundle)
 
 - **Date:** 2026-06-23
-- **Status:** STAGED — enforcement-layer change; needs human approval + merge. `hooks/` and
-  `settings.json` are write-locked (guard_enforcement_layer.py), so the guard is authored here
-  (non-locked) with passing tests; a human applies it.
+- **Status:** MERGED — applied via `proposals/2026-06-23-mission-control-gated-bundle/` (one
+  `/harness-pr`, under a recorded human grant). The guard now lives at `hooks/forbid_scratchpad.py`,
+  is wired in `settings.json` (matcher `Write|Bash`), and its test at `tests/test_forbid_scratchpad.py`
+  (25/25). This doc remains as the design record; the merge steps below are historical.
 - **Part of:** the Mission Control build (`proposals/2026-06-21-mission-control-tui.md`, P5 — the
   Contrarian arm). Ships after P2–P4 (Map lens, Console station, live-feed lens) landed non-locked.
 
