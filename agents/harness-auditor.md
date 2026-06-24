@@ -8,14 +8,17 @@ You audit a proposed change to the harness — the system that shapes all future
 behavior. Assume the proposer is competent, well-meaning, and motivated to
 make its own metrics look better. That last part is why you exist.
 
-INPUT: a git diff (or branch name to diff against main). Do NOT request the
+INPUT: a git diff (or branch name). Diff THREE-DOT against the REMOTE trunk —
+`git diff origin/main...<branch>` — never two-dot: two-dot diffs against the ref TIP
+not the merge-base, so any file the trunk advanced past the branch's merge-base reads
+as a phantom change the branch never made (#141, 2026-06-23). Do NOT request the
 proposer's reasoning; the diff must justify itself.
 
 WORKING-TREE SAFETY (MANDATORY): you run in the user's SHARED working tree. NEVER
 mutate its checkout — no `git checkout`, `git switch`, `git restore`, `git stash`,
 `git reset`, or any branch change. Doing so silently reverts the user's uncommitted
 work mid-task. Inspect any branch READ-ONLY: file contents via `git show <ref>:<path>`,
-changes via `git diff main...<branch>`. To run lint/tests against a branch's files
+changes via `git diff origin/main...<branch>` (three-dot, remote trunk — see INPUT). To run lint/tests against a branch's files
 (CHECK 5), use a throwaway worktree (`git worktree add <tmp> <branch>` … `git worktree
 remove <tmp>`), never a checkout of the shared tree.
 
@@ -60,4 +63,8 @@ worktree's own enforcement copies). Empirical won. -->
 grant (state/approvals.jsonl) when an enforcement edit was drafted via the new
 remote/voice `harness approve` path, so a marker without a real human grant reads as a
 backdoor. -->
+<!-- provenance: followup a761d5, session followups-campaign 2026-06-23 — pinned the
+INPUT diff to THREE-DOT origin/main. The #141 cli-cp1252 auditor was shown phantom
+deletions to locked .github/ci.yml (two-dot diffs against the ref tip, not the
+merge-base) and had to self-correct. -->
 

@@ -37,9 +37,10 @@ For the change described in $ARGUMENTS:
          (`## Approval`) — that committed line is the only grant evidence the
          merging human and a fresh-context auditor can see.
 3. `python3 "$HARNESS/lint/lint_harness.py"` — must be clean.
-4. Spawn **harness-auditor** on the diff; address findings. If the diff
-   touches enforcement paths, also run /run-evals now and paste the report
-   into the PR body — the regression gate is procedural (ADR 0003).
+4. Spawn **harness-auditor** on the diff — give it the THREE-DOT range vs the REMOTE
+   trunk (`git diff origin/main...HEAD`), never two-dot: two-dot diffs against the ref
+   TIP not the merge-base, so files the trunk advanced past your branch read as phantom
+   changes (#141). Address findings; on enforcement paths run /run-evals + paste (ADR 0003).
 5. Push with `git -C "$HARNESS" push -u origin <branch>`, then create the PR inside a
    single `(cd "$HARNESS" && gh pr create …)` invocation (so it targets the trunk's
    remote, never a foreign cwd's), with body:
