@@ -65,6 +65,17 @@ ship.**
    post-build impl critic + auditor, and one critic's own suggested fix broke a
    contract a prior test caught; prediction 6b1e4a12 missed exactly the 'reviews
    force no rework' clause.)
+   TRUNK-DRIFT on a tracked-tree invariant (a coverage / "every X is wired" /
+   lockfile / manifest check that enumerates tracked files): local-green does NOT
+   predict CI-green — CI grades your branch MERGED WITH CURRENT main, so a peer who
+   landed state after you branched flips it RED on inputs you never saw locally. Under
+   a known-active concurrent peer (multiple live sessions / a worktree holding main):
+   make THAT the prediction's residual risk (not a generic OS-portability hunch), and
+   before merge re-fetch + rebase onto origin/main and re-run the full suite on the
+   rebased tree so local == CI's merged view. (session 37226faa, 2026-06-23: a
+   CI-coverage guard went RED on 3 tests a concurrent mission-control merge added to
+   main mid-build; local full-suite-green missed them; prediction 970bdc74 named the
+   wrong residual risk.)
 6. **CAPTURE.** If the result recurs, was correction-born, or encodes taste the
    user articulated, snapshot it. → skill `eval-capture` + `/run-evals` (passes
    day-one). Where a spec governs the target (phase-1's `governed-by` check), write the
@@ -101,6 +112,15 @@ it. Do NOT reach for a global `PYTHONUTF8` env override: it masks a non-robust
 committed script that then breaks in CI / another env, defeating that robustness.
 (session 908de0ac, 2026-06-21: inline `ast.parse(open(...))` + a later command that
 dropped the flag crashed cp1252 3× during an otherwise-clean auto-healer build/verify.)
+
+To confirm a test is import-safe for no-pip CI, do NOT `grep '^(import|from)'`: that
+anchor misses third-party imports indented inside `try/except ImportError` skip-guards
+(and lazy in-function imports) — a FALSE "stdlib-only" all-clear. Match leading
+whitespace (`^\s*(import|from)`) or, better, PROVE it: run the test under bare `python3`
+with the suspect package un-importable (a `sys.modules` blocker / pip-less env); a green
+run is proof, a source regex is a guess. (session 37226faa, 2026-06-23: an `^import`-
+anchored scan twice declared 3 textual-importing mission_control tests "stdlib-only";
+only the harness-auditor, which ran them under a textual blocker, caught it.)
 
 ## Property tests bind green to intent (the one new procedure)
 
