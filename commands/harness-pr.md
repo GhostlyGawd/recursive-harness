@@ -73,7 +73,8 @@ For the change described in $ARGUMENTS:
    in-place in the MAIN checkout; ending the session still on `proposal/*` strands
    the NEXT session on a dead branch (the SessionStart banner flags it). The work
    is safe on its pushed branch + PR. Skip ONLY if the user wants to keep iterating
-   the branch this session.
+   the branch this session. (From a LINKED-worktree session, return with `git switch
+   --detach origin/main`, never bare `git switch main` — it migrates `main` in; 1c9cea.)
 
 <!-- provenance:
 - session 9147f304, 2026-06-14 — step (1) fetch/branch-off-origin: a PR off a stale local main made the

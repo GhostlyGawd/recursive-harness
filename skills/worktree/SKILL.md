@@ -118,6 +118,14 @@ Two paths with two different bars — don't conflate them:
 - **`claude --worktree` and `-p` non-interactive runs are NOT auto-cleaned.**
   Manual: `git worktree remove <path>` (`--force` to discard changes), then
   `git worktree prune`.
+- **Return to trunk from a worktree with `git switch --detach origin/main`, never a
+  bare `git switch main`.** Inside a LINKED worktree `git switch main` checks `main`
+  OUT into that worktree and leaves the PRIMARY checkout detached on an old commit,
+  so `main` migrates between worktrees and the next session's `git switch main` fails
+  ("already used by worktree X"). `--detach origin/main` lands on trunk's commit
+  without moving the `main` ref. The `post_merge_return_to_trunk` hook now emits the
+  `--detach` form when it detects a linked worktree (follow-up 1c9cea); do the same by
+  hand. Detail in `references/cleanup.md`.
 - **Before removing, reconcile this worktree's gitignored `state/`** (see §2) —
   cleanup discards it.
 - **Pruning a BATCH is rule-driven, not list-driven.** State is non-stationary

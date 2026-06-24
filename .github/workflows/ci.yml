@@ -17,32 +17,49 @@ jobs:
         with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      # `if: ${{ !cancelled() }}` on every test step so ONE CI run surfaces the FULL
+      # failure set, not just the first red step. GitHub stops at the first failed
+      # step by default, which hid a 3-deep cascade and surfaced it one PR at a time
+      # (follow-up 833c47). !cancelled() keeps each step running unless the run is
+      # cancelled; the job still goes red if any step fails. Checkout/setup-python
+      # stay unguarded — they are prerequisites, not tests.
       - name: Harness self-lint (budgets, falsifiability, autonomy firewall)
+        if: ${{ !cancelled() }}
         run: python3 lint/lint_harness.py
       - name: Hook behavior tests
-        run: python3 tests/test_hooks.py
+        if: ${{ !cancelled() }}
+        run: |
+          python3 tests/test_hooks.py
+          python3 tests/test_post_merge_return_to_trunk.py
       - name: Kernel-injection & session-start hook tests
+        if: ${{ !cancelled() }}
         run: |
           python3 tests/test_inject_kernel.py
           python3 tests/test_session_start_autoact.py
       - name: Concurrency guard tests (worktree isolation + session, trunk-lease, git-worktree safety)
+        if: ${{ !cancelled() }}
         run: |
           python3 tests/test_guard_worktree_isolation.py
           python3 tests/test_guard_worktree_session.py
           python3 tests/test_guard_trunk_lease.py
           python3 tests/test_guard_git_worktree_safety.py
       - name: Worktree-repo materialization tests
+        if: ${{ !cancelled() }}
         run: python3 tests/test_materialize_worktree_repos.py
       - name: Feature-flag layer tests (ADR 0008)
+        if: ${{ !cancelled() }}
         run: python3 tests/test_features.py
       - name: Retro-completion ledger tests
+        if: ${{ !cancelled() }}
         run: python3 tests/test_retro_done.py
       - name: Harness state-dir, command-recipe & CI-coverage consistency tests
+        if: ${{ !cancelled() }}
         run: |
           python3 tests/test_harness_state_dir.py
           python3 tests/test_command_refresh_recipe.py
           python3 tests/test_ci_coverage.py
       - name: Subsystem tests (fleet event-log, mission-control, auto-healer)
+        if: ${{ !cancelled() }}
         run: |
           python3 fleet/test_eventlog.py
           python3 mission_control/test_smoke.py
@@ -51,13 +68,16 @@ jobs:
           python3 mission_control/test_graph.py
           python3 skills/auto-healer/test_heal.py
       - name: Mission Control gated-bundle tests (P5 guard, P4 reaper, mission-control verb)
+        if: ${{ !cancelled() }}
         run: |
           python3 tests/test_forbid_scratchpad.py
           python3 tests/test_reaper.py
           python3 tests/test_subcommand.py
       - name: Eval corpus structure
+        if: ${{ !cancelled() }}
         run: python3 evals/run_evals.py --dry-run
       - name: Cartograph structural-rot gate (Part B) + full test suite
+        if: ${{ !cancelled() }}
         run: |
           python3 cartograph/extract.py --check
           python3 cartograph/test_gate.py
