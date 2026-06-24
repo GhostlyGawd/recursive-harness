@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""SessionEnd hook: append one summary record per session and clean gate flags."""
+"""SessionEnd hook: append one summary record per session, reap the fleet log, clean gate flags.
+
+The fleet-log reap (Mission Control P4): fleet.eventlog.compact() is the wired lifecycle trigger its
+docstring already names ("the harness wires it into session-end"). Correctness never depends on it
+(every read is reap-aware), so this is space reclamation and is fail-open — the reaper must never
+brick session end. (followups d72eec / ed2b67; deferred out of Agent Mail PR #121.)
+"""
 import datetime as dt
 import glob
 import json
@@ -25,6 +31,16 @@ def _count(name, session):
     return n
 
 
+def _reap_fleet():
+    """Best-effort fleet-log compaction (Mission Control P4). Fail-open: never brick session end."""
+    try:
+        sys.path.insert(0, HARNESS_ROOT)
+        from fleet import eventlog as el
+        el.compact(STATE)
+    except Exception:
+        pass
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
@@ -40,6 +56,8 @@ def main() -> int:
             "predictions": _count("predictions.jsonl", session),
             "skills_fired": _count("skill_usage.jsonl", session),
         }) + "\n")
+    # reap the fleet event log at this low-contention moment (space reclamation, fail-open)
+    _reap_fleet()
     # clean up both per-session retro-nudge flags (stop_retro_gate + stop_cadence_gate)
     for pat in (f"retro_gate_{session}", f"cadence_gate_{session}"):
         for f in glob.glob(os.path.join(STATE, pat)):

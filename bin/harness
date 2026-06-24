@@ -17,6 +17,8 @@ Subcommands:
   gc           Roll hot state older than N days into versioned monthly summaries.
   fleet        emit | feed | reap — lateral-coordination event channel for agents
                (append-only, typed, self-reaping; resolves the one canonical state/).
+  mission-control  Launch Mission Control — the read-only control-room TUI
+               (python -m mission_control; needs textual). --root / --json passthrough.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -617,6 +619,31 @@ def cmd_fleet(args) -> int:
     return 1
 
 
+# ---------------------------------------------------------------- mission control
+def _mission_control_dispatch(args, root, launcher=None):
+    """Dispatch `harness mission-control` -> mission_control.__main__.main(argv). `root` is where the
+    mission_control package lives (ROOT); `launcher` is injected only by tests. --root and --json are
+    mutually exclusive at the TUI layer, so pass at most one (root wins if both are given)."""
+    if launcher is None:
+        sys.path.insert(0, root)
+        try:
+            from mission_control.__main__ import main as launcher
+        except ImportError as exc:
+            print(f"mission_control unavailable (is textual installed?): {exc}", file=sys.stderr)
+            return 1
+    argv = []
+    if getattr(args, "root", ""):
+        argv += ["--root", args.root]
+    elif getattr(args, "json", ""):
+        argv += ["--json", args.json]
+    return launcher(argv)
+
+
+def cmd_mission_control(args) -> int:
+    """Launch Mission Control — the read-only control-room TUI (python -m mission_control)."""
+    return _mission_control_dispatch(args, ROOT)
+
+
 def main() -> int:
     # cp1252 consoles (Windows) crash when a subcommand echoes a non-latin1 char
     # (e.g. an arrow in a correction note) - degrade unencodable output to '?'
@@ -705,6 +732,13 @@ def main() -> int:
     sp.add_argument("--window", type=float, default=900.0, help="feed window seconds")
     sp.add_argument("--json", action="store_true", help="feed as JSON")
     sp.set_defaults(fn=cmd_fleet)
+
+    sp = sub.add_parser("mission-control",
+                        help="launch the read-only control-room TUI (Mission Control)")
+    sp.add_argument("--root", default="",
+                    help="harness root to read --mission from (default: this tree)")
+    sp.add_argument("--json", default="", help="render a saved --mission payload (offline/demo)")
+    sp.set_defaults(fn=cmd_mission_control)
 
     args = p.parse_args()
     return args.fn(args)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the Mission Control P5 guard — `forbid_scratchpad.py` (the anti-STATE.md PreToolUse
-hook). STAGED here (non-locked) because hooks/ is write-locked; the /harness-pr moves the hook into
-hooks/ and registers it in settings.json. These tests prove the LOGIC the human is approving.
+hook, registered in settings.json). Imports the hook from hooks/; this is the live regression suite
+(the hook was merged from proposals/2026-06-23-mission-control-p5-guard/ via /harness-pr).
 
 P5 SUCCESS CRITERIA (inline):
 
@@ -15,7 +15,7 @@ P5 SUCCESS CRITERIA (inline):
   C3 REAL HOOK CONTRACT. Run as a process it speaks the PreToolUse contract: exit 2 (+ stderr) to
      block, exit 0 to allow (mirrors guard_enforcement_layer.py).
 
-Run:  python proposals/2026-06-23-mission-control-p5-guard/test_forbid_scratchpad.py
+Run:  python tests/test_forbid_scratchpad.py
 """
 import json
 import os
@@ -24,7 +24,9 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+ROOT = os.path.dirname(HERE)                       # tests/ -> repo root
+HOOKS = os.path.join(ROOT, "hooks")
+sys.path.insert(0, HOOKS)
 
 import forbid_scratchpad as fs  # noqa: E402
 
@@ -115,7 +117,7 @@ def test_allows_everything_else():
 # ════════════════════════════════════════════════════════ C3: the real exit-2 / exit-0 contract
 def test_hook_process_contract():
     print("[C3] run as a process: exit 2 to block, exit 0 to allow (PreToolUse contract)")
-    script = os.path.join(HERE, "forbid_scratchpad.py")
+    script = os.path.join(HOOKS, "forbid_scratchpad.py")
     script_root = os.path.dirname(os.path.dirname(script))  # the hook's own HARNESS_ROOT
 
     def run(payload):
