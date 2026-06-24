@@ -50,6 +50,11 @@ jobs:
           python3 mission_control/test_feed.py
           python3 mission_control/test_graph.py
           python3 skills/auto-healer/test_heal.py
+      - name: Mission Control gated-bundle tests (P5 guard, P4 reaper, mission-control verb)
+        run: |
+          python3 tests/test_forbid_scratchpad.py
+          python3 tests/test_reaper.py
+          python3 tests/test_subcommand.py
       - name: Eval corpus structure
         run: python3 evals/run_evals.py --dry-run
       - name: Cartograph structural-rot gate (Part B) + full test suite
