@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: Create + manage git worktrees in this harness — when to isolate vs when one is overhead, how to EnterWorktree/ExitWorktree (they live at .claude/worktrees/<name>), and the gotchas that bite here: results don't auto-merge to main; state/ is gitignored so `harness` writes in a worktree miss the main ledger; committed memory/ rides in; shared DB/ports aren't isolated; the guard protects the trunk, not a worktree's own copies. Use whenever a second session opens, independent tasks fan out, or file-mutating agents run beside other work — the user never asks for a worktree or recites a gotcha.
-provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test. · 2026-06-19 (session 0081d05a): added §3 batch-prune-under-concurrency + Guard-A-loop gotchas, from a cleanup whose stale-snapshot plan mispredicted (prediction a7cf091e, miss). · 2026-06-21 (session 04fb5c5c): §6 — EnterWorktree fails from a pinned/repo-root session in both forms; added the isolation-agent Write+commit fallback. From a proposal written beside a concurrent cartograph session (4 guards + both EnterWorktree forms blocked). · 2026-06-22 (session 5bc7a495): §3 — a `locked` worktree can be held by the session's OWN long-lived host (not a peer); detect via a process-ancestry walk from `$PID`, reclaim self-held locks with `git worktree unlock`→`remove` (never kill the pid). From a 20→3 worktree GC where pid 36648 turned out to be this session's host.
+provenance: 2026-06-14, session 9147f304-4135-43ab-afe3-369125efcea3 — ported from the user's fable-harness worktree skill at .claude/worktrees/wraith-side/.claude/skills/worktree (that dir has branch fix/worktree-skill-cleanup-wording checked out; no branch is literally named wraith-side). Adapted to recursive-harness facts and re-verified against the live Claude Code worktree docs + empirical repo tests on 2026-06-14 (three-subagent second pass: live-docs, repo-facts, harness-auditor). Re-port if the fable skill changes materially. · 2026-06-18 (session 5191f317): added the §2 plugin-enablement gotcha + this repo's root `.worktreeinclude`; verified `.worktreeinclude` semantics against live docs + an empirical subagent-worktree copy test. · 2026-06-19 (session 0081d05a): added §3 batch-prune-under-concurrency + Guard-A-loop gotchas, from a cleanup whose stale-snapshot plan mispredicted (prediction a7cf091e, miss). · 2026-06-21 (session 04fb5c5c): §6 — EnterWorktree fails from a pinned/repo-root session in both forms; added the isolation-agent Write+commit fallback. From a proposal written beside a concurrent cartograph session (4 guards + both EnterWorktree forms blocked). · 2026-06-22 (session 5bc7a495): §3 — a `locked` worktree can be held by the session's OWN long-lived host (not a peer); detect via a process-ancestry walk from `$PID`, reclaim self-held locks with `git worktree unlock`→`remove` (never kill the pid). From a 20→3 worktree GC where pid 36648 turned out to be this session's host. · 2026-06-23 (session 9b95c85b, follow-up 315082): split §6 launch/resume/guard-hatch empirics into `references/sessions.md` for B3-cap headroom; extended the §6 reconcile rule to scan open PRs + sibling worktrees (not just merged), and added the cwd-drift-into-a-finished-agent-worktree caveat.
 ---
 
 # Worktree — isolate parallel work without clobbering
@@ -165,44 +165,41 @@ Claude Code changes under us, and stale worktree knowledge is dangerous. So:
 
 ## 6. Sessions: launch, resume, and the guard hatches
 
-(empirical, dated — re-verify against live docs if behavior surprises you)
-- **Launch the harness against a foreign repo** by opening a terminal IN that
-  repo and starting `CLAUDE_CONFIG_DIR=<harness>/.claude-private/accounts/<name>
-  claude`; a plain `claude` loads the default global config, NOT the harness (ADR
-  0004). `/cd` CANNOT relocate a live session into another repo — it is disabled
-  under Remote Control (this harness ships `remoteControlAtStartup: true`) and
-  otherwise only persists within the project + `--add-dir` boundary. Start a
-  fresh rooted session instead. (session 5c6f78c0, 2026-06-18 — recipe + /cd
-  block re-derived live after twice proposing /cd as the fix.)
-- **A session "missing" from `/resume` is almost never data loss.** Two real
-  causes: (1) it is still OPEN in a live `claude` process — an in-use session is
-  withheld from the picker, so close that window or resume by id; (2) the picker
-  labels each session by its LATEST auto-generated title, so a re-titled session
-  looks gone. Escape hatch: `claude --resume <session-id>` opens it regardless of
-  the picker label. Prove integrity with the `.jsonl` byte-count, not reassurance
-  prose. (session 5191f317, 2026-06-16 — a session looked lost; the user panicked
-  before the by-id resume was offered.)
-- **Guard A allows cross-worktree READS; for writes, the env hatch can't be set
-  mid-session but the inline prefix can.** Read/Glob/Grep into ANOTHER worktree are
-  ALLOWED (fix #4, 2026-06-19, per a user correction) — a read can't clobber
-  parallel work, so just read the sibling's files directly. Only MUTATING file
-  tools (Edit/Write/MultiEdit/NotebookEdit) and shells (Bash/PowerShell) are gated
-  cross-worktree. For those: the *env-var* hatch CANNOT be set mid-session — Guard
-  A's `HARNESS_ALLOW_CROSS_WORKTREE=1` and Guard B's `HARNESS_ALLOW_MULTI_SESSION=1`
-  are PreToolUse hooks reading the PARENT process env, so `export VAR=1` inside a
-  Bash command fires too late. BUT a LEADING inline prefix on the same command DOES
-  reach Guard A and works in-session (fix #1): `HARNESS_ALLOW_CROSS_WORKTREE=1 <cmd>`
-  (bash) / `$env:HARNESS_ALLOW_CROSS_WORKTREE='1'; <cmd>` (powershell) — verified
-  this session (a prefixed cross-worktree read succeeded). Guard B's env hatch
-  remains LAUNCH-only (`HARNESS_ALLOW_MULTI_SESSION=1 claude …`). (session 2a9d8553,
-  2026-06-17; corrected 2026-06-19 — prior text wrongly said every tool, incl. Read/Glob, stays blocked cross-worktree.)
+Terse rules below; recipes, exact error strings, and provenance live in
+`references/sessions.md` (re-verify against live docs if behavior surprises you).
 
-- **Before reimplementing a trunk fix, `git fetch` + scan recently-merged PRs** (`gh pr list --state merged --limit 20`) — parallel chats ship the same fix, so a blind redo duplicates merged work. (retro-backlog 2026-06-19, sessions b7488db6 + dc1c3470.)
-- **Two sessions sharing one checkout race on `.git/HEAD`.** Prevent with separate worktrees (Guard C's lease now blocks a stale-HEAD mutate on main); to commit mid-race, build from git objects (`write-tree`→`commit-tree`→`push <oid>:refs/heads/…`) off a TEMP `GIT_INDEX_FILE`, never `checkout`/`reset` a HEAD a peer holds. (sessions b7488db6 + dc1c3470.)
-### When EnterWorktree is blocked (subagent / pinned-cwd sessions)
-`EnterWorktree` REFUSES to run from a subagent or any session with a cwd override / `isolation: "worktree"` — moving in would mutate the parent session's process-wide cwd. BOTH forms fail: with `name`, "cannot create a worktree from a subagent with a cwd override"; with `path`, "current working directory … is the repository root, not an isolated worktree." So the guard's own "use EnterWorktree" suggestion can be unavailable exactly when the main checkout is contended. There the escape is NOT `EnterWorktree` — it is **spawning**: launch an `Agent` with `isolation: "worktree"` (or a `cwd` set to a worktree) and have IT do the Write + `git commit` in its own clean worktree (no cross-worktree or lease guard fires there), then from the main checkout `git push -u origin <its-branch>` and `gh pr create --head <its-branch>`; or relaunch at top level with `claude --worktree <name>`. Do NOT instead fight the trunk-lease / cross-worktree / enforcement guards inline, hatch-by-hatch (a costly slog): `HARNESS_TRUNK_LEASE_OK=1` is a per-command stopgap that lets ONE write through but does NOT end the contention — only a separate working dir does. This is the higher-level sibling of the `write-tree`→`commit-tree` plumbing above — prefer it when you just need a file written and committed; keep READS and `bin/harness` in the PRIMARY checkout (the delegate's `state/` is tree-local and misses the main ledger, §2). (session 04fb5c5c, 2026-06-21 — writing a proposal beside a live cartograph session: 4 guards + both EnterWorktree forms failed; the isolation-agent fallback worked. Re-confirmed session 7d2da048, 2026-06-21.)
-<!-- provenance: session 5bbe0b6e, 2026-06-21 — EnterWorktree rejected from a pinned-cwd session mid-contention (a concurrent peer was thrashing main); a worktree-isolated Agent was the working escape after ~6 lease blocks. -->
-- **To AMEND an already-PUSHED PR branch when the builder agent has come to rest and `SendMessage` can't resume it** (and the branch is still checked out in a now-idle peer worktree, so `git checkout <branch>` by name conflicts): spawn a FRESH `Agent` with `isolation: "worktree"` that runs `git fetch origin <branch>` + `git reset --hard FETCH_HEAD` to mirror the pushed head into its own worktree branch, applies the fix, re-runs the suite, then `git push origin HEAD:<branch>` by ref (pushes its own worktree HEAD onto the remote branch without ever checking out that name). Cheaper than fighting the branch-name conflict or the lease guard inline; the amend-time companion to the create-time fallback above. (session 0e16ec4a, 2026-06-21 — polishing PR #96 after the builder agent finished.)
+- **Launching the harness against a foreign repo** needs
+  `CLAUDE_CONFIG_DIR=<harness>/.claude-private/accounts/<name> claude` from inside
+  that repo — a plain `claude` loads the global config, not the harness, and `/cd`
+  cannot relocate a live session (ADR 0004). Recipe in `references/sessions.md`.
+- **A session "missing" from `/resume` is almost never data loss** — it is either
+  still open in a live process (withheld from the picker) or just re-titled.
+  `claude --resume <session-id>` opens it regardless; prove integrity with the
+  `.jsonl` byte-count, not prose. Detail in `references/sessions.md`.
+- **Guard A allows cross-worktree READS; only writes are gated.** Read/Glob/Grep a
+  sibling worktree directly; for a cross-worktree WRITE the env hatch can't be set
+  mid-session, so lead the command with `HARNESS_ALLOW_CROSS_WORKTREE=1 <cmd>`
+  (powershell form + Guard B's launch-only hatch in `references/sessions.md`).
+- **Before reimplementing a trunk fix, reconcile against ALL in-flight work, not
+  just merged history.** `git fetch`, then scan merged AND open PRs
+  (`gh pr list --state all`) AND live sibling worktrees (`git worktree list`) — a
+  near-complete rebuild can already sit in an OPEN PR or peer worktree, not yet on
+  `main`. (retro-backlog 2026-06-19 b7488db6+dc1c3470; extended 2026-06-23 d1917edc
+  — re-derived an SDD phase open PR #99 already carried.)
+- **Two sessions sharing one checkout race on `.git/HEAD`.** Prevent with separate
+  worktrees (Guard C's lease blocks a stale-HEAD mutate on main); to commit
+  mid-race, build from git objects (`write-tree`→`commit-tree`→`push
+  <oid>:refs/heads/…`) off a TEMP `GIT_INDEX_FILE`, never `checkout`/`reset` a HEAD
+  a peer holds. (sessions b7488db6 + dc1c3470.)
+- **A finished `isolation:worktree` agent can leave the session's cwd inside its
+  now-empty worktree.** Confirm `pwd` is the PRIMARY checkout before any
+  `bin/harness` op: the CLI resolves `state/` to the main ledger regardless of cwd
+  (§2), but the enforcement HOOKS still log tree-local, so a drifted cwd silently
+  drops skill-usage/session logs. (session b3314a63, 2026-06-23.)
+- **When EnterWorktree is blocked** (subagent / pinned cwd — see §1), don't fight
+  the guards inline: spawn an `isolation:worktree` Agent to do the Write + commit
+  in its own clean worktree, then `git push` its branch from the primary checkout.
+  Full create-time and amend-time recipes in `references/sessions.md`.
 
 ## Rules
 
