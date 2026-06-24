@@ -253,6 +253,43 @@ try:
     rc, _, _ = run(pl("Bash", {"command": f'git -C "{r}" merge --ff-only nope'}, r, sid="A"))
     check("after hatch re-baseline, next git -C mutating op at same state ALLOWED", rc == 0, f"rc={rc}")
 
+    # --- 15. NIT-A (followup 512398): a `git branch` READ (-a/-vv/-r/--list) must NOT be
+    #         classified mutating. The old `branch\s+-[a-zA-Z]` clause flagged EVERY dashed
+    #         branch flag, so a harmless `git branch -a` on a moved tree drew a (recoverable
+    #         but noisy) lease BLOCK. Only ref-MUTATING branch ops should gate. ---
+    for readcmd in ("git branch -a", "git branch -vv", "git branch -r", "git branch --list"):
+        r = fresh()
+        stamp(r, "A")
+        git(["checkout", "-q", "-b", "nb-" + readcmd.split()[-1].strip("-")], r)  # tree moved
+        rc, _, _ = run(pl("Bash", {"command": readcmd}, r, sid="A"))
+        check(f"NIT-A: '{readcmd}' is a READ, not gated on mismatch", rc == 0, f"rc={rc}")
+    # ...and a ref-MUTATING branch op on the same mismatch DOES still block.
+    for mutcmd in ("git branch -D gone", "git branch -m old new", "git branch --delete x"):
+        r = fresh()
+        stamp(r, "A")
+        git(["checkout", "-q", "-b", "mb-x"], r)
+        rc, _, err = run(pl("Bash", {"command": mutcmd}, r, sid="A"))
+        check(f"NIT-A: '{mutcmd}' still classified mutating (blocks on mismatch)", blocked(rc, err), f"rc={rc}")
+
+    # --- 15b. NIT-B (followup 512398) regression: the f36989d6 global-option fix already
+    #          classifies `git -C "<quoted space>" -c k=v <mutating>` as mutating (it was a
+    #          documented KNOWN-GAP under-classify, now closed). Lock it so it can't regress. ---
+    r = fresh()
+    stamp(r, "A")
+    git(["checkout", "-q", "-b", "nitb"], r)
+    rc, _, err = run(pl("Bash", {"command": f'git -C "{r}" -c user.name=x commit --allow-empty -m z'}, r, sid="A"))
+    check("NIT-B: git -C <quoted-space> -c k=v commit classified mutating (blocks)", blocked(rc, err), f"rc={rc}")
+
+    # --- 16. f963e5: the trunk-moved BLOCK hint must name the subagent/pinned-cwd escape
+    #         (spawn an isolation:worktree Agent), not only EnterWorktree -- the guard fires
+    #         in exactly the pinned/subagent context where EnterWorktree is unavailable. ---
+    r = fresh()
+    stamp(r, "A")
+    git(["checkout", "-q", "-b", "hintb"], r)
+    rc, _, err = run(pl("Edit", EDIT(r), r, sid="A"))
+    check("f963e5: block hint names the isolation-agent escape for pinned/subagent sessions",
+          "isolation" in err.lower(), err[-160:])
+
 finally:
     for d in REPOS:
         try:

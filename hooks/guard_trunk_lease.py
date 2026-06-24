@@ -111,7 +111,12 @@ _MUTATING_CMD = re.compile(
     # (session f36989d6, 2026-06-21 - narrows the heuristic miss conceded in KNOWN GAPS (2).)
     r"git\s+(?:(?:-C|-c)\s+(?:\"[^\"]*\"|'[^']*'|\S+)\s+|--no-pager\s+)*"
     r"(?:checkout|switch|reset|merge|rebase|commit|stash|pull|cherry-pick"
-    r"|am|revert|restore|apply|clean|branch\s+-[a-zA-Z])"
+    r"|am|revert|restore|apply|clean"
+    # `branch` only when it MUTATES a ref (-d/-D/-m/-M/-c/-C and the --delete/--move/
+    # --copy long forms). The old `branch\s+-[a-zA-Z]` over-flagged READS (-a/-r/-vv ->
+    # a noisy lease check) AND under-flagged the long forms (`branch --delete` slipped
+    # through as a read). (followup 512398 NIT-A)
+    r"|branch\s+(?:--(?:delete|move|copy)|-[dDmMcC]))"
     r"|\b(?:rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|mkdir|patch"
     r"|sed\s+-i|Set-Content|Add-Content|Clear-Content|Remove-Item|New-Item"
     r"|Move-Item|Copy-Item|Out-File)\b"
@@ -338,7 +343,9 @@ def _block(mine, cur) -> None:
             "-- acting now risks committing onto the wrong branch or clobbering its "
             "work." + hatch + "\n"
             "(To work in parallel without this contention, use your own worktree: the "
-            "EnterWorktree tool, or `claude --worktree <name>` -- see skill `worktree`.)",
+            "EnterWorktree tool, or `claude --worktree <name>`; from a subagent / pinned-"
+            "cwd session where EnterWorktree is unavailable, spawn an isolation:worktree "
+            "Agent to do the write -- see skill `worktree`.)",
             file=sys.stderr,
         )
     else:
