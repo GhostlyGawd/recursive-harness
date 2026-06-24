@@ -204,3 +204,15 @@ arbitrary input.
 (session 04fb5c5c, 2026-06-21: auto-healer's heal.py had pure-ASCII framing yet
 crashed `review` on a CJK summary under PYTHONIOENCODING=cp1252; the harness-auditor
 reproduced it, and stdout/stderr errors=replace fixed it.)
+
+## Creating or moving hooks on this Windows checkout (git drops the +x bit)
+
+core.fileMode is effectively off here, so git does not track the executable bit: a hook
+authored via Write or moved with `git mv` lands at mode 100644, and lint's H1 SKIPS the exec
+check on Windows — local lint passes clean while Linux CI's H1 FAILS ("not executable"). After
+creating/moving any hook (or an evals/corpus `check.py`), set it before committing:
+`git update-index --chmod=+x hooks/<file>` (verify `git ls-files -s` → 100755). Same trap on a
+test RELOCATION: a `test_*.py` moved from proposals/ (CI-excluded) into tests/ must be wired into
+`.github/workflows/ci.yml` or `test_ci_coverage.py` fails — run the FULL suite locally before pushing.
+(session 59d5001b, 2026-06-24: the Mission Control bundle moved 2 hooks + 3 tests; both the dropped
++x and the unwired tests passed Windows lint but cost two Linux-CI round-trips before green.)
