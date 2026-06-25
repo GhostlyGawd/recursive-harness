@@ -45,7 +45,13 @@ launched it. One silo owns the real store — `accounts/rhen/projects/` ("rhen o
 chosen for minimal data movement: it already held the superset) — and every other silo's
 `projects/` is a symlink → there. `account-init.sh` wires this for new/empty silos; a silo
 whose `projects/` is already a populated real dir is left untouched with a warning and
-consolidated ONCE, losslessly, by `./sync-account-sessions.sh <name>` (merge-then-cutover).
+consolidated ONCE, losslessly, by the cutover tool (merge-then-cutover): on this Windows host
+use `sync-account-sessions.ps1 <name>` (native PowerShell — the default shell; `bash` is NOT on
+PATH here, so the `.sh` is unusable from a stock PowerShell), or `./sync-account-sessions.sh
+<name>` where bash is available. The `.ps1` is ASCII-only (Windows PowerShell 5.1 misreads a
+UTF-8 non-ASCII byte as ANSI and fails to parse) and verified by `tests/test-sync-account-sessions.ps1`
+under both PS 5.1 and pwsh 7. That test is Windows/symlink-specific, so Linux CI does NOT run it
+(test_ci_coverage only discovers `test_*.py`); re-verify both cutover tools manually on any change.
 
 Failure modes:
 - A session created under silo A will NOT appear in silo B's `/resume` unless this symlink
