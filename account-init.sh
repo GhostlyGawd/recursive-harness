@@ -60,12 +60,14 @@ done
 # profiles stay in lock-step with the canonical template. Drift happens when the template
 # advances and only one account is re-synced (settings.json is materialized per-account, not
 # symlinked — by design, to allow per-account overrides.json). Re-execs this script per account.
+# provenance (--all): session b46882f7, 2026-06-25 - keep all fleet profiles' settings in lock-step.
 if [ "$ALL" -eq 1 ]; then
   [ -n "$NAME" ] && { echo "ERROR: --all cannot be combined with an account name." >&2; exit 2; }
   rc=0
   shopt -s nullglob
   for d in "$REPO_DIR"/.claude-private/accounts/*/; do
     acct="$(basename "$d")"
+    case "$acct" in -*) echo "  SKIP $acct (account name starts with '-')" >&2; rc=1; continue ;; esac
     echo "========== $acct =========="
     if [ "$SYNC_SETTINGS" -eq 1 ]; then
       bash "${BASH_SOURCE[0]}" "$acct" --sync-settings || rc=1
