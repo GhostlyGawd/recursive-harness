@@ -1,10 +1,10 @@
 {
   "_doc": "Graduated autonomy ledger. A category may flip auto_merge to true only when proposed >= 20 and accepted/proposed >= 0.95, via /meta-retro, via PR. 'enforcement' (hooks, lint, evals, autonomy.json, settings.json, .github) is graduable: false FOREVER — the lint rejects any change to that.",
-  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts. 2026-06-21 reconcile (/meta-retro, session 04fb5c5c): skills 5->11, commands 4->6 to match current trunk inventory (skills count - 6 seed; commands count - 6 seed); agents 0 and memory 3 unchanged; no graduation (all < 20).",
+  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts. 2026-06-21 reconcile (/meta-retro, session 04fb5c5c): skills 5->11, commands 4->6 to match current trunk inventory (skills count - 6 seed; commands count - 6 seed); agents 0 and memory 3 unchanged; no graduation (all < 20). 2026-06-24 reconcile (/meta-retro, verbal grant logged state/approvals.jsonl; auditor-corrected): skills 11->12 to match COMMITTED trunk (18 tracked skill dirs - 6 seed = 12 non-seed; +1 since 06-21 = windows-host-paths added 06-23). NOTE: count tracked dirs (git ls-files), not the live filesystem — skills/brand-foundry is gitignored/vendored-live and never reached main, so it is NOT a counted artifact. commands 6 (12 - 6 seed), agents 0 (3 = 3 seed), memory 3 unchanged; no graduation (all < 20).",
   "categories": {
     "skills": {
-      "proposed": 11,
-      "accepted": 11,
+      "proposed": 12,
+      "accepted": 12,
       "auto_merge": false,
       "graduable": true
     },
