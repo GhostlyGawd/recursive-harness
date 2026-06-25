@@ -1,7 +1,7 @@
 ---
 name: brainstorm
-description: Generate several distinct solutions to ONE problem via independent parallel subagents, then choose arena-style. Trigger when the user wants to brainstorm, explore options, compare approaches, name/design/architect something, or asks for ideas or "what are my choices" — especially when one obvious answer would anchor them. Mode 1 (solution arena): a user-chosen diversity engine spreads N agents across orthogonal stances, a divergence guard kills overlap, AskUserQuestion shows them side-by-side to pick. Skipping it yields a single anchored answer and false consensus from look-alike agents.
-provenance: 2026-06-18, session c5f1c14c-63a7-4484-827d-482d5a33bc04 — user request to build a brainstorming skill whose first feature is a solution arena (3 independent subagents → diverse solutions → side-by-side pick). User directed that the diversity engine be a runtime AskUserQuestion choice among fixed lenses / per-problem angles / ideation methods; sequential-divergence was rejected. Tool-behaviour facts confirmed against the in-session AskUserQuestion + Workflow tool schemas/descriptions: AskUserQuestion enforces 2–4 options per question (schema `options.maxItems`), and previews are single-select-only and are what trigger the side-by-side layout (tool description). The arena pick is placed in the main loop by reasoning, not a documented rule: a workflow's/subagent's output is never user-facing (Workflow + Agent tool descriptions), so an interactive pick has no channel from inside a workflow — §4 carries a fallback in case the layout claim ever drifts. Generalizes the design-specific multi-perspective fan-out in skills/huashu-design/references/multi-perspective-parallel-case-study.md; keep the shared parallel-spawn mechanics in sync (that doc's "洞察 4" argues the value is keeping all variants, not picking one — here the user explicitly wants a pick, with Synthesize as the keep-all escape hatch).
+description: Generate distinct solutions to ONE problem, then pick. Trigger when the user wants to brainstorm, explore/compare options, name/design/architect something, asks for ideas, OR wants to INVENT, find a breakthrough, or solve from first principles when known options disappoint. Mode 1 (solution arena): parallel agents across orthogonal stances, divergence guard, side-by-side pick. Mode 2 (invention forge): frame to invariants, diverge on invention vectors, recombine, adversarial filter w/ prior-art search, loop to grounded breakthrough. Skipping yields an anchored answer or confident reinvention.
+provenance: 2026-06-18, session c5f1c14c-63a7-4484-827d-482d5a33bc04 — user request to build a brainstorming skill whose first feature is a solution arena (3 independent subagents → diverse solutions → side-by-side pick). User directed that the diversity engine be a runtime AskUserQuestion choice among fixed lenses / per-problem angles / ideation methods; sequential-divergence was rejected. Tool-behaviour facts confirmed against the in-session AskUserQuestion + Workflow tool schemas/descriptions: AskUserQuestion enforces 2–4 options per question (schema `options.maxItems`), and previews are single-select-only and are what trigger the side-by-side layout (tool description). The arena pick is placed in the main loop by reasoning, not a documented rule: a workflow's/subagent's output is never user-facing (Workflow + Agent tool descriptions), so an interactive pick has no channel from inside a workflow — §4 carries a fallback in case the layout claim ever drifts. Generalizes the design-specific multi-perspective fan-out in skills/huashu-design/references/multi-perspective-parallel-case-study.md; keep the shared parallel-spawn mechanics in sync (that doc's "洞察 4" argues the value is keeping all variants, not picking one — here the user explicitly wants a pick, with Synthesize as the keep-all escape hatch). 2026-06-24, session be67ac31-5354-420d-b13a-444a1df84763 — user wanted brainstorm to "truly invent" beyond stock frontier capability via first-principles + systematic filtration to a novel breakthrough; chose the "Full Forge" scope. Added Mode 2 (Invention Forge) as a depth/invent engine, sibling to Mode 1's breadth/survey engine (no fork — kernel directive 6). Reframed the lever as PROCESS not exhortation: the four model defaults Mode 2 routes around (mean-regression, self-unfalsification, no prior-art grounding, single-pass) are the documented rationale. Prior-art gate uses built-in WebSearch/WebFetch — NOT the external deep-research skill, which is a plugin not present in this trunk (verified absent from skills/ + commands/ 2026-06-24), so wiring to it would over-claim and break on a clean checkout. Detailed vector briefs + gate prompts live in references/invention-forge.md. Prediction ae5818ac.
 ---
 
 # Brainstorm — many distinct solutions, then pick
@@ -11,8 +11,17 @@ N agents asked the same question converge into **false consensus** — three pit
 that are one idea in three fonts. The job here is genuine divergence, then a clean
 pick. The `description` is the always-loaded *when*; this body is the *how*.
 
-This skill is **mode-based**. Mode 1 is the solution arena. Add modes here as the
-skill grows — never fork a sibling skill (kernel directive 6).
+This skill is **mode-based**. Add modes here as the skill grows — never fork a
+sibling skill (kernel directive 6).
+
+- **Mode 1 · Solution Arena** — *breadth.* Survey the known solution space: N
+  independent agents spread across orthogonal stances, then a clean side-by-side
+  pick. The default for "what are my options / compare approaches / name this."
+- **Mode 2 · Invention Forge** — *depth.* For when the known options all
+  disappoint and you want something that doesn't exist yet ("invent", "novel",
+  "breakthrough", "first principles"). Heavyweight (multi-agent + web); not the
+  default. Frames the problem to its invariants, then forces the model past its
+  four default failure modes (below) toward a prior-art-grounded breakthrough.
 
 ## Mode 1 · Solution Arena
 
@@ -93,11 +102,98 @@ Call `AskUserQuestion` (multiSelect) offering all three:
 
 Return the result: the winner, or the merged / expanded artifact.
 
+## Mode 2 · Invention Forge
+
+Use when the known solutions all disappoint and the user wants something that does
+not exist yet. The lever is **not** telling the model to "think harder" — weights
+are frozen (kernel). The lever is a process that routes around the model's four
+default failure modes:
+1. **Mean-regression** — left alone it drifts to the safe middle → forced
+   orthogonal divergence (§1).
+2. **Self-unfalsification** — it won't try to kill its own ideas → adversarial
+   gates (§3).
+3. **No prior-art grounding** — it cannot certify "this doesn't exist" from
+   confidence → a real web search (§3).
+4. **Single-pass** — it stops at first-order ideas → recombine + loop (§2, §4).
+
+Read `references/invention-forge.md` for the per-vector agent briefs, the pitch
+schema, the three gate prompts, and the scorecard format before spawning.
+
+### 0. Frame to invariants — the highest-leverage, most fallible step
+- State the **job-to-be-done as an OUTCOME**, not the shape of today's solution.
+- List the **invariants**: what ANY solution must satisfy (real constraints,
+  physics, the success criterion). This is what a candidate is judged against.
+- List the **inherited assumptions**: conventions current solutions copy that are
+  NOT actually required. *This list is the novelty surface — invention is dropping
+  one.* If you can't name any, the problem isn't framed yet.
+- Pin the **baseline**: the boring, obvious, best-known solution. It is the
+  control every candidate must beat — a novel idea that loses to the baseline is
+  theater, not a breakthrough.
+- If invariants or the success criterion are vague, ask 1–2 questions FIRST (as in
+  Mode 1 §0). A breakthrough against the wrong criterion is wasted.
+
+### 1. Diverge on invention vectors — parallel, independent
+Spawn one `general-purpose` agent per vector in **one message** (reuse Mode 1's
+independence rule + its §3 divergence guard — Mode 2's own §3 is the funnel). Each gets the frame and ONLY its
+vector. Default the four below; swap one if a vector is dead for this problem.
+- **Assumption-drop** — take the most load-bearing inherited assumption; design as
+  if it were false.
+- **Cross-domain transfer** — find a structurally-isomorphic problem in a distant
+  field (nature, another industry, another scale/era) and transplant its
+  mechanism. *Invention is mostly recombination.*
+- **First-principles rebuild** — derive only from the invariants; ignore how it's
+  normally done.
+- **Constraint-to-extreme** — push one constraint to 0 or ∞ (free compute, zero
+  latency, one user, infinite scale) and harvest what unlocks.
+
+### 2. Recombine — cross-pollinate (deliberately breaks Mode 1's rule)
+Read all vector pitches and graft their strongest fragments into 2–4 **hybrid**
+candidates. Mode 1 forbids candidates seeing each other; here the cross-
+pollination IS the point — that's why this is a separate mode. Carry the best pure
+vector pitches forward too; hybrids don't always win.
+
+### 3. Adversarial filtration funnel — each candidate must clear ALL three gates
+Run the gates per candidate (a `Workflow` pipeline scales this; see references).
+- **Feasibility kill-test** — a FRESH skeptic agent tries to *prove it can't work*
+  or violates an invariant. Default-refute; the candidate survives only if the
+  refutation fails.
+- **Prior-art gate** — a fresh subagent runs `WebSearch`/`WebFetch`: does it already
+  exist? If yes it is not a breakthrough — drop it, or keep only the genuine *delta*
+  vs prior art. Be honest in output: this proves "not found", never "doesn't exist".
+- **Dominance gate** — does it actually beat the **baseline** (§0) on the success
+  criterion? If not, cut it.
+Tell the user the funnel arithmetic ("8 candidates → 3 survived: 2 killed on
+feasibility, 2 already exist, 1 lost to baseline").
+
+### 4. Loop if thin
+If <2 strong survivors, mutate the survivors and drop the NEXT inherited
+assumption, then re-run §1–§3 (loop-until-dry, **max ~2 extra rounds**). Log when
+you stop and why — silent capping reads as "explored everything" when it didn't.
+
+### 5. Arena the survivors
+Present survivors via **Mode 1 §4** (`AskUserQuestion`, side-by-side, plain OUTCOME
+language — not mechanism jargon). Each carries an honest **scorecard**: novelty
+(vs the prior art actually found), feasibility risk, and margin over baseline. The
+user picks; then offer the Mode 1 §5 follow-ups (Synthesize / Expand /
+Re-brainstorm). Never pre-rank.
+
 ## Rules
-- **Independence is the value.** Never let candidates converge by sharing context,
-  except the deliberate §3 respawn.
+
+Both modes:
 - **The user picks — you don't pick for them.** No "option 2 is clearly best" in
   the arena. This is a generator, not a decision skill; the chosen solution is the
   user's, not a recommendation you then defend.
 - **If you can't make N orthogonal, propose fewer** — distinct mechanisms beat
   variations on one idea.
+
+Mode 1:
+- **Independence is the value.** Never let candidates converge by sharing context,
+  except the deliberate §3 respawn.
+
+Mode 2:
+- **Generation stays independent; synthesis is deliberate.** Vectors (§1) never see
+  each other — only the recombine step (§2) merges them, on purpose.
+- **Novelty is earned, never asserted.** A candidate is "novel" only after the
+  prior-art gate (§3) fails to find it — and even then say "not found", not "new".
+- **The baseline is the control.** Always carry the boring best-known solution
+  through to the scorecard; a candidate that doesn't beat it is not a breakthrough.
