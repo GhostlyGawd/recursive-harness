@@ -1,4 +1,4 @@
-# Proposal: broaden the correction matcher + warn on stale local main
+# Proposal: broaden the correction matcher + warn on stale local main + nudge heal capture
 
 date: 2026-06-25
 status: proposed (enforcement-locked hooks — human implements via /harness-pr)
@@ -7,9 +7,10 @@ this session?" — investigation found the auto-capture hook fired but its regex
 this session's corrections. Surfaced alongside a stale-memory re-surfacing (a corrected ADR claim
 repeated to the user a second time).
 
-Both targets are in the write-locked enforcement layer (`hooks/`), so this is a proposal, not a
-drafted edit. The non-locked half of this retro (the `windows-host-paths` skill update) ships in
-the same PR.
+All three targets are in the write-locked enforcement layer (`hooks/`), so this is a proposal, not
+a drafted edit. The non-locked half of this retro (the `windows-host-paths` skill update) ships in
+the same PR. Part C was added on direct user feedback during the retro and is the highest-value
+item (it fixes the system's reliance on the agent remembering to log its own bug-fixes).
 
 ## A. `hooks/log_correction.py` — broaden the SIGNALS regex (PRIMARY)
 
@@ -61,6 +62,32 @@ accounts/wraith" wording, which I quoted straight back to the user even though o
 already corrected it; an appended `corrected:` footnote leaves the dead line live and quotable,
 whereas a struck claim cannot read as current. (On current main the wording is already corrected —
 this is about the pattern, not that specific surviving line.)
+
+## C. `hooks/stop_*` — nudge in-session heal capture when bug-fixes went unlogged (PRIMARY, added on user feedback)
+
+**Evidence.** This session fixed two genuine root defects in-session — an em-dash/PS-5.1 parse
+trap and a `Move-Item`-on-directory non-atomicity — and logged NEITHER to the heal ledger at the
+time. Both were only captured during /retro, which the user had to trigger. The user named the gap
+directly: "with heal ledger why didn't you do it after fixing bugs. You wouldn't have done that had
+I not done a retro." Heal capture is agent-initiated by design, but a first-try fix never trips
+stuck-detection, so nothing prompts the agent — the exact blind spot the heal ledger exists to
+cover. Relying on the agent to remember is what just failed.
+
+**Proposed.** A Stop hook (sibling to `stop_retro_gate.py` / `stop_cadence_gate.py`) that detects
+likely in-session bug-fix activity and, when no `heal.py fix` was recorded this session, injects one
+nudge: `[harness] you fixed N bug(s) this session but logged 0 to the heal ledger — run heal.py fix
+(skill: auto-healer) before the fix is forgotten.` Cheap, recall-biased signals (any subset, tuned
+in review): an Edit that follows a failing test/command for the same file; commit-message verbs
+(`fix(`, "root cause", "the bug was"); a captured correction that names a defect. Like the retro and
+3-corrections gates, it NUDGES, never blocks; false positives cost one ignorable line.
+
+**Falsification:** replay this session — it must fire (2 fixes, 0 heal entries at Stop). A session
+with no bug-fix signal must NOT fire. Extend `tests/test_hooks.py`.
+
+**Companion skill note (non-locked, routing-learnings):** "bugs you introduce and fix in your OWN
+new code during a build/test loop still count" — they are recurrence-worthy root defects (encoding,
+cross-runtime, atomicity), not ephemeral noise. The auto-healer trigger should be read to include
+them; this session misfiled exactly that class.
 
 ## Why this is locked-proposal, not a drafted diff
 `hooks/` is enforcement-locked (CLAUDE.md prime directive 5); a PreToolUse guard blocks edits
