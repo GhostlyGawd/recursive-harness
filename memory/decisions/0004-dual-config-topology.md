@@ -50,7 +50,8 @@ use `sync-account-sessions.ps1 <name>` (native PowerShell — the default shell;
 PATH here, so the `.sh` is unusable from a stock PowerShell), or `./sync-account-sessions.sh
 <name>` where bash is available. The `.ps1` is ASCII-only (Windows PowerShell 5.1 misreads a
 UTF-8 non-ASCII byte as ANSI and fails to parse) and verified by `tests/test-sync-account-sessions.ps1`
-under both PS 5.1 and pwsh 7.
+under both PS 5.1 and pwsh 7. That test is Windows/symlink-specific, so Linux CI does NOT run it
+(test_ci_coverage only discovers `test_*.py`); re-verify both cutover tools manually on any change.
 
 Failure modes:
 - A session created under silo A will NOT appear in silo B's `/resume` unless this symlink

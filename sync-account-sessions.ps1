@@ -158,7 +158,7 @@ catch {
 }
 
 if (-not (Test-IsLink $src)) {
-  Remove-Item -LiteralPath $src -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $src -Recurse -Force -ErrorAction SilentlyContinue
   [System.IO.Directory]::Move($bakDir, $src)
   Write-Error "Link creation did not produce a reparse point (restored original)."
   exit 1

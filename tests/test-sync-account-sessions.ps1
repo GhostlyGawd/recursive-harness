@@ -4,8 +4,9 @@
 # filesystem outcome. Pass -Runtime to choose which PowerShell runs the cutover:
 #   powershell -ExecutionPolicy Bypass -File tests\test-sync-account-sessions.ps1 -Runtime powershell
 #   pwsh       -ExecutionPolicy Bypass -File tests\test-sync-account-sessions.ps1 -Runtime pwsh
-# provenance: session b46882f7, 2026-06-25 — bash tool was unusable from Windows PowerShell; this
+# provenance: session b46882f7, 2026-06-25 - bash tool was unusable from Windows PowerShell; this
 # proves the native replacement is lossless + lock-safe under BOTH PS 5.1 and pwsh 7.
+# NOTE: keep this file ASCII-only (PS 5.1 misreads a UTF-8 non-ASCII byte as ANSI).
 param(
   [string]$ScriptPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'sync-account-sessions.ps1'),
   [string]$Runtime    = 'powershell'   # exe used to RUN the cutover (child): 'powershell' (5.1) or 'pwsh' (7)
