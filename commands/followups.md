@@ -30,11 +30,13 @@ For $ARGUMENTS (default: show open):
    auto-close an item. For an item to do now: do it, then `followup done <id>`.
 5. Apply an APPROVED fold: `python3 bin/harness followup done <id>` for EACH symptom
    (note "folded -> <root>"); then put the root cause in its DURABLE home —
-   architectural or >=3 symptoms ⇒ a one-paragraph `memory/decisions/` record (it
+   architectural or >=3 symptom ids ⇒ a one-paragraph `memory/decisions/` record (it
    survives the 30-day TTL: a fold concentrates many tickets into ONE point, and a
    TTL'd point silently decays — see 213888), else a single consolidated `followup
-   add` that EMBEDS the symptom ids (so reconcile stays traceable). The goal is
-   FEWER, BIGGER, correctly-scoped work — never a shorter list for its own sake.
+   add` that EMBEDS the symptom ids (so reconcile stays traceable). Note the
+   consolidated ledger item ITSELF ages under the 30-day TTL — it is not a permanent
+   home, so anything that must outlast 30 days belongs in `memory/decisions/`. The goal
+   is FEWER, BIGGER, correctly-scoped work — never a shorter list for its own sake.
 6. For ones the user wants to drop: `python3 bin/harness followup done <id>`. Closing
    is not the same as doing — it just clears the ledger, and that is allowed and
    encouraged. No guilt, no "are you sure".
