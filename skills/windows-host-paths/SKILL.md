@@ -1,6 +1,6 @@
 ---
 name: windows-host-paths
-description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid: the repo lives at a SPACE-containing path (D:\GitHub Projects\recursive-harness) and first-space-naive parsers truncate it and hit the wrong target with NO error — fix structurally, don't re-quote. ALSO use when composing a command/script for the USER to run: their shell is Windows PowerShell 5.1 (no bash on PATH, `&&` errors, `/d/` paths and `.sh` shebangs fail), NOT the assistant's Bash tool. Pairs with worktree + harness-authoring.
+description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid: the repo lives at a SPACE-containing path (D:\GitHub Projects\recursive-harness) and first-space-naive parsers truncate it and hit the wrong target with NO error — fix structurally, don't re-quote. ALSO use when composing a command/script for the USER to run: their shell is Windows PowerShell 5.1 (not bash: `&&` errors, `/d/` paths and `.sh` shebangs fail), NOT the assistant's Bash tool. Pairs with worktree + harness-authoring.
 provenance: 2026-06-23, retro-backlog sweep (sessions fa7d1457 + 853a5037) — two
   same-root failures: the trunk-lease bypass token silently no-opped when not the
   leading token (space-containing VAR= assignment defeated the guard regex), and a
@@ -83,11 +83,13 @@ truncated `D:\GitHub`.
 Rule 1 below ("prefer the Bash tool") is about the ASSISTANT's own tools, where Git
 Bash is on PATH. It is WRONG guidance the moment it's copied into a command handed to
 the **user**, or into a shipped script the user runs: their interactive shell is
-**Windows PowerShell 5.1**, where `bash` is NOT on PATH (`CommandNotFoundException`),
-`&&` is a parse error, a `/d/…` POSIX path resolves to `D:\d\…` (wrong), and a `.sh`
-shebang is ignored (silent no-op). Conflating "the Bash tool I have" with "the shell the
-user has" produced three dead invocations in a row before the user pushed back (session
-b46882f7).
+**Windows PowerShell 5.1**, where `&&` is a parse error, a `/d/…` POSIX path resolves to
+`D:\d\…` (wrong), and a `.sh` shebang is ignored (silent no-op). `bash` itself may not even
+be on the user's PATH (this user hit `CommandNotFoundException`) — but DON'T rely on that
+as the failure mode: even when Git-for-Windows puts `bash` on PATH, those bash idioms still
+fail or run subtly wrong, so bash is unsafe to hand the user either way. Conflating "the Bash
+tool I have" with "the shell the user has" produced three dead invocations in a row before
+the user pushed back (session b46882f7).
 
 **Fix:** anything the user will RUN ships as **native PowerShell** (`.ps1`), and any
 command you give the user must be valid PS 5.1 — never `bash`, `&&`, `/d/…` paths, or

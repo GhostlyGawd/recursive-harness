@@ -56,8 +56,11 @@ Keep it cheap (no network if a fetch is too slow at startup; read existing refs)
 **Companion (non-hook) rule for routing-learnings / harness-authoring:** a "stale / dead / inactive"
 **status label** in any ADR decays. Never repeat one without checking LIVE state, and when
 correcting it, STRIKE the wrong claim inline (or mark it ~~struck~~) rather than only appending a
-`corrected:` footnote — ADR 0004 line 6 still reads "the stale accounts/wraith", which is exactly
-the text I quoted back to the user despite three correction lines below it.
+`corrected:` footnote. At session start the LOCAL (stale) ADR 0004 still carried inline "stale
+accounts/wraith" wording, which I quoted straight back to the user even though origin/main had
+already corrected it; an appended `corrected:` footnote leaves the dead line live and quotable,
+whereas a struck claim cannot read as current. (On current main the wording is already corrected —
+this is about the pattern, not that specific surviving line.)
 
 ## Why this is locked-proposal, not a drafted diff
 `hooks/` is enforcement-locked (CLAUDE.md prime directive 5); a PreToolUse guard blocks edits
