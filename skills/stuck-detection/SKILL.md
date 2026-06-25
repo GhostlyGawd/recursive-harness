@@ -56,12 +56,20 @@ worktree-isolated Agent). If two consecutive "fixes" both vary the surface and n
 the cause, that IS the stuck signal — stop and re-classify (this is the strike-2
 "don't re-parameterize the same class" rule applied to *guards*, not bugs).
 
+**Expected trigger — your own merge stales your own lease.** A `gh pr merge` / ff
+that advances `main` mid-session leaves your lease at the pre-merge HEAD, so the
+FIRST mutating op right after blocks ONCE — that is the guard working, not a peer.
+Re-baseline and proceed; don't go hunting for a phantom concurrent session. (The
+re-baseline token must LEAD the command — a `cd …` or space-valued `VAR=` in front
+silently no-ops it; see skill `windows-host-paths` §A for the mechanics.)
+
 Proactive heuristic: re-classify your work-mode on transition. A read-only
 brainstorm on shared `main` is fine; the moment work turns write-heavy (prototype,
 commits, PRs) under a known-active concurrent peer, move to a worktree BEFORE the
 first block — not after the fifth.
 
 <!-- provenance: session 5bbe0b6e, 2026-06-21 — ~5 blocked writes burned varying mechanism/target before switching cause class. -->
+<!-- provenance: session be67ac31, 2026-06-25 (/retro) — agent blocked TWICE re-baselining (`cd "…" && HARNESS_TRUNK_LEASE_OK=1 …`; start-anchored regex) right after its own `gh pr merge` ff-advanced main and staled its own lease. Added ONLY the expected post-merge trigger here; the leading-token MECHANICS already live in windows-host-paths §A (harness-auditor REVISE caught the dup the miner's check missed), so this cross-references rather than forks. -->
 
 ## A recurring failure? Search the record before re-fixing
 
