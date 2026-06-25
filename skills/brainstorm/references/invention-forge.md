@@ -2,7 +2,11 @@
 
 provenance: 2026-06-24, session be67ac31-5354-420d-b13a-444a1df84763. Overflow from
 skills/brainstorm/SKILL.md Mode 2 (B3 keeps the body ≤200 lines). Read this before
-spawning the vector agents or running the funnel.
+spawning the vector agents or running the funnel. 2026-06-25 (same session): a Mode 2
+road-test on a real problem folded in two tweaks — (1) Stage 3 gates are three ROLES
+not three agents (feasibility+dominance MAY merge into one skeptic; cap funnel ~4
+candidates); (2) prior-art coverage is variable, so high-stakes novelty wants two
+search angles + a skeptic prior-art flag (follow-ups 74469f, 74d3ef).
 
 This file is the *how* behind Mode 2's stages. The SKILL.md section is the spine;
 this is the agent briefs, the pitch schema, the three gate prompts, the scorecard,
@@ -89,6 +93,14 @@ the same `mechanism`, not merely similar wording. Keep the stronger; drop the ot
 Each gate gets a FRESH agent with NO memory of generation — a generator grading its
 own idea is worthless. Use the pitch + the frame artifact as input.
 
+**Tractability — three gate ROLES, not necessarily three agents.** Feasibility and
+dominance are both adversarial reasoning over the same inputs, so you MAY merge them
+into ONE skeptic agent (try-to-kill *and* beats-baseline) to halve agent count; keep
+the prior-art gate SEPARATE because it needs the web. Cap the funnel at **~4
+candidates** — beyond that, shortlist before the funnel (the arena caps at 4 anyway).
+(Road-test 2026-06-25: 4 candidates × {1 skeptic + 1 prior-art} = 8 agents was
+already heavy; the merged skeptic worked cleanly.)
+
 **Feasibility kill-test** (default-refute):
 > Adversarially REFUTE this candidate. Your job is to prove it CANNOT work or that
 > it violates one of these invariants: `<invariants>`. Default to "refuted=true"
@@ -108,6 +120,14 @@ on a majority (perspective-diverse: one on physics/feasibility, one on cost, one
 If `exists` and `delta` is "none", drop it. If there's a real `delta`, keep the
 candidate reframed as "X, but <delta>". Output language must say "no prior art
 **found**" — never "this is new"; absence of evidence is not proof.
+
+Coverage is variable and confidence is bounded. (Road-test 2026-06-25: one
+*feasibility* skeptic surfaced a shipping product the dedicated prior-art agent
+missed, and two prior-art runs on the same candidate split — already-exists vs
+novel-enough@~0.65.) So for a high-stakes novelty call: run **two** prior-art
+searches with DIFFERENT query angles (by-mechanism AND by-application-domain), and
+have the feasibility skeptic ALSO flag any obvious prior art it happens to know.
+Treat a lone "novel-enough" as provisional, not proof.
 
 **Dominance gate**:
 > Compare this candidate to the BASELINE (`<baseline>`) on the success criterion
