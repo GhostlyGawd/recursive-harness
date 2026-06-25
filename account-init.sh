@@ -96,6 +96,37 @@ link commands
 link hooks
 link skills
 
+# --- Shared session store: every account reads/writes ONE projects/ so /resume
+# sees sessions across accounts (ADR 0004). Unlike the four brain dirs (which link
+# to the TRUNK), projects/ links to the canonical store in the rhen account; rhen
+# itself owns the real directory. New/empty accounts auto-link here. An account
+# whose projects/ is already a populated REAL dir is left untouched with a warning:
+# consolidating it needs a lossless merge + a cutover that can't run while a session
+# of that account is live — see ./sync-account-sessions.sh.
+STORE_ACCOUNT="rhen"
+STORE="$REPO_DIR/.claude-private/accounts/$STORE_ACCOUNT/projects"
+ACCT_NAME="$(basename "$TARGET")"
+echo "Session store:"
+if [ "$ACCT_NAME" = "$STORE_ACCOUNT" ]; then
+  echo "  ok    projects/ (this account OWNS the canonical store)"
+elif [ ! -d "$STORE" ]; then
+  echo "  SKIP  projects/ (canonical store '$STORE_ACCOUNT/projects' does not exist yet)"
+else
+  dst="$TARGET/projects"
+  if [ -L "$dst" ]; then
+    if [ "$(readlink "$dst")" = "$STORE" ]; then echo "  ok    projects -> $STORE_ACCOUNT/projects"
+    else rm "$dst"; ln -s "$STORE" "$dst"; echo "  fixed projects -> $STORE_ACCOUNT/projects"; fi
+  elif [ -d "$dst" ] && [ -n "$(ls -A "$dst" 2>/dev/null)" ]; then
+    echo "  WARN  projects/ is a populated real dir — NOT auto-linking (would risk session loss)."
+    echo "        Consolidate with:  ./sync-account-sessions.sh $ACCT_NAME   (run with no live '$ACCT_NAME' session)"
+  elif [ -e "$dst" ]; then
+    if rmdir "$dst" 2>/dev/null; then ln -s "$STORE" "$dst"; echo "  link  projects -> $STORE_ACCOUNT/projects (was empty)"
+    else echo "  SKIP  projects/ (a real file/dir exists — not overwriting)"; fi
+  else
+    ln -s "$STORE" "$dst"; echo "  link  projects -> $STORE_ACCOUNT/projects"
+  fi
+fi
+
 # --- Materialize settings.json from the portable canonical ---
 SETTINGS="$TARGET/settings.json"
 TEMPLATE="$REPO_DIR/templates/account-settings.json"
