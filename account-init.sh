@@ -23,6 +23,8 @@
 #   ./account-init.sh                          # repair the account named by $CLAUDE_CONFIG_DIR
 #   ./account-init.sh <name>                   # init/repair .claude-private/accounts/<name>
 #   ./account-init.sh [name] --sync-settings   # also (re)generate settings.json (backs up first)
+#   ./account-init.sh --all [--sync-settings]  # repair/sync EVERY account in lock-step (keeps
+#                                              # all profiles' settings.json synced to the template)
 #
 # provenance: session 56295237, 2026-06-13 — fleet-config silo restructure (Stage 1).
 set -euo pipefail
@@ -44,13 +46,35 @@ fi
 
 NAME=""
 SYNC_SETTINGS=0
+ALL=0
 for arg in "$@"; do
   case "$arg" in
     --sync-settings) SYNC_SETTINGS=1 ;;
+    --all) ALL=1 ;;
     -*) echo "unknown flag: $arg" >&2; exit 2 ;;
     *) NAME="$arg" ;;
   esac
 done
+
+# --all: repair/sync EVERY account under .claude-private/accounts/ in one pass, so all
+# profiles stay in lock-step with the canonical template. Drift happens when the template
+# advances and only one account is re-synced (settings.json is materialized per-account, not
+# symlinked — by design, to allow per-account overrides.json). Re-execs this script per account.
+if [ "$ALL" -eq 1 ]; then
+  [ -n "$NAME" ] && { echo "ERROR: --all cannot be combined with an account name." >&2; exit 2; }
+  rc=0
+  shopt -s nullglob
+  for d in "$REPO_DIR"/.claude-private/accounts/*/; do
+    acct="$(basename "$d")"
+    echo "========== $acct =========="
+    if [ "$SYNC_SETTINGS" -eq 1 ]; then
+      bash "${BASH_SOURCE[0]}" "$acct" --sync-settings || rc=1
+    else
+      bash "${BASH_SOURCE[0]}" "$acct" || rc=1
+    fi
+  done
+  exit $rc
+fi
 
 # Resolve the target account config dir WITHOUT mutating anything outside the silo.
 if [ -n "$NAME" ]; then
