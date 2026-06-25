@@ -5,6 +5,7 @@ status: accepted
 provenance: session 56295237 (fleet-silo setup) routed in 61f58113 /retro, 2026-06-13 — user verified the fleet launcher does not rewrite the silo settings.json (followup f210e7) and asked to bank the topology before it decayed. Filesystem-verified, not recalled.
 corrected: 2026-06-19 (/retro-backlog, sessions 5191f317 + 43e917be) — `CLAUDE_CONFIG_DIR` points at `accounts/rhen/`, whose `hooks/` is a real symlink → the trunk.
 corrected: 2026-06-24 (user, /meta-retro) — `accounts/wraith/` is NOT stale; it is a SECOND, co-active account silo (its own `settings.json` + `.claude.json`, sessions/history through 2026-06-16, same four symlinks → the trunk). The 2026-06-19 note over-declared it dead by reading "not this session's silo" as "inactive". The topology is MULTI-silo: any number of `accounts/<name>/` run concurrently, each linked to the ONE TRUNK; `rhen` is merely THIS session's silo (`CLAUDE_CONFIG_DIR`), not the only active one. (Implication: a concurrent-session guard warning on the main checkout may be a real peer silo — e.g. wraith — not a false alarm.)
+extended: 2026-06-25 (session b46882f7, live under wraith) — the multi-silo model shared the BRAIN but not session HISTORY: per-account `projects/` was never shared (account-init.sh linked only the four brain dirs), so each silo's `/resume` saw only its own sessions and the stores silently diverged. User asked that `/resume` span all silos. Fix: one shared session store — see "Session store is SHARED" below. Filesystem-verified (rhen held the superset: 1322 rhen-only sessions, only 2 wraith-only).
 
 ## The topology
 This Windows machine runs TWO independent Claude config homes:
@@ -35,6 +36,25 @@ This Windows machine runs TWO independent Claude config homes:
   regenerates only `settings.json` WIRING (matchers / which hook fires when) and does
   not touch hook code. (session cbb07617, 2026-06-21 — a PR deploy-note and an auditor
   both stated this backwards.)
+
+## Session store is SHARED (projects/), the brain is symlinked to the trunk
+The four brain dirs (`skills/ hooks/ commands/ agents/`) symlink to the TRUNK so every
+silo runs one harness. The session transcripts (`projects/`) are handled differently:
+they are SHARED ACROSS SILOS so `/resume` sees every session regardless of which silo
+launched it. One silo owns the real store — `accounts/rhen/projects/` ("rhen owns it",
+chosen for minimal data movement: it already held the superset) — and every other silo's
+`projects/` is a symlink → there. `account-init.sh` wires this for new/empty silos; a silo
+whose `projects/` is already a populated real dir is left untouched with a warning and
+consolidated ONCE, losslessly, by `./sync-account-sessions.sh <name>` (merge-then-cutover).
+
+Failure modes:
+- A session created under silo A will NOT appear in silo B's `/resume` unless this symlink
+  is in place; without it the two stores silently diverge. The fossil
+  `accounts/rhen/projects.oldlink` (→ `accounts/wraith/projects`) is the remains of an
+  earlier, severed sharing attempt — `sync-account-sessions.sh` removes it on cutover.
+- The cutover renames `<silo>/projects`, which Windows blocks while a session of THAT silo
+  holds a transcript open. Run it with no live session of the target silo (a session of a
+  different silo, or a plain terminal, is fine).
 
 ## Maintaining the symlinks (MSYS gotcha — load-bearing)
 The silo's four symlinks ARE the link to ONE TRUNK (prime directive 6). On
