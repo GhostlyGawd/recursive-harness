@@ -1,12 +1,17 @@
 ---
 name: windows-host-paths
-description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid here. This machine's repo lives at a SPACE-containing path (D:\GitHub Projects\recursive-harness); first-space-naive parsers (PowerShell's file-safety guard, the harness trunk-lease + worktree-isolation guards, leading env-var bypass prefixes) truncate it at the first space and act on the wrong target — usually with NO error. Don't retry with another quoting trick; the fix is structural. Pairs with worktree + harness-authoring.
+description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid: the repo lives at a SPACE-containing path (D:\GitHub Projects\recursive-harness) and first-space-naive parsers truncate it and hit the wrong target with NO error — fix structurally, don't re-quote. ALSO use when composing a command/script for the USER to run: their shell is Windows PowerShell 5.1 (no bash on PATH, `&&` errors, `/d/` paths and `.sh` shebangs fail), NOT the assistant's Bash tool. Pairs with worktree + harness-authoring.
 provenance: 2026-06-23, retro-backlog sweep (sessions fa7d1457 + 853a5037) — two
   same-root failures: the trunk-lease bypass token silently no-opped when not the
   leading token (space-containing VAR= assignment defeated the guard regex), and a
   PowerShell Remove-Item was blocked TWICE as a "protected system path 'D:\GitHub'"
   because the guard split the repo path at the space. Same first-space-truncation
   class as the locked guard_worktree_isolation bug (proposal 2026-06-22-guard-worktree-space-split.md).
+  extended: 2026-06-25, session b46882f7 — added Manifestations D & E. I shipped a bash-only tool
+  to a Windows host and handed the user three bash invocations to paste into PowerShell 5.1 (where
+  bash is not on PATH, `&&` is a parse error, `/d/` paths and `.sh` shebangs fail), asserting each
+  worked without testing in their shell, until they demanded an RCA. Misapplied Rule 1 ("prefer my
+  Bash tool") to commands the USER runs. Filesystem-verified; two runtime bugs in the heal ledger.
 ---
 
 # Windows host paths — the space in `D:\GitHub Projects\…` defeats naive parsers
@@ -73,10 +78,44 @@ enforcement-locked and tracked in `proposals/2026-06-22-guard-worktree-space-spl
 (human merges). Until it lands, expect worktree-path guard messages to show a
 truncated `D:\GitHub`.
 
+## Manifestation D — the user's shell is NOT my Bash tool
+
+Rule 1 below ("prefer the Bash tool") is about the ASSISTANT's own tools, where Git
+Bash is on PATH. It is WRONG guidance the moment it's copied into a command handed to
+the **user**, or into a shipped script the user runs: their interactive shell is
+**Windows PowerShell 5.1**, where `bash` is NOT on PATH (`CommandNotFoundException`),
+`&&` is a parse error, a `/d/…` POSIX path resolves to `D:\d\…` (wrong), and a `.sh`
+shebang is ignored (silent no-op). Conflating "the Bash tool I have" with "the shell the
+user has" produced three dead invocations in a row before the user pushed back (session
+b46882f7).
+
+**Fix:** anything the user will RUN ships as **native PowerShell** (`.ps1`), and any
+command you give the user must be valid PS 5.1 — never `bash`, `&&`, `/d/…` paths, or
+`./script.sh`. **Verify by RUNNING it in PS 5.1** (`powershell -ExecutionPolicy Bypass
+-File …`) before handing it over; do not assert an untested command works.
+
+## Manifestation E — PS 5.1 and pwsh 7 differ; test a `.ps1` under BOTH
+
+A `.ps1` that passes under one runtime can break under the other. Two confirmed traps
+(both in the heal ledger):
+
+- A **non-ASCII char** (e.g. em-dash `—`) in a UTF-8-no-BOM `.ps1` is read as ANSI by PS
+  5.1 and cascades into `Missing closing '}'` parse errors — pwsh 7 reads UTF-8 and masks
+  it. Keep harness `.ps1` files **ASCII-only**; verify with a byte scan + `Parser::ParseFile`.
+- `Move-Item` on a **directory** is an atomic rename under 5.1 but a non-atomic copy+delete
+  under pwsh 7, leaving a **partial** destination when the source is locked. Use
+  `[System.IO.Directory]::Move` for atomic same-volume dir moves that fail cleanly.
+
+**Procedure that caught both:** a test that runs the tool as a child process under BOTH
+`powershell` (5.1) AND `pwsh` (7), asserting pass in each (see
+`tests/test-sync-account-sessions.ps1`).
+
 ## Rules
 
-- Prefer the **Bash tool + POSIX `/d/GitHub Projects/…` paths** over PowerShell
-  for file ops on this checkout — POSIX quoting survives the space cleanly.
+- For the ASSISTANT's OWN file ops on this checkout, prefer the **Bash tool + POSIX
+  `/d/GitHub Projects/…` paths** over PowerShell — POSIX quoting survives the space
+  cleanly. But anything the USER runs is PowerShell 5.1 (Manifestation D) — never hand
+  them bash.
 - Lead any guard-bypass env token; never precede it with `cd` or a space-valued
   `VAR=` assignment. Use `git -C`/`os.chdir`, not `cd`.
 - Quote EVERY path that touches the repo root, in every shell.
