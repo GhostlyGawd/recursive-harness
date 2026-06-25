@@ -3,13 +3,15 @@
 date: 2026-06-13
 status: accepted
 provenance: session 56295237 (fleet-silo setup) routed in 61f58113 /retro, 2026-06-13 — user verified the fleet launcher does not rewrite the silo settings.json (followup f210e7) and asked to bank the topology before it decayed. Filesystem-verified, not recalled.
-corrected: 2026-06-19 (/retro-backlog, sessions 5191f317 + 43e917be) — the active silo is `accounts/rhen/`; this ADR previously named the stale `accounts/wraith/`. Re-verified on disk: `CLAUDE_CONFIG_DIR` points at `accounts/rhen/`, whose `hooks/` is a real symlink → the trunk.
+corrected: 2026-06-19 (/retro-backlog, sessions 5191f317 + 43e917be) — `CLAUDE_CONFIG_DIR` points at `accounts/rhen/`, whose `hooks/` is a real symlink → the trunk.
+corrected: 2026-06-24 (user, /meta-retro) — `accounts/wraith/` is NOT stale; it is a SECOND, co-active account silo (its own `settings.json` + `.claude.json`, sessions/history through 2026-06-16, same four symlinks → the trunk). The 2026-06-19 note over-declared it dead by reading "not this session's silo" as "inactive". The topology is MULTI-silo: any number of `accounts/<name>/` run concurrently, each linked to the ONE TRUNK; `rhen` is merely THIS session's silo (`CLAUDE_CONFIG_DIR`), not the only active one. (Implication: a concurrent-session guard warning on the main checkout may be a real peer silo — e.g. wraith — not a false alarm.)
 
 ## The topology
 This Windows machine runs TWO independent Claude config homes:
 
-1. **Account silo** `.claude-private/accounts/rhen/` — THIS harness (the active
-   silo; the topology applies to any per-account silo `accounts/<name>/`). Its
+1. **Account silo** `.claude-private/accounts/rhen/` — THIS session's silo (one of
+   SEVERAL co-active `accounts/<name>/` silos, e.g. `rhen` + `wraith`; the topology
+   applies to every per-account silo identically). Its
    `skills/ hooks/ commands/ agents/` are real symlinks → the trunk
    `D:\GitHub Projects\recursive-harness\...`. It has its own `settings.json`
    (HUD + hooks, ~2 KB) and `.claude.json` (runtime state). The fleet launcher
