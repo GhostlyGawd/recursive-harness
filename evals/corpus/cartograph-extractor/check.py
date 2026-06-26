@@ -66,6 +66,8 @@ if ("hook:log_correction", "state:corrections", "touches") not in pairs:
     fail("lost anchor: log_correction touches state:corrections")
 
 # hardening invariants (mirror cartograph/test_hardening.py, asserted against the live trunk)
+# provenance: 2026-06-26, session 689f12f4 — followup d368f8; keep in sync with
+# test_hardening.py:152 (no-hook-spawns) and :121 (multi-session born_in)
 # (1) hooks are synchronous Python enforcement and cannot launch a subagent, so NO
 #     spawns edge may originate from a hook node (the extractor pre-sanitizes this).
 hook_spawns = sorted(f"{s}->{t}" for s, t, ty in pairs
