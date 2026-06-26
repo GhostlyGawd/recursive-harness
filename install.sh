@@ -19,6 +19,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # the accounts aren't re-materialized; this post-merge hook re-syncs ALL profiles right then.
 # Git hooks are not cloned, so this re-creates it on every install (idempotent). Safe: account-init
 # writes settings.json in place and backs up first.
+# provenance: session b46882f7, 2026-06-26 - reproducible install of the fleet-settings auto-sync hook.
 install_git_hooks() {
   command -v git >/dev/null 2>&1 || return 0
   git -C "$REPO_DIR" rev-parse --git-dir >/dev/null 2>&1 || return 0
