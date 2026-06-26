@@ -14,6 +14,48 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Install the repo-level git hook that keeps every fleet account's settings.json in lock-step
+# with the template. Drift is born when a pull/merge advances templates/account-settings.json and
+# the accounts aren't re-materialized; this post-merge hook re-syncs ALL profiles right then.
+# Git hooks are not cloned, so this re-creates it on every install (idempotent). Safe: account-init
+# writes settings.json in place and backs up first.
+# provenance: session b46882f7, 2026-06-26 - reproducible install of the fleet-settings auto-sync hook.
+install_git_hooks() {
+  command -v git >/dev/null 2>&1 || return 0
+  git -C "$REPO_DIR" rev-parse --git-dir >/dev/null 2>&1 || return 0
+  local hooks_dir
+  hooks_dir="$(git -C "$REPO_DIR" config --get core.hooksPath || true)"
+  if [ -n "$hooks_dir" ]; then
+    command -v cygpath >/dev/null 2>&1 && hooks_dir="$(cygpath -u "$hooks_dir")"
+  else
+    hooks_dir="$(git -C "$REPO_DIR" rev-parse --absolute-git-dir)/hooks"
+  fi
+  mkdir -p "$hooks_dir"
+  cat > "$hooks_dir/post-merge" <<'HOOK'
+#!/usr/bin/env bash
+# post-merge - auto-sync every fleet account's settings.json when the settings TEMPLATE changes.
+# Installed by install.sh (git hooks are not cloned). Safe + idempotent: account-init.sh writes
+# settings.json in place and backs up first, so re-running is harmless.
+set -uo pipefail
+repo="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -n "$repo" ] || exit 0
+# Files changed by the merge/pull just applied (ORIG_HEAD = pre-merge tip). If we can't tell,
+# default to syncing (cheap + idempotent) rather than silently skipping.
+changed="$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || true)"
+if [ -z "$changed" ] || printf '%s\n' "$changed" | grep -q '^templates/account-settings\.json$'; then
+  echo "[post-merge] settings template changed -> syncing all fleet profiles..."
+  if bash "$repo/account-init.sh" --all --sync-settings; then
+    echo "[post-merge] fleet settings synced."
+  else
+    echo "[post-merge] WARN: sync failed; run ./account-init.sh --all --sync-settings manually." >&2
+  fi
+fi
+exit 0
+HOOK
+  chmod +x "$hooks_dir/post-merge"
+  echo "Git hook installed: $hooks_dir/post-merge (auto-syncs fleet settings on template change)."
+}
+
 if [ "${1:-}" != "--global-legacy" ]; then
   cat <<EOF
 Siloed/fleet model is the default — nothing is installed globally.
@@ -23,6 +65,7 @@ Siloed/fleet model is the default — nothing is installed globally.
   • Legacy single-user global (symlinks this repo to ~/.claude):
         ./install.sh --global-legacy
 EOF
+  install_git_hooks
   python3 "$REPO_DIR/lint/lint_harness.py"   # a bare run stays a useful health check
   exit 0
 fi
@@ -51,6 +94,7 @@ if [ ! -d .git ]; then
   git add -A && git commit -m "harness v$(cat VERSION): initial install" >/dev/null
   echo "Initialized git repo. Add a remote:  git remote add origin <your-github-url>"
 fi
+install_git_hooks
 python3 lint/lint_harness.py
 echo "Installed (legacy global): $TARGET -> $REPO_DIR"
 echo "Next: run ./project-init.sh inside each project you work on."
