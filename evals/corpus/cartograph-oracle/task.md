@@ -38,3 +38,8 @@ compares git-tracked files against the git REF and ignores gitignored on-disk
 artifacts (e.g. `skills/brand-foundry/`), so a tree diffed against itself adds
 nothing. Both the functional contract (no rot/review finding) and the empty delta
 are what this guards.
+
+**Caveat (clean-tree invariant):** the empty-self-diff assertion presumes a CLEAN
+committed working tree. An UNcommitted file under a scanned dir (`skills`/`agents`/
+`commands`/`hooks`/`memory`) is honestly a new tracked-vs-REF node, so it trips the
+zero-added-nodes check — this case must run against a clean tree (as `/run-evals` does).
