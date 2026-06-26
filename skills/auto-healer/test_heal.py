@@ -139,6 +139,31 @@ def test_match():
     check("match by error substring against attempt hypothesis", "k2" in {b["id"] for b in by_err})
 
 
+def test_hook_autocapture():
+    # Unit-cover hooks/heal_autocapture.py (the producer that seeds candidates.jsonl):
+    # detection heuristic, signature stability, and -- the DRIFT GUARD (followups
+    # 0b80e1/3939d8) -- that its inline _repo_key AGREES with heal._repo_key (the single
+    # source). Imported by path: the hook lives in hooks/, not on this test's sys.path.
+    import importlib.util
+    hook_py = os.path.join(heal.HARNESS_ROOT, "hooks", "heal_autocapture.py")
+    spec = importlib.util.spec_from_file_location("_heal_autocapture", hook_py)
+    hac = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hac)
+    t, c = hac._text_and_code({"exit_code": 2,
+                               "stderr": "Traceback (most recent call last):\nValueError: x"})
+    check("hook _text_and_code extracts exit_code + merges text", c == 2 and "ValueError" in t)
+    check("hook _FAIL_RE matches a traceback", bool(hac._FAIL_RE.search("Traceback (most recent call last):")))
+    check("hook _FAIL_RE matches pytest FAILED", bool(hac._FAIL_RE.search("FAILED test_x.py::a")))
+    check("hook _FAIL_RE ignores benign output", not hac._FAIL_RE.search("all 12 checks passed"))
+    s1 = hac._signature("FAILED tests/test_x.py::a - AssertionError at line 42")
+    s2 = hac._signature("FAILED tests/test_y.py::b - AssertionError at line 88")
+    check("hook signature collapses path/number volatility (same failure, diff shape)", s1 == s2)
+    check("hook signature distinguishes a different failure", s1 != hac._signature("KeyError: nope"))
+    for cwd in (os.getcwd(), heal.HARNESS_ROOT, os.path.join(os.sep, "nope", "x", "y"), ""):
+        check(f"hook _repo_key agrees with heal._repo_key (drift guard) cwd={cwd!r}",
+              hac._repo_key(cwd) == heal._repo_key(root=cwd or os.getcwd()))
+
+
 # ----------------------------------------------------------------- CLI tests
 def run(*argv, repo=TEST_REPO):
     cmd = [sys.executable, HEAL_PY] + list(argv)
@@ -280,7 +305,7 @@ def main():
         print("== unit: predicates ==")
         test_stuck(); test_escalate_healing_aware(); test_metrics()
         test_mean_attempts_scored_only(); test_repo_key_root()
-        test_recurrence_candidates(); test_match()
+        test_recurrence_candidates(); test_match(); test_hook_autocapture()
         print("== cli ==")
         cleanup()  # fresh ledger
         test_cli_fix_requires_outcome()
