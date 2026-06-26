@@ -246,6 +246,29 @@ def test_cli_match_recall_surface():
     check("recall-surface: match surfaces the worked fix", "errors=replace" in out)
 
 
+def test_cli_candidates_and_promote():
+    # hooks/heal_autocapture.py seeds candidates.jsonl (dark by default); emulate two
+    # same-signature auto-captures, then assert review surfaces the >=2 cluster and a
+    # reviewed `promote` mints a bug + clears the candidate (no unreviewed auto-memory).
+    sig = "abc123def456"
+    cands = [{"ts": "2026-06-26T00:00:00+00:00", "repo": TEST_REPO, "signature": sig,
+              "snippet": "FAILED test_x - AssertionError", "tool": "Bash", "session": "s"},
+             {"ts": "2026-06-26T00:01:00+00:00", "repo": TEST_REPO, "signature": sig,
+              "snippet": "FAILED test_y - AssertionError", "tool": "Bash", "session": "s"}]
+    heal._write_all(heal._candidates_path(TEST_REPO), cands)
+    check("review surfaces the CANDIDATES cluster", "CANDIDATES" in run("review").stdout
+          and sig in run("review").stdout)
+    no_sum = run("promote", sig)
+    check("promote refuses without --summary (no unreviewed auto-memory)",
+          no_sum.returncode == 1 and "needs --summary" in no_sum.stderr)
+    ok = run("promote", sig, "--summary", "recurring AssertionError in suite", "--tags", "area:tests")
+    check("promote mints a reviewed bug", ok.returncode == 0 and "-> bug" in ok.stdout)
+    check("promoted bug carries the auto:<sig> tag",
+          f"auto:{sig}" in run("bug", "list", "--tag", f"auto:{sig}").stdout)
+    check("promoted candidate cleared from review", sig not in run("review").stdout)
+    check("promote refuses an unknown signature", run("promote", "nope000nope0").returncode == 1)
+
+
 def cleanup():
     for p in (os.path.join(heal.HARNESS_ROOT, "state", "heal", TEST_REPO),
               os.path.join(heal.HARNESS_ROOT, "memory", "heal", TEST_LABEL)):
@@ -266,6 +289,7 @@ def main():
         test_cli_stats_json()
         test_cli_rollup()
         test_cli_match_recall_surface()
+        test_cli_candidates_and_promote()
     finally:
         cleanup()
     print()

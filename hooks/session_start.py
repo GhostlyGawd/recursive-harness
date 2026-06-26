@@ -124,6 +124,25 @@ def _jsonl(name):
     return out
 
 
+def _heal_counts(cwd):
+    """(escalate_count, stuck_count) for the SESSION's repo via heal.py's single-sourced
+    predicates - do NOT re-implement the failure math here. Imports heal.py by path and
+    keys off the payload `cwd` (NOT os.getcwd()/__file__: the active hook is always the
+    trunk copy, so keying off this file would read the wrong repo). Fail-open: (0, 0)."""
+    try:
+        import importlib.util
+        heal_py = os.path.join(HARNESS_ROOT, "skills", "auto-healer", "heal.py")
+        spec = importlib.util.spec_from_file_location("_heal_banner", heal_py)
+        heal = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(heal)
+        repo = heal._repo_key(root=cwd or os.getcwd())
+        bp, ap = heal._paths(repo)
+        m = heal._metrics(heal._read(bp), heal._read(ap))
+        return int(m.get("escalate_count", 0)), int(m.get("stuck_count", 0))
+    except Exception:
+        return 0, 0
+
+
 def main() -> int:
     # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
     # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
@@ -197,6 +216,13 @@ def main() -> int:
             more = "" if len(ov) <= 4 else f" +{len(ov) - 4} more"
             print(f"[harness] features: {len(ov)} override(s) active "
                   f"({keys}{more}; `harness features`)")
+        # Heal-count line (ADR 0008 SOFT flag observability.heal_banner, default false ->
+        # ships dark): JIT-surface a repo's unresolved root defects at session start, the
+        # highest-leverage moment. Pull-only (`/heal`), never the web; fail-open to 0.
+        if flag("observability.heal_banner", False):
+            esc, stuck = _heal_counts(cwd)
+            if esc or stuck:
+                print(f"[harness] heal: {esc} escalate / {stuck} stuck (/heal)")
     warn = _branch_warning(cwd)
     if warn:
         print(warn)

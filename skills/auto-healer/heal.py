@@ -21,6 +21,7 @@ Subcommands:
   fix                                 one-shot: log bug + scored attempt in one call
   match                               JIT recall: prior bugs for a file/error/tag (read-only)
   review [--all-repos] [--json]       surface the web; ESCALATE first (the /retro feed)
+  promote <signature>                 promote an auto-captured candidate cluster -> a reviewed bug
   escalate route <bug-id>             stamp a bug as routed to /retro (idempotent feed)
   stats [--json]                      counts + health metrics for the current repo
   rollup [--month] [--trim-days]      versioned stats-only digest -> memory/heal/<label>/
@@ -126,6 +127,24 @@ def _repo_key(explicit: str = "", root: str = "") -> str:
 def _paths(repo_key: str):
     d = os.path.join(HEAL_DIR, repo_key)
     return os.path.join(d, "bugs.jsonl"), os.path.join(d, "attempts.jsonl")
+
+
+def _candidates_path(repo_key: str) -> str:
+    """The auto-capture candidates stream (hooks/heal_autocapture.py appends here).
+    SEPARATE from bugs.jsonl so raw capture noise never inflates the bug ledger - a
+    candidate becomes a bug only via a reviewed `promote` (ADR 0001 no-auto-memory)."""
+    return os.path.join(HEAL_DIR, repo_key, "candidates.jsonl")
+
+
+def _candidate_clusters(repo_key: str, min_count: int = 2) -> dict:
+    """signature -> [candidate...] for signatures auto-captured >= min_count times
+    ('the same failure in a different shape' - the promote signal)."""
+    clusters = {}
+    for c in _read(_candidates_path(repo_key)):
+        sig = c.get("signature")
+        if sig:
+            clusters.setdefault(sig, []).append(c)
+    return {s: cs for s, cs in clusters.items() if len(cs) >= min_count}
 
 
 def _parse_list(s: str) -> list:
@@ -633,6 +652,45 @@ def cmd_escalate(args) -> int:
     return 1
 
 
+# ---------------------------------------------------------------- promote
+def cmd_promote(args) -> int:
+    """Promote an auto-captured candidate cluster (hooks/heal_autocapture.py) into a
+    durable, agent-summarized bug. REQUIRES --summary (the reviewed framing) so raw
+    auto-capture text never becomes a tracked bug unreviewed (ADR 0001). Mints via the
+    same record shape as `bug add`, tags it auto:<signature>, records the cluster
+    provenance, and clears the promoted candidates so they stop re-surfacing in review."""
+    repo = _repo_key(args.repo)
+    sig = args.signature
+    cs = _candidate_clusters(repo, min_count=1).get(sig)
+    if not cs:
+        print(f"no candidate with signature {sig} in {repo} "
+              "(run `heal review` to see promotable CANDIDATES clusters).", file=sys.stderr)
+        return 1
+    if not (args.summary or "").strip():
+        print("heal promote needs --summary: the REVIEWED framing of the root failure - "
+              "raw auto-capture text never becomes a bug unreviewed (ADR 0001).",
+              file=sys.stderr)
+        return 1
+    bugs_path, _ = _paths(repo)
+    bugs = _read(bugs_path)
+    tags = _parse_list(args.tags)
+    auto_tag = f"auto:{sig}"
+    if auto_tag not in tags:
+        tags.append(auto_tag)
+    bid = _id()
+    bugs.append({"id": bid, "ts": _now(), "repo": repo, "summary": args.summary.strip(),
+                 "tags": tags, "links": [], "status": "open", "recurrences": 0,
+                 "promoted_from": {"signature": sig, "count": len(cs),
+                                   "first_ts": min((c.get("ts", "") for c in cs), default=""),
+                                   "sample": cs[-1].get("snippet", "")[:120]}})
+    _write_all(bugs_path, bugs)
+    remaining = [c for c in _read(_candidates_path(repo)) if c.get("signature") != sig]
+    _write_all(_candidates_path(repo), remaining)
+    print(f"promoted candidate {sig} (x{len(cs)}) -> bug {bid}  [{repo}]")
+    print(f"  tags: {','.join(tags)}  - log fix attempts with `heal fix --bug {bid} ...`")
+    return 0
+
+
 # ---------------------------------------------------- immunity scaffold (v2)
 def _print_eval_scaffold(bug: dict) -> None:
     """Print a ready-to-paste /capture-eval scaffold so a healed bug becomes permanent
@@ -662,6 +720,7 @@ def _review_payload(repo: str, bugs: list, attempts: list) -> dict:
         "recurring": [_bug_brief(b, by_bug) for b in _recurring(bugs)],
         "tag_clusters": _tag_clusters(bugs),
         "linked_clusters": [sorted(c) for c in _components(bugs) if len(c) >= 2],
+        "candidates": {sig: len(cs) for sig, cs in _candidate_clusters(repo).items()},
     }
 
 
@@ -714,7 +773,14 @@ def _review_one(repo: str, escalate_only: bool = False) -> None:
         for c in multi:
             print(f"  {' <-> '.join(sorted(c))}")
 
-    if not (esc or stuck or recurring or shared or multi):
+    cand = _candidate_clusters(repo)
+    if cand:
+        print("\nCANDIDATES (auto-captured failure clusters >=2x - promote with a reviewed summary):")
+        for sig, cs in sorted(cand.items(), key=lambda x: -len(x[1])):
+            print(f"  {sig}  x{len(cs)}  {cs[-1].get('snippet', '')[:54]}"
+                  f"  (`heal promote {sig} --summary ...`)")
+
+    if not (esc or stuck or recurring or shared or multi or cand):
         print("\nno recurrence/cluster signal yet - keep logging; the web emerges with data.")
 
 
@@ -907,6 +973,15 @@ def main() -> int:
                     help="only the ESCALATE feed (for /retro signal gathering)")
     sp.add_argument("--json", action="store_true", help="machine-readable payload")
     sp.set_defaults(fn=cmd_review)
+
+    sp = sub.add_parser("promote",
+                        help="promote an auto-captured candidate cluster into a reviewed bug")
+    sp.add_argument("signature", help="candidate signature from `heal review` CANDIDATES")
+    sp.add_argument("--summary", default="",
+                    help="REQUIRED: the reviewed framing of the root failure")
+    sp.add_argument("--tags", default="", help="comma list of facet:value tags")
+    sp.add_argument("--repo", default="")
+    sp.set_defaults(fn=cmd_promote)
 
     sp = sub.add_parser("stats")
     sp.add_argument("--repo", default="")
