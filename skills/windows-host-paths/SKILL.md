@@ -112,6 +112,12 @@ A `.ps1` that passes under one runtime can break under the other. Two confirmed 
 `powershell` (5.1) AND `pwsh` (7), asserting pass in each (see
 `tests/test-sync-account-sessions.ps1`).
 
+**FALSE-GREEN trap (the tool is NOT the user's shell):** the assistant's PowerShell *tool*
+runs **pwsh 7+** (where `&&`, ternary, `??` work), but the user's interactive shell is **5.1**
+(where they fail). A green tool-side run is NOT proof a user-facing command works in 5.1 —
+write 5.1-safe syntax (`;` not `&&`), and to actually confirm, have the USER run it in their
+own session (the `! <command>` prefix runs a command inline there).
+
 ## Rules
 
 - For the ASSISTANT's OWN file ops on this checkout, prefer the **Bash tool + POSIX
