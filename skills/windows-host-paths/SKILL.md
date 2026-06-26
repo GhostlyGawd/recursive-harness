@@ -1,12 +1,16 @@
 ---
 name: windows-host-paths
-description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid here. This machine's repo lives at a SPACE-containing path (D:\GitHub Projects\recursive-harness); first-space-naive parsers (PowerShell's file-safety guard, the harness trunk-lease + worktree-isolation guards, leading env-var bypass prefixes) truncate it at the first space and act on the wrong target — usually with NO error. Don't retry with another quoting trick; the fix is structural. Pairs with worktree + harness-authoring.
+description: Use the MOMENT a git/worktree/file/PowerShell op is unexpectedly BLOCKED, silently no-ops, or reports a "protected system path" on a path you KNOW is valid here, OR before you hand the USER a command/script to run (their shell is PowerShell 5.1 — `bash`, `&&`, `/d/…` paths, `./script.sh` are NOT on PATH, so a bash invocation you did not run fails). This host repo lives at a SPACE path (D:\GitHub Projects\recursive-harness); naive parsers truncate at the space and hit the wrong target, NO error. Fix structurally, not with another quote trick. Pairs with worktree + harness-authoring.
 provenance: 2026-06-23, retro-backlog sweep (sessions fa7d1457 + 853a5037) — two
   same-root failures: the trunk-lease bypass token silently no-opped when not the
   leading token (space-containing VAR= assignment defeated the guard regex), and a
   PowerShell Remove-Item was blocked TWICE as a "protected system path 'D:\GitHub'"
   because the guard split the repo path at the space. Same first-space-truncation
   class as the locked guard_worktree_isolation bug (proposal 2026-06-22-guard-worktree-space-split.md).
+  EXTENDED 2026-06-25 (session 6eee4c38, /retro) — Manifestation D: handed the user
+  bash invocations (bash, &&, /d/ paths, ./script.sh) on a PowerShell-5.1 host and
+  asserted them unverified; user: "you keep fucking up… do a RCA… verify this works
+  end to end." The bash-on-Windows blind spot is the same naive-host-assumption class.
 ---
 
 # Windows host paths — the space in `D:\GitHub Projects\…` defeats naive parsers
@@ -73,10 +77,36 @@ enforcement-locked and tracked in `proposals/2026-06-22-guard-worktree-space-spl
 (human merges). Until it lands, expect worktree-path guard messages to show a
 truncated `D:\GitHub`.
 
+## Manifestation D — the USER's shell is Windows PowerShell 5.1; bash is NOT on PATH
+
+A separate, OPPOSITE-direction trap from B/C: those are about **your own** tool
+ops (you have a Bash tool, so POSIX paths work for *you*). Manifestation D is about
+any command or script **you hand the USER** to run. It executes in **Windows
+PowerShell 5.1**, where `bash`, `&&`, `/d/…` POSIX paths, and `./script.sh` all
+FAIL — `bash` is not on their PATH. A green Bash-tool run on YOUR side is **not**
+evidence it works in THEIR shell; you cannot verify a user-facing invocation by
+reasoning about it.
+
+**Fix:**
+
+- Produce **PowerShell** for hand-off (`;` not `&&`, `D:\…` or `D:/…` paths,
+  `& "D:\…\script.ps1"`), or ship a native `.ps1` — never a `.sh` the user is
+  expected to invoke directly.
+- Before asserting a user-facing command works, RUN the real path (or its `.ps1`
+  test) end-to-end. Do not assert unverified commands into the user's shell.
+- FALSE-GREEN trap: the PowerShell **tool** runs pwsh **7+** (where `&&`, ternary,
+  `??` work), but the user's interactive shell is **5.1** (where they FAIL). A
+  tool-side pass does NOT prove 5.1 compatibility — write 5.1-safe syntax (`;` not
+  `&&`) and have the USER run it in their session (e.g. the `! <command>` prefix) to
+  confirm, rather than trusting a 7+ green.
+
 ## Rules
 
 - Prefer the **Bash tool + POSIX `/d/GitHub Projects/…` paths** over PowerShell
   for file ops on this checkout — POSIX quoting survives the space cleanly.
+- Commands you HAND THE USER are PowerShell (their shell is PS 5.1; bash is not on
+  PATH). Verify a user-facing invocation in their shell before asserting it works —
+  your own green Bash-tool run does not prove it (Manifestation D).
 - Lead any guard-bypass env token; never precede it with `cd` or a space-valued
   `VAR=` assignment. Use `git -C`/`os.chdir`, not `cd`.
 - Quote EVERY path that touches the repo root, in every shell.
