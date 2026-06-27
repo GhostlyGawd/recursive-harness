@@ -33,10 +33,13 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    If THIS session was split by `/clear` (a compaction boundary mid-transcript), SAY so at
    hand-off and point the miner at the post-clear line range — a large split transcript
    otherwise gets sampled head-only and the later phase is missed entirely (630534).
-3. For each accepted event, run the routing tree (skill: routing-learnings) and
-   draft the artifact per skill: harness-authoring, on branch
-   `retro/$(date +%F)-<slug>` of the harness repo
-   (`git -C "$HARNESS" checkout -b retro/$(date +%F)-<slug> origin/main`).
+3. **Before drafting, dedup against concurrent peers** — a parallel session can route
+   the SAME learning (2026-06-26: the auditor REJECTED such a duplicate). Scan
+   `gh pr list --state open --search retro` + local `git -C "$HARNESS" branch --list
+   'retro/*'` for a same-TOPIC retro in flight; if found, reconcile/yield, don't
+   duplicate. Then for each accepted event, run the routing tree (skill:
+   routing-learnings) and draft the artifact per skill: harness-authoring, on branch
+   `retro/$(date +%F)-<slug>` (`git -C "$HARNESS" checkout -b retro/$(date +%F)-<slug> origin/main`).
    $ARGUMENTS may name a specific learning to prioritize. If an accepted event came
    from a heal ESCALATE, stamp it routed once the artifact is drafted:
    `python3 "$HARNESS/skills/auto-healer/heal.py" escalate route <bug-id> --session <session_id>`
@@ -44,7 +47,9 @@ Run the retrospection procedure (skill: retrospection). Concretely:
 4. `python3 "$HARNESS/lint/lint_harness.py"` — fix violations before proceeding.
 5. Spawn the **harness-auditor** agent on the diff. Address every finding;
    `requires-human` and enforcement-layer changes stay as draft PRs.
-6. Check `autonomy.json` for each artifact's category:
+6. **Re-scan for a peer duplicate** (step-3 scan again) — one may have been pushed
+   while you drafted; reconcile/yield rather than push a second. Then check
+   `autonomy.json` for each artifact's category:
    - `auto_merge: true` → merge to main, record `proposed+1, accepted+1`.
    - else → `git -C "$HARNESS" push -u origin <branch>` then
      `(cd "$HARNESS" && gh pr create --title "retro: <slug>" --body-file <(provenance
@@ -63,16 +68,11 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    create the mess). The drafted work is safe on its pushed branch + PR. If the
    retro produced no PR (empty signal), you never left `main` — nothing to do.
 
-<!-- provenance: 2026-06-17 (prediction 4cf104ba) — replaced the hardcoded `~/.claude`
-with an install-agnostic harness-root resolution
-(`HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`). In
-the fleet / per-account-config model `~/.claude` is a stale dir with no `bin/`, so /retro
-(and calibrate/gc/meta-retro/standup/harness-pr) could not find bin/harness or the repo
-when run from another project's cwd. Bare `harness` calls were pinned to
-`$HARNESS/bin/harness` too — they assumed a PATH entry the fleet model does not set. The
-recipe is repeated per command by necessity: a command loads standalone (the kernel
-CLAUDE.md is not loaded when cwd is another repo), shell state does not persist between
-Bash calls, and bin/ is enforcement-locked so there is no shared shim to source. -->
+<!-- provenance: 2026-06-17 (prediction 4cf104ba) — replaced hardcoded `~/.claude` with an
+install-agnostic resolve (`HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`):
+in the fleet model `~/.claude` is a stale dir with no `bin/`, so /retro (+ calibrate/gc/meta-retro/
+standup/harness-pr) misrouted from a foreign cwd. Repeated per command by necessity — a command
+loads standalone, shell state doesn't persist between Bash calls, bin/ is locked (no shim to source). -->
 <!-- provenance: session 01S8mkwD, 2026-06-17 — added step 8 (return to trunk). A user
 opened a session stranded on a stale `proposal/*` branch a prior harness flow left behind;
 /retro branches in-place on `retro/<date>-<slug>` the same way and never returned to main.
