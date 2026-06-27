@@ -24,7 +24,9 @@
   "nudges": {
     "retro_gate": true,
     "cadence_gate": true,
-    "retro_cadence_sessions": 5
+    "retro_cadence_sessions": 5,
+    "skill_gap_gate": true,
+    "skill_gap_recurrence": 3
   },
 
   "observability": {
