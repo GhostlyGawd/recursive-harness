@@ -16,7 +16,8 @@ cartograph engine `cartograph/extract.py`), never hand-drawn.
    Run everything below from `"$HARNESS"` so it reads the LIVE trunk `state/`
    ledgers (a worktree's gitignored-empty `state/` would render zeros — atlas.py
    already resolves the canonical state dir, but generate from trunk to be safe).
-2. **Regenerate** the map: `python "$HARNESS/cartograph/atlas.py"` writes two files -
+2. **Regenerate** the map: `"$HARNESS/bin/harness" map` (or `python
+   "$HARNESS/cartograph/atlas.py"`) writes two files -
    `cartograph/ATLAS.md` (the **structural** map, low-churn, commit routinely) and
    `cartograph/ATLAS-PULSE.md` (the **live** friction/load/bug snapshot, meant to
    drift - commit it deliberately, e.g. at `/meta-retro`, for a trend record).

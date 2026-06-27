@@ -19,6 +19,8 @@ Subcommands:
                (append-only, typed, self-reaping; resolves the one canonical state/).
   mission-control  Launch Mission Control — the read-only control-room TUI
                (python -m mission_control; needs textual). --root / --json passthrough.
+  map          Regenerate the Harness Atlas (cartograph/atlas.py → ATLAS.md +
+               ATLAS-PULSE.md); --html refreshes the interactive page, --check gates rot.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -659,6 +661,28 @@ def cmd_mission_control(args) -> int:
     return _mission_control_dispatch(args, ROOT)
 
 
+def cmd_map(args) -> int:
+    """Regenerate the Harness Atlas: a thin, discoverable front door over the cartograph
+    scripts (they stay the source of truth — this only shells out to them, never
+    re-implements the render). Default: write cartograph/ATLAS.md + ATLAS-PULSE.md via
+    atlas.py. --check runs the structural-rot gate FIRST (so a rotted graph is caught
+    before the map is rebuilt over it); --html also refreshes the interactive page."""
+    atlas_py = os.path.join(ROOT, "cartograph", "atlas.py")
+    extract_py = os.path.join(ROOT, "cartograph", "extract.py")
+    if not os.path.isfile(atlas_py):
+        sys.stderr.write("harness map: cartograph/atlas.py not found\n")
+        return 1
+    rc = 0
+    if args.check:
+        rc = subprocess.run([sys.executable, extract_py, "--check"]).returncode or rc
+    rc = subprocess.run([sys.executable, atlas_py]).returncode or rc
+    if args.html:
+        rc = subprocess.run(
+            [sys.executable, extract_py, "--html",
+             os.path.join(ROOT, "cartograph", "index.html")]).returncode or rc
+    return rc
+
+
 def main() -> int:
     # cp1252 consoles (Windows) crash when a subcommand echoes a non-latin1 char
     # (e.g. an arrow in a correction note) - degrade unencodable output to '?'
@@ -759,6 +783,13 @@ def main() -> int:
                     help="harness root to read --mission from (default: this tree)")
     sp.add_argument("--json", default="", help="render a saved --mission payload (offline/demo)")
     sp.set_defaults(fn=cmd_mission_control)
+
+    sp = sub.add_parser("map", help="regenerate the Harness Atlas (ATLAS.md + ATLAS-PULSE.md)")
+    sp.add_argument("--html", action="store_true",
+                    help="also refresh the interactive cartograph page (needs vendor/*.js)")
+    sp.add_argument("--check", action="store_true",
+                    help="run the structural-rot gate before regenerating")
+    sp.set_defaults(fn=cmd_map)
 
     args = p.parse_args()
     return args.fn(args)

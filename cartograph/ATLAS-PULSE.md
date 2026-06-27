@@ -4,13 +4,13 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-06-27` from extract.py @ `c6d006d`.
+**Build stamp** - generated `2026-06-27` from extract.py @ `e916207`.
 
 ---
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **79%** hit-rate (131 hit / 34 miss / 2 open over 167). Open follow-ups: **28**. The breakdowns below localize the friction.
+Overall prediction calibration: **80%** hit-rate (133 hit / 34 miss / 0 open over 167). Open follow-ups: **28**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -24,7 +24,7 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 | harness-authoring | 1 | 1 | 50% | ⚠ friction |
 | harness | 1 | 1 | 50% | ⚠ friction |
 | implementation | 3 | 2 | 60% |  |
-| general | 107 | 23 | 82% |  |
+| general | 109 | 23 | 83% |  |
 | build | 11 | 2 | 85% |  |
 | debugging | 1 | 0 | 100% |  |
 | coding | 1 | 0 | 100% |  |
@@ -35,7 +35,7 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 | Skill | Fires |
 |---|---:|
-| `retro` | 21 |
+| `retro` | 22 |
 | `run-evals` | 13 |
 | `calibration` | 12 |
 | `harness-authoring` | 9 |
