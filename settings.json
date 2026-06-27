@@ -32,6 +32,8 @@
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/materialize_worktree_repos.py"}]},
       {"matcher": "Skill",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/log_skill_use.py"}]},
+      {"matcher": "Bash|Edit|Write|MultiEdit",
+       "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/heal_autocapture.py"}]},
       {"matcher": "Bash",
        "hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/post_merge_return_to_trunk.py"}]},
       {"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",

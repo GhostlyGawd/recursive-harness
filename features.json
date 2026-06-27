@@ -30,7 +30,9 @@
   "observability": {
     "session_banner": "full",
     "log_corrections": true,
-    "log_skill_use": true
+    "log_skill_use": true,
+    "heal_autocapture": false,
+    "heal_banner": false
   },
 
   "workflow": {

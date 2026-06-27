@@ -139,6 +139,31 @@ def test_match():
     check("match by error substring against attempt hypothesis", "k2" in {b["id"] for b in by_err})
 
 
+def test_hook_autocapture():
+    # Unit-cover hooks/heal_autocapture.py (the producer that seeds candidates.jsonl):
+    # detection heuristic, signature stability, and -- the DRIFT GUARD (followups
+    # 0b80e1/3939d8) -- that its inline _repo_key AGREES with heal._repo_key (the single
+    # source). Imported by path: the hook lives in hooks/, not on this test's sys.path.
+    import importlib.util
+    hook_py = os.path.join(heal.HARNESS_ROOT, "hooks", "heal_autocapture.py")
+    spec = importlib.util.spec_from_file_location("_heal_autocapture", hook_py)
+    hac = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hac)
+    t, c = hac._text_and_code({"exit_code": 2,
+                               "stderr": "Traceback (most recent call last):\nValueError: x"})
+    check("hook _text_and_code extracts exit_code + merges text", c == 2 and "ValueError" in t)
+    check("hook _FAIL_RE matches a traceback", bool(hac._FAIL_RE.search("Traceback (most recent call last):")))
+    check("hook _FAIL_RE matches pytest FAILED", bool(hac._FAIL_RE.search("FAILED test_x.py::a")))
+    check("hook _FAIL_RE ignores benign output", not hac._FAIL_RE.search("all 12 checks passed"))
+    s1 = hac._signature("FAILED tests/test_x.py::a - AssertionError at line 42")
+    s2 = hac._signature("FAILED tests/test_y.py::b - AssertionError at line 88")
+    check("hook signature collapses path/number volatility (same failure, diff shape)", s1 == s2)
+    check("hook signature distinguishes a different failure", s1 != hac._signature("KeyError: nope"))
+    for cwd in (os.getcwd(), heal.HARNESS_ROOT, os.path.join(os.sep, "nope", "x", "y"), ""):
+        check(f"hook _repo_key agrees with heal._repo_key (drift guard) cwd={cwd!r}",
+              hac._repo_key(cwd) == heal._repo_key(root=cwd or os.getcwd()))
+
+
 # ----------------------------------------------------------------- CLI tests
 def run(*argv, repo=TEST_REPO):
     cmd = [sys.executable, HEAL_PY] + list(argv)
@@ -246,6 +271,29 @@ def test_cli_match_recall_surface():
     check("recall-surface: match surfaces the worked fix", "errors=replace" in out)
 
 
+def test_cli_candidates_and_promote():
+    # hooks/heal_autocapture.py seeds candidates.jsonl (dark by default); emulate two
+    # same-signature auto-captures, then assert review surfaces the >=2 cluster and a
+    # reviewed `promote` mints a bug + clears the candidate (no unreviewed auto-memory).
+    sig = "abc123def456"
+    cands = [{"ts": "2026-06-26T00:00:00+00:00", "repo": TEST_REPO, "signature": sig,
+              "snippet": "FAILED test_x - AssertionError", "tool": "Bash", "session": "s"},
+             {"ts": "2026-06-26T00:01:00+00:00", "repo": TEST_REPO, "signature": sig,
+              "snippet": "FAILED test_y - AssertionError", "tool": "Bash", "session": "s"}]
+    heal._write_all(heal._candidates_path(TEST_REPO), cands)
+    check("review surfaces the CANDIDATES cluster", "CANDIDATES" in run("review").stdout
+          and sig in run("review").stdout)
+    no_sum = run("promote", sig)
+    check("promote refuses without --summary (no unreviewed auto-memory)",
+          no_sum.returncode == 1 and "needs --summary" in no_sum.stderr)
+    ok = run("promote", sig, "--summary", "recurring AssertionError in suite", "--tags", "area:tests")
+    check("promote mints a reviewed bug", ok.returncode == 0 and "-> bug" in ok.stdout)
+    check("promoted bug carries the auto:<sig> tag",
+          f"auto:{sig}" in run("bug", "list", "--tag", f"auto:{sig}").stdout)
+    check("promoted candidate cleared from review", sig not in run("review").stdout)
+    check("promote refuses an unknown signature", run("promote", "nope000nope0").returncode == 1)
+
+
 def cleanup():
     for p in (os.path.join(heal.HARNESS_ROOT, "state", "heal", TEST_REPO),
               os.path.join(heal.HARNESS_ROOT, "memory", "heal", TEST_LABEL)):
@@ -257,7 +305,7 @@ def main():
         print("== unit: predicates ==")
         test_stuck(); test_escalate_healing_aware(); test_metrics()
         test_mean_attempts_scored_only(); test_repo_key_root()
-        test_recurrence_candidates(); test_match()
+        test_recurrence_candidates(); test_match(); test_hook_autocapture()
         print("== cli ==")
         cleanup()  # fresh ledger
         test_cli_fix_requires_outcome()
@@ -266,6 +314,7 @@ def main():
         test_cli_stats_json()
         test_cli_rollup()
         test_cli_match_recall_surface()
+        test_cli_candidates_and_promote()
     finally:
         cleanup()
     print()
