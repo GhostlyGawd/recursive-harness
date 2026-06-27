@@ -16,19 +16,21 @@ cartograph engine `cartograph/extract.py`), never hand-drawn.
    Run everything below from `"$HARNESS"` so it reads the LIVE trunk `state/`
    ledgers (a worktree's gitignored-empty `state/` would render zeros — atlas.py
    already resolves the canonical state dir, but generate from trunk to be safe).
-2. **Regenerate** the committed map: `python "$HARNESS/cartograph/atlas.py"`
-   (writes `cartograph/ATLAS.md`). Optionally refresh the interactive page too:
-   `python "$HARNESS/cartograph/extract.py" --html "$HARNESS/cartograph/index.html"`
-   (gitignored; needs `cartograph/vendor/*.js`).
+2. **Regenerate** the map: `python "$HARNESS/cartograph/atlas.py"` writes two files -
+   `cartograph/ATLAS.md` (the **structural** map, low-churn, commit routinely) and
+   `cartograph/ATLAS-PULSE.md` (the **live** friction/load/bug snapshot, meant to
+   drift - commit it deliberately, e.g. at `/meta-retro`, for a trend record).
+   Optionally refresh the interactive page too: `python "$HARNESS/cartograph/extract.py"
+   --html "$HARNESS/cartograph/index.html"` (gitignored; needs `cartograph/vendor/*.js`).
 3. **Confirm integrity** — run the structural-rot gate and the audit feed:
    `python "$HARNESS/cartograph/extract.py" --check` (exits non-zero on new,
    un-baselined rot) and `--audit` (advisory dead-weight + heal-health).
-4. **Diff & report** — `git -C "$HARNESS" diff --stat -- cartograph/ATLAS.md`, then
-   read the regenerated §8 (Gaps) and §9 (Observability snapshot). Surface in a
-   short TL;DR: any NEW structural rot, the lowest-hit-rate prediction categories
-   (friction), the heaviest-fired skills (load), open follow-up count, and any
-   bug cluster whose recurrence is rising. Name what changed since the last commit
-   of ATLAS.md, not the whole file.
+4. **Diff & report** — `git -C "$HARNESS" diff --stat -- cartograph/ATLAS.md
+   cartograph/ATLAS-PULSE.md`, then read ATLAS.md §8 (Gaps) and the PULSE. Surface in
+   a short TL;DR: any NEW structural rot, the lowest-hit-rate prediction categories
+   (friction), the heaviest-fired skills (load), open follow-up count, and any bug
+   cluster whose recurrence is rising. Name what changed since the last commit, not
+   the whole file.
 
 ## Notes
 - **Read-mostly.** atlas.py and extract.py only READ the repo; they write only the
