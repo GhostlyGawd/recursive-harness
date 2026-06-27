@@ -92,3 +92,4 @@ jobs:
           python3 cartograph/test_spec.py
           python3 cartograph/test_spec_gate.py
           python3 cartograph/test_mission.py
+          python3 cartograph/test_atlas.py

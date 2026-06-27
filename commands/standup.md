@@ -21,6 +21,10 @@ Lead with a 2-3 line TL;DR, then sections: Shipped / Open / Health / Suggested n
   (Phosphor Console TUI; needs `textual`). Point `--root` at `"$HARNESS"` so it reads the LIVE
   trunk ledger, not a worktree's gitignored-empty `state/` (which renders zeros). Mention it; do
   not auto-launch — it is an interactive TUI, not a report line.
+- Map drift (optional): if structural artifacts changed (new/renamed skill/command/agent/
+  hook/ADR/eval, or settings wiring) since the last map, offer `"$HARNESS/bin/harness" map`
+  to re-sync the Harness Atlas (`cartograph/ATLAS.md`), and commit `cartograph/ATLAS-PULSE.md`
+  for a friction-over-time record. Mention it; don't auto-run.
 
 <!-- provenance: followup 18a805 (2026-06-22, Mission Control gated bundle PR #143/#136); the
 proposal had /standup compose with the TUI. Verb `harness mission-control --root` confirmed live
