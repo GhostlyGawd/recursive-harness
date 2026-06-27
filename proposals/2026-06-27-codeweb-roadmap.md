@@ -1,120 +1,110 @@
-# ROADMAP — Codeweb to launch
+# ROADMAP — Codeweb
 
-> First draft, 2026-06-27. Built from what we already know about Codeweb so you can
-> correct it, not fill out a quiz. Anything I guessed is marked **«guess — fix me»**.
-> Method + format = the roadmap plugin design in [2026-06-27-roadmap-plugin.md](./2026-06-27-roadmap-plugin.md).
+> Produced by the `roadmap` plugin (first dogfood), 2026-06-27. Living document — update at
+> each milestone boundary. Items needing your input are marked **«fix me»**.
+> Method/format = `plugins/roadmap/` (skill + template).
 
 ## North-star outcome
 
-Codeweb is **live, branded, installable by a stranger, and publicly launched** — positioned
-on what it provably does — with a first success number being measured, in **«~4 weeks — fix me»**.
+Codeweb is a shipped, branded product that **demonstrably makes an AI coding agent better on
+real codebases** — anchored by a deterministic CI gate (the floor) and a proven
+better-coding-on-hard-tasks result (the crown) — launched with a measured stage-1 success
+number, in **«~4 weeks — confirm»**.
 
-## Where it is now (the honest baseline)
+## Context / baseline
 
-Working engine + HTML code-map + ~20 MCP query tools, multi-language, v0.2.0, big test
-suite, a validation paper, a live demo. But: free OSS, **0 traction**, no product-level
-positioning or brand, no distribution, no offer. Its own frontier-agent test came back
-**null on edit-quality** — so we position on **finding duplicate/overlapping code before you
-or your agent rewrite it** (proven), NOT "makes your agent code better" (not proven).
+Working engine + HTML code-map + ~20 MCP query tools, multi-language, v0.2.0, big test suite,
+a validation paper, a live demo. Free OSS, **0 traction**, no product positioning/brand, no
+offer. Already ships a `codeweb-gate` GitHub Action.
 
-## ⚠ Value verdict (2026-06-27) — the launch plan below is PAUSED
+## Value verdict (FRAME §0 — is this worth doing?)
 
-We pressure-tested the value prop + competition BEFORE planning a launch (the critical step
-the first draft skipped — and a gap we found in the roadmap method itself). Findings:
+As currently pitched ("help your agent understand code / a nicer map"): **no differentiated,
+worth-paying value prop.** Evidence:
+- **Edit-quality null** by Codeweb's own pre-registered A/B (H18: diff exactly 0). Only proven
+  win is *discovery* (~+27% caller-recall, ~44% fewer tokens) — saves cost, not correctness.
+- **Outclassed** for both jobs: Serena + Claude-Code-native (agent), jscpd/knip/madge (human).
 
-- **Headline claim is null.** Codeweb's own pre-registered A/B (H18) found agents do NOT edit
-  better with it — difference exactly 0 over 8 paired tasks. Only measured win was *discovery*:
-  ~+27% caller-recall, ~44% fewer tokens. It saves cost, not correctness.
-- **The rest is outclassed.** Agent job ("does this exist / what breaks") — Serena (LSP, 30+
-  langs) + Claude Code's native search do it better. Human job (duplication / dead code /
-  graph) — jscpd, knip, madge already own it. Codeweb mostly repackages mature free tools.
-- **Verdict:** as currently pitched, no differentiated, worth-paying value prop. Shipping
-  as-is would flop. (User's instinct, confirmed.)
+**Direction (chosen):** hill-climb all surfaces into ONE product = *a deterministic model of
+your codebase that makes an AI agent code better* (context-compiler feeds it, auto-fix lets it
+act, gate enforces). The "better at coding" null was measured on EASY tasks (both arms near
+ceiling); if the value is real it lives in HARD cases. **We prove it there before we bet on it.**
 
-### Hill-climb options (what it could BECOME to be worth buying)
-1. **Sell the gate, not the agent.** It already ships a `codeweb-gate` GitHub Action.
-   Reposition as a deterministic CI check that BLOCKS PRs adding circular deps / duplication /
-   dead code. No LLM → no null to defend. Clear buyer (teams), clear pricing. ← strongest.
-2. **Advice → action.** Make `simulate-edit` actually apply the cycle-safe codemod and prove
-   the gate stays green — a verified refactor bot, not a hint.
-3. **Context compiler.** Lead with the −44% token win; one deterministic query replaces grep
-   fan-out; monetize agent cost/latency on big monorepos.
+## Win condition (stage 1)
 
-### Direction — CHOSEN 2026-06-27
-Hill-climb **all three as ONE product**, goal = **make an AI agent actually code better**.
-Thesis: *Codeweb = a deterministic model of your codebase that makes an AI agent code better* —
-give it precise context (context-compiler), let it act safely (auto-fix), enforce the result
-(CI gate). The three options are surfaces of that, not separate products.
+Launched · live · branded · a stranger can install it · **value PROVEN** (the gate catches
+real issues, and/or the crown spike showed a measurable lift) · positioned on the *proven*
+value only · one success number tracked · a round-2 outline.
+**«fix me»: (a) real deadline, (b) the success number, (c) revenue at launch or adoption-first.**
 
-Hard truth we're taking on: "better at coding" is the claim that came back **null** — but that
-test ran on EASY tasks (both arms near ceiling). If the value is real it lives in HARD cases
-(big repos, high fan-out, cross-cutting edits) where agents fail today. We **prove** it there.
+## Milestones  (sequenced risk-first; M1 + M2 run in parallel)
 
-Sequencing (anti-sprawl):
-- **FLOOR (ships fast):** the CI gate — deterministic, needs no "better coding" claim, breaks the drought.
-- **CROWN (the real value, must be earned):** prove Codeweb makes an agent measurably succeed
-  at a hard coding task it otherwise botches.
-- Ship the floor WHILE proving the crown. Biggest risk burned down early.
+### M1 · Week 1–2 — CROWN SPIKE: does Codeweb actually help on HARD tasks?  *(make-or-break)*
+- **Goal:** find out, with data, whether Codeweb makes an agent succeed where it otherwise fails.
+- **Work items:** pick 4–6 HARD, realistic tasks on big / high-fan-out repos (cross-cutting
+  rename, change a high-fan-out symbol, dedupe a real clone) — the cases the null test was too
+  easy to capture **«fix me: which repos?»**; run A/B (agent + Codeweb tools vs agent alone);
+  measure task success / breakage / completeness.
+- **Done-criteria:** a clear measured verdict — real repeatable lift, or null again.
+- **Deadline:** «~end of week 2».
+- **Depends-on:** —
+- **Risks:** THE risk. If null again → drop the "better coding" crown, ship gate-only (M2 still stands).
+- **Hypothesis:** «agent + Codeweb succeeds on ≥half the hard tasks it fails alone». Log + score.
 
----
+### M2 · Week 1–2 — FLOOR: productize the CI gate  *(ships regardless of M1)*
+- **Goal:** turn `codeweb-gate` into a real product teams can adopt.
+- **Work items:** clean install/config; blocks PRs adding circular deps / duplication / dead
+  code with clear output; a planted-bad-PR demo.
+- **Done-criteria:** a stranger adds the gate in <10 min and it blocks a bad PR live.
+- **Deadline:** «~end of week 2».
+- **Depends-on:** —
+- **Risks:** gate is somewhat commodity → win on DX + the bundle (cycles+dup+dead in one).
+- **Hypothesis:** «installs clean + catches the planted PR; ≥3 outside devs say they'd run it».
 
-## Win condition (stage 1) — **«confirm/fix me»**
-
-Launched · live · usable · branded · a stranger can install it · there's a defined offer +
-a way to adopt (or buy) · one success metric is set and tracked · a rough round-2 outline.
-**Open: do you require real revenue at launch, or is adoption-first OK?**
-
-## Milestones
-
-> NOTE: these milestones were the as-is LAUNCH plan and are SUPERSEDED by the chosen
-> direction above. Kept for reference; the fresh roadmap (floor=gate, crown=prove
-> better-coding) is the next deliverable.
-
-### M1 · Week 1 — Position & prove anyone wants it  *(walking skeleton)*
-- Lock the one-sentence pitch on the proven value; define who it's for (devs/teams leaning hard on AI coding agents).
-- Put the live demo + pitch in front of 5–10 real devs (a relevant subreddit/Discord/DMs).
-- **Done:** a positioning you'd stand behind + ≥5 real outside reactions.
-- **Hypothesis:** «≥4 of 10 say "real problem / I'd use this"». If not → wedge is wrong, fix before building more.
-
-### M2 · Week 2 — Make it look like a product
-- Brand it (name lock, wordmark, color/type — brand-foundry is an option). Landing page + demo a stranger gets in 10 seconds. Clean getting-started. 60-sec demo clip.
-- **Done:** landing page understandable cold + one-click demo + branded.
-- **Depends:** M1 (positioning drives the copy/brand).
-
-### M3 · Week 3 — Installable + "sellable"
-- Frictionless install (Claude Code plugin / npm / MCP listing). Decide the offer (free + paid tier? or free-now/monetize-later — **decision**). A way to capture users (waitlist/email/stars, or checkout if paid).
-- **Done:** a stranger installs + uses it without you; the offer + signup path exist.
-- **Spike:** monetize at launch vs adoption-first.
+### M3 · Week 3 — Productize the winner + brand
+- **Goal:** package the proven value into something a stranger gets in 10 seconds.
+- **Work items:** headline = whatever M1/M2 PROVED (crown if it hit, else the gate); brand it
+  (brand-foundry); landing page + one-click demo; frictionless install.
+- **Done-criteria:** branded; landing page understood cold; install path works.
+- **Deadline:** «~end of week 3».
+- **Depends-on:** M1 (verdict) + M2.
+- **Hypothesis:** «5 strangers read the landing page and correctly say what it does + who it's for».
 
 ### M4 · Week 4 — Launch
-- Launch content + post on ≥2 channels (Show HN / dev Twitter / relevant subreddits / Claude Code plugin marketplace / MCP directory).
-- **Done:** publicly launched on ≥2 channels; the success metric is being measured.
-- **Success metric — «set this»:** e.g. N installs / N signups / N stars in the first 2 weeks.
+- **Goal:** publicly in front of people.
+- **Work items:** launch content; post on ≥2 channels (Show HN / dev Twitter / subreddits /
+  Claude Code plugin marketplace / MCP directory); offer + signup/buy path **«fix me: monetize?»**.
+- **Done-criteria:** launched on ≥2 channels; success number being measured.
+- **Deadline:** «~end of week 4».
+- **Depends-on:** M3.
+- **Hypothesis:** «hit the stage-1 success number «fix me» within 2 weeks of launch».
 
 ## Dependency view
 
-M1 (positioning) → M2 (brand/surface) → M3 (install/offer) → M4 (launch). M1 gates everything.
+M1 (crown spike) ┐
+                 ├─ both run weeks 1–2 → M3 (productize+brand) → M4 (launch)
+M2 (gate floor) ┘
+Biggest risk (M1) burned down first; M2 guarantees something ships even if M1 is null.
 
 ## Risks & open questions
 
-- **Demand unproven** → M1 is the test; don't skip it.
-- **Positioning trap** → never claim better edit-quality (null-validated); lead with overlap/duplication/impact.
-- **Distribution** → which channels actually reach AI-coding devs? (spike in M3/M4)
-- **Monetization** → revenue-at-launch or adoption-first? (your call, affects M3)
+- **Crown null again** → fall back to gate-only product (M2 is the safety net). [decided]
+- **Gate is commodity-ish** → win on bundle + DX; spike outside interest in M2.
+- **Distribution** → which channels reach AI-coding devs? (spike in M4)
+- **Monetization** → revenue-at-launch vs adoption-first «fix me» (affects M4 offer).
 
-## Out of scope (v1)
+## Out of scope (stage 1)
 
-Engine rewrites, new language extractors, "improves edit quality" claims, enterprise/CI
-features — all round 2.
+Engine rewrites, new language extractors, enterprise/SSO, and — until M1 proves it — any
+"makes your agent code better" marketing claim. Auto-fix refactor-bot is round 2.
 
 ## Round-2 outline (rough)
 
-Double down on the highest-pull use case from launch feedback; monetize if adoption
-validates; CI integration.
+If crown hit: lead the better-coding product, add auto-fix (advice→action). If gate-only:
+deepen the gate (auto-fix the violations it flags), team pricing, CI-platform integrations.
 
 ## Status
 
-DIRECTION CHOSEN 2026-06-27 — hill-climb all three as one product ("make agents code
-better"): FLOOR = CI gate (ships fast), CROWN = proven better-coding on hard tasks. The old
-launch milestones above are SUPERSEDED — next step is a fresh roadmap for the chosen product
-(floor-first while proving the crown).
+DRAFT (real roadmap, floor/crown). Awaiting your **«fix me»** inputs (deadline, success
+number, monetization, spike repos), then lock M1 + M2 and start. Old as-is launch plan is
+superseded by this.
