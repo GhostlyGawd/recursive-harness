@@ -59,6 +59,7 @@ jobs:
           python3 tests/test_command_refresh_recipe.py
           python3 tests/test_settings_parity.py
           python3 tests/test_ci_coverage.py
+          python3 tests/test_followup.py
       - name: Subsystem tests (fleet event-log, mission-control, auto-healer, specialization)
         if: ${{ !cancelled() }}
         run: |

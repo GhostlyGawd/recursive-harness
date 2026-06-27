@@ -386,12 +386,21 @@ def cmd_followup(args) -> int:
         print(sum(1 for r in recs if _followup_active(r, cutoff)))
         return 0
     if args.action == "done":
+        note = (args.note or "").strip()
+        folded = (getattr(args, "folded_into", "") or "").strip()
         for r in recs:
             if r.get("id") == args.arg:
                 r["status"] = "done"
                 r["done_ts"] = _now()
+                # Record the close reason / fold trail IN the ledger so an applied
+                # synthesis fold is traceable from `--all`, not only the PR/chat (254593).
+                if note:
+                    r["note"] = note
+                if folded:
+                    r["folded_into"] = folded
                 _write_all(FOLLOWUPS, recs)
-                print(f"follow-up {args.arg} marked done")
+                trail = f" (folded -> {folded})" if folded else (f" ({note})" if note else "")
+                print(f"follow-up {args.arg} marked done{trail}")
                 return 0
         print(f"no follow-up with id {args.arg}", file=sys.stderr)
         return 1
@@ -407,7 +416,13 @@ def cmd_followup(args) -> int:
         except (KeyError, ValueError):
             stale = False
         mark = "done " if st == "done" else ("stale" if stale else "open ")
-        print(f"  [{r.get('id', '?')}] {mark} {r.get('ts', '')[:10]}  {r.get('text', '')[:100]}")
+        line = f"  [{r.get('id', '?')}] {mark} {r.get('ts', '')[:10]}  {r.get('text', '')[:100]}"
+        if st == "done":
+            if r.get("folded_into"):
+                line += f"  (folded -> {r['folded_into']})"
+            elif r.get("note"):
+                line += f"  ({r['note'][:60]})"
+        print(line)
     return 0
 
 
@@ -694,6 +709,11 @@ def main() -> int:
     sp.add_argument("arg", nargs="?", default="", help="text (for add) or id (for done)")
     sp.add_argument("--task", default="")
     sp.add_argument("--all", action="store_true", help="include done + stale entries")
+    sp.add_argument("--note", default="",
+                    help="on `done`: a closing note recorded IN the ledger (e.g. why dropped)")
+    sp.add_argument("--folded-into", default="",
+                    help="on `done`: the root-cause id this symptom folded into; records the "
+                         "fold trail in the ledger so /followups reconcile stays traceable")
     sp.set_defaults(fn=cmd_followup)
 
     sp = sub.add_parser("retro-done", help="durable ledger of retro'd sessions (feeds /retro-backlog)")
