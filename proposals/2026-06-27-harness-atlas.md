@@ -38,8 +38,9 @@ The genuine gaps the cartograph left open, which the Atlas closes:
 | Artifact | What | Locked? |
 |---|---|---|
 | `cartograph/atlas.py` | Generator: imports `extract.build()` + engine, emits `ATLAS.md`. Adds **no** new edge extraction — if a relation isn't in the cartograph, it isn't invented here. Resolves the **canonical** `state/` (git common-dir) so live overlays are correct even from a worktree. | No (`cartograph/`) |
-| `cartograph/ATLAS.md` | The generated, committed map (9 sections; structural views + a point-in-time observability snapshot). | No |
-| `commands/atlas.md` | `/atlas` — regenerate, run the gate, report what moved. | No (`commands/`) |
+| `cartograph/ATLAS.md` | The generated, committed **structural** map (8 sections; low-churn — diffs only on harness change). | No |
+| `cartograph/ATLAS-PULSE.md` | The **live** companion — friction / load / backlog / bug-cluster snapshot; meant to drift, committed deliberately for a trend record. | No |
+| `commands/atlas.md` | `/atlas` — regenerate both, run the gate, report what moved. | No (`commands/`) |
 
 Design invariants kept from the cartograph: machine-truth is single-sourced through
 `extract.py`; curated overlays (layer grouping, bio-role metaphor, 3-loop layout)
@@ -61,14 +62,18 @@ These touch the write-locked enforcement layer and must NOT be done unilaterally
    sections + diagrams from a fixture graph, guarding the "silent section drop" risk
    (the cartograph's own stated failure mode, one level up).
 
+## Decisions
+
+- **Volatile snapshot churn — RESOLVED 2026-06-27 (user): split.** The structural map
+  (`ATLAS.md`) is committed routinely and diffs only on harness change; the live
+  numbers live in `ATLAS-PULSE.md`, committed deliberately (e.g. at `/meta-retro`) for
+  a friction-over-time record. Structural diffs stay clean; the trend is still tracked.
+
 ## Open questions
 
-- **Volatile snapshot churn.** §9 embeds session-varying numbers (hit-rates, fires,
-  follow-ups). Committing the whole file means each re-sync diffs §9. The request
-  ("synced over time … the living harness as it evolves") reads as *intended* —
-  re-syncing IS the ritual, and the stamp dates it. Alternative: gitignore §9 and
-  commit only the structural map. **Decision deferred to the user.**
 - **Cadence.** Manual `/atlas`, `/retro`-triggered, CI-on-every-merge, or scheduled?
+  (Leaning: `/atlas` manual + a `/retro` nudge when a structural change landed; the CI
+  drift-guard covers staleness — see follow-up 1.)
 
 ## Provenance
 
