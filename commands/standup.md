@@ -53,8 +53,9 @@ d. Delete merged REMOTE branches. Re-derive the list from `git branch -r --merge
 e. Clear stale `state/retro_gate_*` markers — any whose session id is NOT the
    current session (a prior session's gate is inert; the file is gitignored and
    regenerates). Resolve the CURRENT session id from `state/session_owners.json`
-   keyed by the cwd's git-toplevel (the same source /retro uses) — NEVER infer it
-   from marker recency or agent temp-dir paths. Keep that session's marker, clear
+   keyed by the cwd's git-toplevel (the same source /retro uses; if it is absent or
+   ambiguous under a concurrent session, resolve by content-match per `commands/retro.md`
+   step 2) — NEVER infer it from marker recency or agent temp-dir paths. Keep that session's marker, clear
    the rest. (Marker-recency picked a stale prior id on 2026-06-22 and it
    propagated into a shipped PR's provenance.)
 
