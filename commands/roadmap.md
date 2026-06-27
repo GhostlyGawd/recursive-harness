@@ -21,7 +21,7 @@ it produces a `ROADMAP.md` and the discipline to follow it, then hands features 
    the **win condition**, altitude, and "this is worth pursuing" WITH THE USER before
    planning. A full roadmap on an unconfirmed/low-value goal is the main failure mode.
 3. **Log the load-bearing hypothesis** with `harness predict` (each milestone gets one).
-4. **Write the artifact** using `templates/ROADMAP.template.md`. Put it where the work
+4. **Write the artifact** using `skills/roadmap/templates/ROADMAP.template.md`. Put it where the work
    lives: in the target project's repo as `ROADMAP.md`, or — for harness/meta work — under
    `proposals/<date>-<slug>-roadmap.md`. Commit it (branch first; never leave it loose).
 5. **Set up the update ritual.** State when the first milestone is reviewed and how the doc
@@ -32,3 +32,9 @@ it produces a `ROADMAP.md` and the discipline to follow it, then hands features 
 - For a **single feature**, decline and point to `build-loop` — a roadmap there is overhead.
 - If the approach itself is unclear, run `brainstorm` first, then roadmap the chosen one.
 - Keep milestones **time-boxed (2–4 weeks)** and sequence **risk-first**.
+
+<!-- provenance: 2026-06-27, session 01Ua4x8egBkaVbB9K35epBxv — /roadmap command for the
+roadmap skill (the planning/commitment brick of the product factory). Relocated from
+plugins/roadmap to commands/ + skills/roadmap so the harness actually loads it (plugins/ is
+not scanned for skills/commands). Design + provenance: proposals/2026-06-27-roadmap-plugin.md. -->
+
