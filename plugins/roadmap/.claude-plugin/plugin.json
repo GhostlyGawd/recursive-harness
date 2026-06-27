@@ -1,0 +1,10 @@
+{
+  "name": "roadmap",
+  "displayName": "Roadmap — idea to shipped, on a deadline",
+  "version": "0.1.0",
+  "description": "Turns one big goal into a dated, sequenced, measurable ROADMAP.md and holds you to it. A commitment device against exploration-loop drift: frame -> decompose -> map deps/risks -> sequence into time-boxed milestones -> write ROADMAP.md -> hand each feature to build-loop. Every milestone carries a deadline, a falsifiable done-criteria, and a hypothesis you later score. No Linear, no external deps.",
+  "author": { "name": "GhostlyGawd" },
+  "license": "MIT",
+  "keywords": ["roadmap", "planning", "scoping", "commitment", "milestones", "shipping", "product-factory"],
+  "defaultEnabled": false
+}
