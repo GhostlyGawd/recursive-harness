@@ -118,6 +118,31 @@ runs **pwsh 7+** (where `&&`, ternary, `??` work), but the user's interactive sh
 write 5.1-safe syntax (`;` not `&&`), and to actually confirm, have the USER run it in their
 own session (the `! <command>` prefix runs a command inline there).
 
+## Manifestation F — native-Windows `python`/`gh` can't open a `/d/…` path passed as a string LITERAL
+
+The Bash tool is Git Bash (MSYS). MSYS rewrites a `/d/GitHub Projects/…` POSIX path to
+`D:\…` **only when it appears as a command-line ARGUMENT** — it does NOT touch a path
+string that lives *inside* a program. So a native-Windows `python`/`gh`/`node` launched
+from the Bash tool receives the literal `/d/…` and fails — usually a bare
+`FileNotFoundError` that reads as "my path was wrong":
+
+```bash
+python -c "open('/d/GitHub Projects/recursive-harness/state/x.json')"
+# FileNotFoundError — native python sees a literal /d/.. it can't resolve;
+# MSYS converted nothing because the path was never an argv entry.
+```
+
+This is the inverse of Manifestation A/B: there, `/d/…` is the RIGHT form because the
+Bash tool quotes it as an argv arg; here the path is a string constant the child process
+reads verbatim, so MSYS never sees it. Hit twice during /retro 2026-06-26 (`session_owners.json`
++ `autonomy.json` reads).
+
+**Fix:** inside a program's string literals use a **Windows path** (`D:/GitHub Projects/…` —
+forward slashes are accepted by the Windows API and dodge backslash-escaping), OR keep the
+path OUT of the literal and hand it where MSYS DOES translate it — as an argv arg, via
+`git -C "<path>"`, or `os.chdir(...)`. For a plain read, the **Read tool** sidesteps the
+shell entirely and never hits this.
+
 ## Rules
 
 - For the ASSISTANT's OWN file ops on this checkout, prefer the **Bash tool + POSIX
@@ -127,5 +152,7 @@ own session (the `! <command>` prefix runs a command inline there).
 - Lead any guard-bypass env token; never precede it with `cd` or a space-valued
   `VAR=` assignment. Use `git -C`/`os.chdir`, not `cd`.
 - Quote EVERY path that touches the repo root, in every shell.
+- A `/d/…` path inside a program's string LITERAL is NOT MSYS-translated (only argv
+  args are) — use `D:/…`, `git -C`/`os.chdir`, or the Read tool (Manifestation F).
 - A block or no-op on a known-good path is a SPACE smell, not a you-were-wrong
   smell. Don't re-quote-and-retry in the same shell — change the structure.
