@@ -150,7 +150,7 @@ even refused swaps that would ADD a line-height the element lacked.)
 
 ## Relationships (one name per concept — never fork)
 
-- **venture-build** is the multi-session, Linear-managed, scaffold+ledger SUPERSET
+- **venture-build** is the multi-session, board-managed, scaffold+ledger SUPERSET
   for whole products; it CITES this skill for the per-feature inner loop and keeps
   its own grading-independence + validate-live gates. This skill is the generic
   core, not a competitor; venture-build phase 4 keeps tests-as-you-go for MVP

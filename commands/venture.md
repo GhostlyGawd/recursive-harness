@@ -1,5 +1,5 @@
 ---
-description: Autonomously build a venture/product end-to-end from a charter (a GOAL.md path or an inline brief), managed cleanly with Linear + a versioned subproject. Wraps the venture-build skill.
+description: Autonomously build a venture/product end-to-end from a charter (a GOAL.md path or an inline brief), managed cleanly with a self-contained markdown PM board + a versioned subproject. Wraps the venture-build skill.
 ---
 
 > provenance: 2026-06-13 · session 406040c3 · trigger: user asked to make this conversation's venture build a repeatable, user-invocable workflow.

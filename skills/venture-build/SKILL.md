@@ -1,16 +1,17 @@
 ---
 name: venture-build
-description: End-to-end procedure for turning a charter (GOAL.md or inline brief) into a validated, managed venture: predict, scaffold the subproject, stand up Linear PM, fan out a strategy-IP workflow, build the MVP contract-first with tests-as-you-go, validate LIVE (not just unit tests), run an adversarial-review workflow and fix findings, write the venture ledger, branch+commit and score. Trigger when the user asks to build/spin up/stand up a company, product, MVP, or venture end-to-end, or runs /venture. Skipping it yields demos without validation gates or a ledger.
+description: End-to-end procedure for turning a charter (GOAL.md or inline brief) into a validated, managed venture: predict, scaffold the subproject, stand up a markdown PM board, fan out a strategy-IP workflow, build the MVP contract-first with tests-as-you-go, validate LIVE (not just unit tests), run an adversarial-review workflow and fix findings, write the venture ledger, branch+commit and score. Trigger when the user asks to build/spin up/stand up a company, product, MVP, or venture end-to-end, or runs /venture. Skipping it yields demos without validation gates or a ledger.
 ---
 
 # Venture Build
 
-> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005. · 2026-06-17 (session d7de6b55): added the grading-independence gate after a 529-forced main-thread build. · 2026-06-21 (session 7d2da048): cite build-loop as the per-feature inner loop (build-loop is the generic core; venture-build is its venture-scale superset).
+> provenance: 2026-06-13 · session 406040c3 · trigger: after an autonomous venture build (AgentOps Trust OS), the user asked to capture the *process* (not the bespoke product code) as a reusable skill. · 2026-06-16 cross-Grove retro (N=2, Grove): added the blackboard resume-contract + the cold-CI gate; reconciled scaffold with ADR-0005. · 2026-06-17 (session d7de6b55): added the grading-independence gate after a 529-forced main-thread build. · 2026-06-21 (session 7d2da048): cite build-loop as the per-feature inner loop (build-loop is the generic core; venture-build is its venture-scale superset). · 2026-06-27 (session a42f36f6): stripped Linear; PM is now a self-contained markdown board (ledger/board.md) only — per user correction "wants NO Linear integrations anymore."
 
 Turn a charter into a validated, managed, acquisition-ready venture. The product
 is bespoke every time; THIS procedure is what repeats. Defaults: bias to
 runnable-anywhere / minimal-dependency builds so validation is real, but stay
-stack-flexible per charter; Linear-first PM with a markdown-board fallback.
+stack-flexible per charter; PM is a self-contained markdown board (`ledger/board.md`) —
+no external PM tool.
 
 These defaults are distilled from a couple of ventures (AgentOps Trust OS, Grove) —
 treat the milestone names, the acquirer-map artifact, the compliance stack, and the
@@ -72,7 +73,7 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
 
 > The per-feature inner discipline — align → criteria → RED tests → pre-build
 > review → build to green → verify in practice — is the skill `build-loop`; this
-> venture loop is its multi-session, Linear-managed, scaffold+ledger superset.
+> venture loop is its multi-session, board-managed, scaffold+ledger superset.
 > Phase 4 keeps venture's tests-as-you-go pace for MVP coherence; tighten to
 > build-loop's tests-RED-first when building an individual feature to spec.
 
@@ -84,9 +85,9 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
    references/artifacts.md): docs/{business,product,security,compliance}, the code
    dir, tests, examples, ledger, README.md, a THIN CLAUDE.md, VENTURE.md, and the
    charter saved as GOAL.md. Exit: tree exists; CLAUDE.md < 40 lines.
-2. PM SETUP. Linear project + 5 phase milestones + seeded issues, status set by
-   reality (Done for what you will build this loop, Todo/Backlog for the rest). No
-   Linear → a markdown board at ledger/board.md. Exit: project + milestones + issues.
+2. PM SETUP. A markdown board at `ledger/board.md` — 5 phase milestones + seeded
+   issues, status set by reality (Done for what you will build this loop, Todo/Backlog
+   for the rest). Exit: board with milestones + issues.
 3. STRATEGY FAN-OUT (background). Adapt references/strategy-ip-fanout.workflow.js to
    the charter's domain and launch it via the Workflow tool WHILE you build — it
    writes the research/GTM/security/compliance IP in parallel. Exit: workflow launched.
