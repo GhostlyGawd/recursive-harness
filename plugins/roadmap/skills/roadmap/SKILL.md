@@ -1,7 +1,7 @@
 ---
 name: roadmap
 description: Turn one big goal into a dated, sequenced, measurable ROADMAP.md you stick to. Trigger when the user wants to roadmap / scope out / plan / sequence a multi-feature goal, says "turn this idea into a plan", or keeps iterating with no deadline or win condition. A commitment device vs exploration-loop drift: frame -> decompose -> map deps/risks -> sequence into time-boxed milestones -> hand each feature to build-loop. Each milestone gets a deadline, done-criteria, and a hypothesis you score. Skipping it = endless iteration, no ship date. Single feature -> use build-loop.
-provenance: 2026-06-27, session 01Ua4x8egBkaVbB9K35epBxv — user is building an end-to-end product factory on this harness; the roadmap plugin is its planning/commitment brick, built to break the user's documented exploration-loop drift (iterating with no deadline/win condition). Design + first dogfood (Codeweb) in proposals/2026-06-27-roadmap-plugin.md + 2026-06-27-codeweb-roadmap.md. Duplication-checked: distinct from brainstorm (divergence on options), the Plan agent (one-task architecture), build-loop (one-feature execution), and venture-build (whole-product + Linear, deliberately dropped). roadmap is the multi-feature decompose+sequence layer that FEEDS build-loop. The §0 value/should-be gate was added the same session after the Codeweb dogfood showed a roadmap can otherwise plan a launch of a thing whose value prop is unproven.
+provenance: 2026-06-27, session 01Ua4x8egBkaVbB9K35epBxv — user is building an end-to-end product factory on this harness; the roadmap plugin is its planning/commitment brick, built to break the user's documented exploration-loop drift (iterating with no deadline/win condition). Design + first dogfood (Codeweb) in proposals/2026-06-27-roadmap-plugin.md + 2026-06-27-codeweb-roadmap.md. Duplication-checked: distinct from brainstorm (divergence on options), Claude Code's built-in Plan agent (one-task architecture), build-loop (one-feature execution), and venture-build (whole-product + Linear, deliberately dropped). roadmap is the multi-feature decompose+sequence layer that FEEDS build-loop. The §0 value/should-be gate was added the same session after the Codeweb dogfood showed a roadmap can otherwise plan a launch of a thing whose value prop is unproven.
 ---
 
 # Roadmap — idea to shipped, on a deadline
@@ -48,8 +48,8 @@ the many.
    **GATE: every item has a one-line scope; the skeleton is named.**
 2. **MAP DEPS & RISKS.** Build the dependency graph (what blocks what). Turn each unknown
    into a **spike**; give each risk an owner or a mitigation. For an existing codebase,
-   query cartograph (`extract.py --query`) for blast radius; use the `Plan` agent for
-   per-area architecture. **GATE: each risk has a spike/mitigation; no item depends on an
+   query cartograph (`extract.py --query`) for blast radius; spawn a `general-purpose`
+   (or Claude Code's built-in `Plan`) agent for per-area architecture. **GATE: each risk has a spike/mitigation; no item depends on an
    unlisted item.**
 3. **SEQUENCE.** Order into **time-boxed milestones** by dependency + value +
    **risk-burndown-early** (do the scariest, most-likely-to-kill-it thing first). Walking
@@ -83,7 +83,7 @@ A roadmap is alive. At each milestone boundary, or when reality contradicts a hy
 ## Composition (compose; never reimplement)
 
 - **brainstorm** — when §0's approach is contested, diverge + pick first, then roadmap it.
-- **Plan agent / cartograph** — §2 architecture + blast-radius for existing codebases.
+- **cartograph + a `general-purpose` (or built-in `Plan`) agent** — §2 blast-radius + per-area architecture for existing codebases.
 - **build-loop** — §5 hands each feature to it for the per-feature build→review loop.
 - This plugin is the decompose+sequence layer ABOVE those. It does not execute features
   and does not do single-feature planning.

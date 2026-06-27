@@ -32,7 +32,7 @@ effective, capable, aligned.** So every roadmap carries:
 1. **DECOMPOSE** — break into features/work items; find the walking skeleton.
    GATE: each item one-line scoped.
 2. **MAP DEPS & RISKS** — dependency graph; unknowns → spikes; risks w/ owners.
-   GATE: each risk has a spike/mitigation. (composes `Plan` agent / cartograph)
+   GATE: each risk has a spike/mitigation. (composes cartograph / a `general-purpose` or built-in `Plan` agent)
 3. **SEQUENCE** — order into time-boxed milestones by dependency + value + risk-burndown-early.
    GATE: each milestone demoable + dated.
 4. **WRITE ROADMAP.md** — one canonical view; explicit out-of-scope.

@@ -37,10 +37,13 @@ The stages and the pieces that serve them:
 | brand | `brand-foundry` |
 | market / iterate / scale | *(not built yet)* |
 
+> `roadmap` plans ONE initiative (decompose + sequence into dated milestones) — lighter and a
+> different altitude from the heavier whole-venture `venture-build` executor.
+
 Each brick is built and proven on a real product, then reused. `roadmap` was first dogfooded
 on **Codeweb** (see `proposals/2026-06-27-*.md`).
 
 ## Composes (never reimplements)
 
-`brainstorm` (diverge on approach) · `Plan` agent + cartograph (architecture + blast radius)
+`brainstorm` (diverge on approach) · cartograph + a `general-purpose`/built-in `Plan` agent (blast radius + architecture)
 · `build-loop` (per-feature execution). No Linear, no external dependencies.
