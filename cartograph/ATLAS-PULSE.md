@@ -4,13 +4,13 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-06-27` from extract.py @ `e916207`.
+**Build stamp** - generated `2026-06-27` from extract.py @ `21d6ff4`.
 
 ---
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **80%** hit-rate (133 hit / 34 miss / 0 open over 167). Open follow-ups: **28**. The breakdowns below localize the friction.
+Overall prediction calibration: **80%** hit-rate (133 hit / 34 miss / 0 open over 167). Open follow-ups: **24**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -48,7 +48,7 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 ### Backlog & friction
 
-- Open follow-ups: **28**
+- Open follow-ups: **24**
 - Corrections logged (all-time ledger): **88**
 
 ### Where bugs cluster - the heal ledger
