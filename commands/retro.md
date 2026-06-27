@@ -28,7 +28,8 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    take the newest-mtime `*.jsonl` under the account's `projects/<cwd-key>/` dir. Do
    NOT infer the session id from agent temp-dir / task-output paths — that id is a
    persistent grouping decoupled from the live session, and inferring from it mined
-   the WRONG prior session on 2026-06-21, wasting a full miner pass.)
+   the WRONG prior session on 2026-06-21. Under a concurrent session newest-mtime can TIE (and
+   `session_owners.json` may be absent) — then pick the candidate `*.jsonl` whose content `grep`s THIS session's DISTINCTIVE user-turn phrases (boilerplate recurs across sessions; 2026-06-26 tie was the 3rd such miss).)
    If THIS session was split by `/clear` (a compaction boundary mid-transcript), SAY so at
    hand-off and point the miner at the post-clear line range — a large split transcript
    otherwise gets sampled head-only and the later phase is missed entirely (630534).
