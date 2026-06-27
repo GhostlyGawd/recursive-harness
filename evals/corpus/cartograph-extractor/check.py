@@ -65,6 +65,26 @@ if not any(s == "command:meta-retro" and t == "invokes"
 if ("hook:log_correction", "state:corrections", "touches") not in pairs:
     fail("lost anchor: log_correction touches state:corrections")
 
+# hardening invariants (mirror cartograph/test_hardening.py, asserted against the live trunk)
+# provenance: 2026-06-26, session 689f12f4 — followup d368f8; keep in sync with
+# test_hardening.py:152 (no-hook-spawns) and :121 (multi-session born_in)
+# (1) hooks are synchronous Python enforcement and cannot launch a subagent, so NO
+#     spawns edge may originate from a hook node (the extractor pre-sanitizes this).
+hook_spawns = sorted(f"{s}->{t}" for s, t, ty in pairs
+                     if ty == "spawns" and s.startswith("hook:"))
+if hook_spawns:
+    fail("hook-origin spawns edge(s) leaked (hooks can't spawn): " + ", ".join(hook_spawns))
+
+# (2) born_in captures ALL sessions an artifact declares (multi-session lineage), not
+#     just the first — at least one node must carry >=2 distinct born_in sessions, else
+#     lineage capture regressed to first-session-only.
+born = {}
+for s, t, ty in pairs:
+    if ty == "born_in":
+        born.setdefault(s, set()).add(t)
+if not any(len(sess) >= 2 for sess in born.values()):
+    fail("no multi-session born_in node - lineage capture regressed to first-session-only")
+
 print(f"ok ({len(nodes)} nodes, {len(edges)} edges, "
       f"{len(etypes)} edge-types)")
 sys.exit(0)
