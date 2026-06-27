@@ -35,16 +35,18 @@ products/<slug>/
 10 sales pipeline · 11 investor/acquirer map · 12 weekly founder report · 13 metrics
 dashboard · 14 kill/pivot/double-down log. (Items 1–11 are docs/; 12–14 are ledger/.)
 
-## Linear PM structure (phase 2)
+## PM board structure (phase 2)
 
-- Project: the venture name, rich description (mission, thesis, positioning, phases,
-  acquirers), priority Urgent, start + target dates.
+The PM board is `ledger/board.md` — a self-contained markdown table by milestone, no
+external PM tool.
+
+- Header: the venture name + rich description (mission, thesis, positioning, phases,
+  acquirers), start + target dates.
 - 5 milestones: Phase 1 Market Proof · Phase 2 MVP Build · Phase 3 Design-Partner
   Pilots · Phase 4 Paid Product · Phase 5 Moat & Scale — each with its gate criteria.
 - Issues: set status by reality (Done for what you build this loop; Todo for the
-  urgent human items like real discovery + naming; Backlog for Phases 3–5). Post a
-  project status update at the end.
-- No Linear connected → mirror this as `ledger/board.md` (a markdown table by milestone).
+  urgent human items like real discovery + naming; Backlog for Phases 3–5). Update the
+  board's status line at the end of each loop.
 
 ## CLAUDE.md (thin contract) template
 
@@ -64,7 +66,7 @@ Only facts true of THIS repo belong here. Procedures/preferences route upstream 
 
 ```
 # <Venture> — Venture Operating System
-**One-liner:** <what it is>.  **Linear:** <project>.  **Stage:** <phase>.
+**One-liner:** <what it is>.  **Board:** ledger/board.md.  **Stage:** <phase>.
 ## Required artifacts (table: # | artifact | path | status ✅/🚧)
 ## The weekly venture loop  (the 8 steps + pointer to ledger/loop-NNN.md)
 ## Decision framework  (the 8 scores)
