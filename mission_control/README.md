@@ -3,7 +3,7 @@
 A Phosphor-Console TUI for total harness state. **Three lenses on one model** — Roster (P1),
 Map (P2), and the Console station with Proof counters + a read-only live-feed Terminal (P3–P4) —
 rendering the read-only `cartograph/extract.py --mission` payload (P0) and the `fleet.eventlog`
-feed in the Lathe "Phosphor Console" design language. P5 (the anti-`STATE.md` guard) is staged.
+feed in the Lathe "Phosphor Console" design language. P5 (the anti-`STATE.md` guard) is merged.
 
 Read-only. Adds no store. See `proposals/2026-06-21-mission-control-tui.md` for the locked design
 and the P0–P5 roadmap.
@@ -69,7 +69,8 @@ Three lenses on **one model** (selection follows the component across all of the
 The data join is P0's: best-effort, by file path; anything unscoped stays unscoped, nothing is
 invented. An absent ledger degrades to empty (never a fabricated zero). The Terminal reads the
 canonical `state/fleet/events.jsonl` (resolved to the MAIN checkout from a worktree); it never
-writes — emit/act + the reaper + the `bin/harness fleet` subcommand stay gated.
+writes — emit/act, the reaper, and the `bin/harness fleet` subcommand shipped separately via
+`/harness-pr` (the Terminal lens itself stays a pure reader).
 
 ## Design language
 
@@ -92,14 +93,16 @@ python mission_control/test_feed.py      # P4 Terminal live-feed (read-only, fle
 - [x] **P1** — TUI skeleton: chrome bar + Signal lanes (Roster) + detail bay
 - [x] **P2** — Graph (Map) lens + selection-follow across lenses
 - [x] **P3** — full Console station + Proof counters + layer toggles
-- [x] **P4** — live-feed (Terminal) lens, **read-only** over `fleet.eventlog` *(emit/act gated)*
-- [~] **P5** — anti-`STATE.md` PreToolUse guard — **staged** for `/harness-pr`
-  (`proposals/2026-06-23-mission-control-p5-guard/`; `hooks/` is write-locked)
+- [x] **P4** — live-feed (Terminal) lens, **read-only** over `fleet.eventlog` *(emit/act shipped separately)*
+- [x] **P5** — anti-`STATE.md` PreToolUse guard — **merged** via `/harness-pr`
+  (`hooks/forbid_scratchpad.py`, wired in `settings.json`; test `tests/test_forbid_scratchpad.py`, 25/25)
 
-### Deferred (gated — need `/harness-pr` + human approval)
+### Landed — the gated work (merged via `/harness-pr` under recorded human approval)
 
-- **P4 emit/act-from-it** — the Terminal *reads*; emitting typed events + the session-end reaper
-  hook + the `bin/harness fleet` subcommand are gated (`bin/` + `hooks/` write-locked).
-- **P5 guard** — move `forbid_scratchpad.py` → `hooks/` + register in `settings.json` (staged).
-- Wire `harness mission-control` into `bin/harness`; add a "launch mission-control" line to
-  `/standup`.
+- **P4 emit/act-from-it** — `bin/harness fleet emit|feed|reap` + the session-end reaper
+  (`hooks/session_end.py`) shipped (Agent Mail PR #121 + the gated bundle).
+- **P5 guard** — `forbid_scratchpad.py` moved to `hooks/` + registered in `settings.json`.
+- **`harness mission-control`** launch verb wired into `bin/harness`; `/standup` carries its
+  "launch mission-control" line.
+
+The P0–P5 build is complete.
