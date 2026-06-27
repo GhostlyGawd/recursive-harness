@@ -95,7 +95,6 @@ last_warn_ts in the owner map, instead of one systemMessage per PreToolUse.
 import json
 import math
 import os
-import re
 import sys
 import time
 
@@ -108,12 +107,12 @@ except Exception:  # never let a config-reader import brick a guard
     def num(key, default):
         return float(default)
 
-# A ".claude/worktrees/<name>" segment, case-insensitive, tolerating '/' and
-# '\\'. group(1) spans from the start through <name> — the worktree root.
-_WT_RE = re.compile(
-    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$",
-    re.IGNORECASE,
-)
+# Worktree-aware path helpers, shared with inject_kernel + guard_worktree_isolation
+# (follow-up 3939d8). Hard import: hooks/ ships as a unit so _wtpaths.py always sits
+# beside this guard (the one isolated-copy test, test_guard_worktree_session, copies it
+# too). Unlike harness_features (optional config) there is no safe no-op for path
+# resolution, so a missing module SHOULD fail loudly rather than mis-resolve a guard.
+from _wtpaths import normalize as _normalize, worktree_root as _worktree_root, gitwalk_root as _gitwalk_root
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _MAP_REL = ("state", "session_owners.json")
@@ -129,7 +128,6 @@ _TTL_SECONDS = 900          # 15 min: covers normal idle gaps; a crashed session
 #                             frees its trees after this (clean exits free them
 #                             instantly via SessionEnd; moving trees frees the old
 #                             one on the next tool call).
-_MAX_WALK = 80              # bounded parent walk so a pathological cwd can't spin.
 _REPLACE_RETRIES = 4       # Windows: os.replace fails if the file is open elsewhere.
 
 # MAIN-checkout concurrency window for the non-blocking WARNING (see
@@ -168,50 +166,10 @@ def _ttl_seconds() -> float:
     return num("guards.worktree_session.ttl_seconds", _TTL_SECONDS)
 
 
-def _strip_extended(path: str) -> str:
-    r"""Lexically strip the Windows extended-length prefix (\\?\ and \\?\UNC\),
-    which is a pure alias of the plain path. Done WITHOUT realpath so we never
-    resolve symlinks (see _normalize)."""
-    if path.startswith("\\\\?\\UNC\\"):
-        return "\\\\" + path[len("\\\\?\\UNC\\"):]
-    if path.startswith("\\\\?\\"):
-        return path[len("\\\\?\\"):]
-    return path
-
-
-def _normalize(path: str) -> str:
-    r"""Canonical absolute form for use as a registry KEY. Lexically strips the
-    Windows \\?\ / \\?\UNC\ extended-length prefix (a pure alias), then
-    abspath+normpath; os.path.normcase (applied by the caller) folds case +
-    separators. It deliberately does NOT realpath/resolve symlinks: doing so would
-    strip a relocated or symlinked `.claude/worktrees/<name>` of its worktree
-    identity (reclassifying it as a plain checkout and splitting it from the shared
-    repo map — a worse regression than the alias it would close). Residual
-    low-realism alias gap, a cwd real Claude Code never emits: an 8.3 short name
-    (LONGRE~1), or a cwd that is itself a symlink to a DIFFERENT real directory,
-    keys separately from the canonical spelling."""
-    if not path:
-        return ""
-    return os.path.normpath(os.path.abspath(_strip_extended(os.path.expanduser(path))))
-
-
-def _worktree_root(norm_cwd: str):
-    m = _WT_RE.match(norm_cwd)
-    return m.group(1) if m else None
-
-
-def _gitwalk_root(norm_cwd: str) -> str:
-    """Nearest ancestor of norm_cwd containing a `.git` entry (file OR dir) = the
-    repo / main-checkout root. Falls back to norm_cwd (under-isolate, safe)."""
-    d = norm_cwd
-    for _ in range(_MAX_WALK):
-        if os.path.exists(os.path.join(d, ".git")):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            break
-        d = parent
-    return norm_cwd
+# _normalize (registry-KEY canonical form, no realpath), _worktree_root (WT_RE match),
+# and _gitwalk_root (nearest-.git walk) now come from _wtpaths (imported above) — one
+# source shared with inject_kernel, so the worktree-detection rules can't drift. normcase
+# is still applied by _resolve below (the shared normalize intentionally does not).
 
 
 def _resolve(cwd: str):

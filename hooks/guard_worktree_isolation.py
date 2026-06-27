@@ -57,14 +57,11 @@ except Exception:  # never let a config-reader import brick a guard
     def flag(key, default=None):
         return default
 
-# Match a ".claude/worktrees/<name>" segment, case-insensitive on the literal
-# ".claude/worktrees" part (Windows is case-insensitive), tolerating both '/'
-# and '\\' separators around it. The captured group spans from the start of the
-# string through the <name> directory — i.e. the worktree root.
-_WT_RE = re.compile(
-    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$",
-    re.IGNORECASE,
-)
+# The ".claude/worktrees/<name>" segment matcher — group(1) is the worktree root.
+# Shared with inject_kernel + guard_worktree_session via _wtpaths (follow-up 3939d8);
+# this guard keeps its own richer _normalize (it takes a `base` and folds glob noise).
+# Hard import: hooks/ ships as a unit so _wtpaths.py always sits beside this guard.
+from _wtpaths import WT_RE as _WT_RE
 
 
 def _normalize(path: str, base: str = "") -> str:

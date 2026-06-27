@@ -26,54 +26,13 @@ provenance: session d7de6b55, 2026-06-18 -- Fix A of the harness-portability pro
 """
 import json
 import os
-import re
 import sys
 
+# Worktree-aware path helpers shared with the guards (follow-up 3939d8). The hook runs
+# as `python3 hooks/inject_kernel.py`, so hooks/ is sys.path[0] and this resolves.
+from _wtpaths import repo_root as _repo_root
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# ".claude/worktrees/<name>" segment, case-insensitive, '/' or '\' -- group(1) is the
-# worktree root (mirrors guard_worktree_session._WT_RE).
-_WT_RE = re.compile(
-    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$",
-    re.IGNORECASE,
-)
-_MAX_WALK = 80
-
-
-def _normalize(path: str) -> str:
-    r"""Canonical absolute form for comparison. Strips the Windows \\?\ / \\?\UNC\
-    extended-length prefix (a pure alias), then expanduser+abspath+normpath. No
-    realpath (do not resolve symlinks -- a symlinked `.claude/worktrees` must keep its
-    worktree identity)."""
-    if not path:
-        return ""
-    if path.startswith("\\\\?\\UNC\\"):
-        path = "\\\\" + path[len("\\\\?\\UNC\\"):]
-    elif path.startswith("\\\\?\\"):
-        path = path[len("\\\\?\\"):]
-    return os.path.normpath(os.path.abspath(os.path.expanduser(path)))
-
-
-def _repo_root(cwd: str) -> str:
-    """Worktree-aware repo root for cwd (PATH-only, no git subprocess). A worktree
-    strips `.claude/worktrees/<name>` back to the main checkout; else the nearest
-    ancestor with a `.git` entry; else the normalized cwd. '' on empty input."""
-    norm = _normalize(cwd)
-    if not norm:
-        return ""
-    m = _WT_RE.match(norm)
-    if m:
-        wt = m.group(1)
-        return os.path.dirname(os.path.dirname(os.path.dirname(wt)))
-    d = norm
-    for _ in range(_MAX_WALK):
-        if os.path.exists(os.path.join(d, ".git")):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            break
-        d = parent
-    return norm
 
 
 def _kernel_text() -> str:
