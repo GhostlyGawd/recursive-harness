@@ -169,6 +169,10 @@
           {
             "type": "command",
             "command": "python3 \"{{REPO_ROOT}}/hooks/stop_cadence_gate.py\""
+          },
+          {
+            "type": "command",
+            "command": "python3 \"{{REPO_ROOT}}/hooks/stop_skill_gap_gate.py\""
           }
         ]
       }

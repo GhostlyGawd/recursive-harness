@@ -41,7 +41,8 @@
     ],
     "Stop": [
       {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/stop_retro_gate.py"},
-                 {"type": "command", "command": "python3 ~/.claude/hooks/stop_cadence_gate.py"}]}
+                 {"type": "command", "command": "python3 ~/.claude/hooks/stop_cadence_gate.py"},
+                 {"type": "command", "command": "python3 ~/.claude/hooks/stop_skill_gap_gate.py"}]}
     ],
     "SessionEnd": [
       {"hooks": [{"type": "command", "command": "python3 ~/.claude/hooks/session_end.py"},
