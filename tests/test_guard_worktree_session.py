@@ -180,6 +180,12 @@ def new_main_tree():
     os.mkdir(os.path.join(d, ".git"))
     os.makedirs(os.path.join(d, "hooks"), exist_ok=True)
     shutil.copyfile(_HOOK_SRC, os.path.join(d, "hooks", "guard_worktree_session.py"))
+    # Guard B hard-imports its sibling _wtpaths (shared worktree-path helpers, 3939d8),
+    # so the isolated copy needs it alongside or the subprocess dies on ImportError.
+    shutil.copyfile(
+        os.path.join(os.path.dirname(_HOOK_SRC), "_wtpaths.py"),
+        os.path.join(d, "hooks", "_wtpaths.py"),
+    )
     return d
 
 
