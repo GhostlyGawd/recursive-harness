@@ -51,6 +51,21 @@ canonical main checkout - so evidence from every worktree and session lands in
 one place. `add` prints the running recurrence and flags when a need crosses the
 threshold.
 
+### 1b. A missing TOOL is acquired, not worked around
+
+A *need* is a knowledge gap you reason through. A missing **tool** is different - a
+concrete binary / CLI / service the task requires that simply is not installed (a
+renderer, an encoder, an auth'd CLI - e.g. playwright, ffmpeg). The standing user
+directive for that case is ACQUIRE it, never degrade around it: identify the right
+tool, install/build/vendor it, verify it runs, then proceed. Shipping a worse result -
+or FAKING it, or DEFERRING the work to a follow-up - because a tool was absent is the
+anti-pattern (the documented install is usually one step: e.g.
+`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install` to drive system Chrome). Stay inside
+the user's floors - subscription-CLI auth only, no API-key dependencies, no headless
+execution (memory/user-model.md). Still `needs.py add` the gap: a recurring
+acquisition is real evidence and promotes to a documented setup/preflight step, the
+same accretion loop. (correction #89, 2026-06-28.)
+
 ## 2. Recurrence & promotion - mostly automatic
 
 A need with recurrence >= threshold (default 3, `nudges.skill_gap_recurrence`)
@@ -113,3 +128,8 @@ tracking durably. It is the harness's map of its own capability frontier.
   expert that never fires.
 
 <!-- provenance: 2026-06-27, session 9f6014a0 - user defined the recursive-harness thesis ("it should recursively create and improve itself and extend its capabilities over time... creating experts as you go to call upon in the future") and corrected that this must be autonomous, not user-prompted. Scope set via AskUserQuestion (recurrence-gated promotion + continuous live logging + distill-from-evidence-cluster) under a blanket execute-and-land grant. Ships with needs.py (the ledger), memory/skill-needs.md (the registry), and the stop_skill_gap_gate hook (the autonomous nudge). Mirrors the auto-healer accretion->promotion pattern. -->
+<!-- provenance: 2026-06-28, session 24f99be7 (correction #89, state/corrections.jsonl) - added §1b
+(a missing TOOL is acquired, not worked around): the skill covered knowledge-gap->expert only, but
+the user standing directive is to ACQUIRE a missing tool/binary (install/build/vendor), never work
+around / fake / DEFER for lack of it. Triggered by a brand-foundry render DEFERRED citing "Playwright
+absent" instead of the one-step documented install. Paired with a memory/user-model.md working-style bullet. -->
