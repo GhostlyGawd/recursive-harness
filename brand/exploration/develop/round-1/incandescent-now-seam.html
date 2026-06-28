@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<!--
+  DIRECTION · Append-Only Strata  ·  REFINEMENT · Incandescent now seam
+  Same skeleton (left ISO rail + downward core sample, 'now' seam at top, ragged right, sealed bedrock at base).
+  Same concept (append-only; never overwritten; depth bound to age; JSONL grain).
+  Same content (identity, promise, mechanism, calibration soul, four predictions, three loops, founding invariant).
+
+  DIAL-IN — recency-as-hierarchy pushed to the extreme:
+    · the field is now the *cooling* of fresh deposition. HEAT == AGE.
+    · the seam is a single near-white-hot hairline — the ONLY bright thing on the screen (120%).
+    · its glow decays FAST: the header still carries residual heat, but within a few rows the strata
+      are already dead and dim. Brightness, from here down, reads purely as age.
+    · the left ISO rail drops to a quiet hairline margin so nothing competes with the seam.
+    · the former iron-oxide accent survives only as low-luminance EMBERS — warm, never glowing.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>Recursive Harness — core sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Spline+Sans+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    /* COOLING gradient — heat IS age. white-hot seam (newest) decays FAST to dead near-black bedrock (oldest). */
+    --b-head:#33240f;  --b-line:#2a1c0d;  --b-sub:#211610;  --b-cal:#1b130e;
+    --b-pend:#181110;  --b-miss:#16100e;  --b-hit1:#140f0d;  --b-hit2:#120d0c;
+    --b-task:#100c0b;  --b-sess:#0e0a09;  --b-month:#0c0808; --b-bed:#080605;
+
+    /* warm-white content, dimming with depth */
+    --txt-hot:#F4E7CE;   /* freshest content — directly under the seam */
+    --txt-warm:#C9B591;  /* already cooling */
+    --txt-mute:#8c7b60;
+    --txt-dim:#5d5240;
+    --txt-faint:#473d2f;
+    --cream:#D6C9AD;     /* lit text on buried strata */
+    --cream-soft:#897a5e;
+
+    /* embers — warm accents held BELOW the seam's luminance; they smoulder, they never glow white */
+    --ember:#A6482A;
+    --ember-lo:#7a3520;
+    --ember-hot:#C25A30;  /* hottest ember, permitted only in the top (recent) zone */
+
+    --rule:rgba(231,206,170,0.065);    /* hairline rules on lit strata */
+    --rule-d:rgba(231,206,170,0.045);  /* hairline rules on buried strata */
+  }
+  html,body{ background:#050302; height:100%; }
+  body{ display:flex; align-items:center; justify-content:center; font-family:"Spline Sans Mono",monospace; }
+
+  .frame{
+    position:relative; width:1440px; height:900px; overflow:hidden;
+    background:var(--b-bed);
+    box-shadow:0 40px 120px rgba(0,0,0,.7), 0 0 0 1px rgba(0,0,0,.6);
+  }
+
+  /* RAIL (132) + CORE (1308) — the ruled margin and the core sample */
+  .grid{
+    display:grid;
+    grid-template-columns:132px 1308px;
+    grid-template-rows:3px 78px 160px 66px 150px 33px 33px 32px 32px 70px 60px 53px 130px;
+    width:100%; height:100%;
+  }
+
+  /* ════════ THE INCANDESCENT NOW SEAM — one white-hot hairline; nothing may sit above it ════════ */
+  .seam{
+    grid-column:1 / 3; position:relative; z-index:20;
+    /* a ~1.5px white-hot filament reading off a sub-pixel warm underside */
+    background:linear-gradient(180deg,#FFFCF6 0%,#FFF2DE 42%,#FFCB92 78%,#F6A35A 100%);
+    box-shadow:
+      0 0 3px rgba(255,250,242,.95),
+      0 1px 9px rgba(255,206,148,.78),
+      0 3px 24px rgba(243,128,56,.42),
+      0 7px 52px rgba(196,74,32,.26);
+  }
+  .seam::after{ /* the live deposition tick — a bright point of fresh accretion travelling the seam */
+    content:""; position:absolute; top:0; bottom:0; width:74px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
+    filter:blur(.3px);
+    animation:seamrun 6.5s linear infinite;
+  }
+  @keyframes seamrun{ 0%{left:-74px} 100%{left:1440px} }
+
+  /* residual heat shed downward by the seam — washes the freshest strata, gone within ~140px (fast decay) */
+  .afterglow{
+    position:absolute; top:3px; left:0; width:1440px; height:148px;
+    pointer-events:none; z-index:30; mix-blend-mode:screen;
+    background:linear-gradient(180deg,
+      rgba(255,179,99,.34) 0%,
+      rgba(248,138,58,.15) 26%,
+      rgba(204,92,42,.05) 55%,
+      transparent 86%);
+  }
+
+  /* ── RAIL cells — quiet hairline margin: monotonic timestamps + 8-hex ids, all whisper-dim ── */
+  .rail{
+    position:relative; padding:8px 10px 0 12px;
+    border-right:1px solid var(--rule);
+    border-bottom:1px solid var(--rule);
+    display:flex; flex-direction:column; gap:2px;
+    font-size:8.5px; line-height:1.34; letter-spacing:.03em; overflow:hidden;
+  }
+  .rail .depth{ font-weight:500; font-size:9px; color:var(--txt-mute); letter-spacing:.1em; }
+  .rail .rid{ color:var(--txt-dim); }
+  .rail .rtime{ color:var(--txt-dim); opacity:.82; }
+  .rail .rlab{ color:var(--txt-faint); font-size:7.5px; letter-spacing:.07em; text-transform:uppercase; margin-top:1px; }
+  .rail.dark{ border-bottom-color:var(--rule-d); border-right-color:var(--rule-d); }
+  .rail.dark .rid,.rail.dark .rtime{ color:#564a39; }
+  .rail.dark .depth{ color:#6a5d47; }
+  .rail.dark .rlab{ color:#443a2d; }
+
+  /* ── CORE cells — the bands themselves ── */
+  .band{ position:relative; border-bottom:1px solid var(--rule); overflow:hidden; }
+  .band.dark{ border-bottom-color:var(--rule-d); }
+
+  /* faint raw-JSON tails, right-anchored at varying offsets => literal ragged right edge */
+  .tail{
+    position:absolute; top:50%; transform:translateY(-50%);
+    font-size:11px; letter-spacing:.01em; white-space:nowrap; pointer-events:none;
+    color:rgba(231,206,170,.10);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 42%);
+            mask-image:linear-gradient(90deg,transparent,#000 42%);
+  }
+  .band.dark .tail{ color:rgba(231,206,170,.07); }
+
+  /* row bg colours = the strata, cooling downward */
+  #r-head{background:var(--b-head)} #c-head{background:var(--b-head)}
+  #r-line{background:var(--b-line)} #c-line{background:var(--b-line)}
+  #r-sub{background:var(--b-sub)}   #c-sub{background:var(--b-sub)}
+  #r-cal{background:var(--b-cal)}   #c-cal{background:var(--b-cal)}
+  #r-pend{background:var(--b-pend)} #c-pend{background:var(--b-pend)}
+  #r-miss{background:var(--b-miss)} #c-miss{background:var(--b-miss)}
+  #r-h1{background:var(--b-hit1)}   #c-h1{background:var(--b-hit1)}
+  #r-h2{background:var(--b-hit2)}   #c-h2{background:var(--b-hit2)}
+  #r-task{background:var(--b-task)} #c-task{background:var(--b-task)}
+  #r-sess{background:var(--b-sess)} #c-sess{background:var(--b-sess)}
+  #r-mon{background:var(--b-month)} #c-mon{background:var(--b-month)}
+  #r-bed{background:var(--b-bed)}   #c-bed{background:var(--b-bed)}
+
+  /* ── HEADER band: identity at the seam + the act of appending (CTA) ── */
+  #c-head{ display:flex; align-items:center; justify-content:space-between; padding:0 30px 0 24px; }
+  .lockup{ display:flex; align-items:center; gap:13px; }
+  .lockup svg{ display:block; }
+  .wm{ font-family:"Fraunces",serif; font-weight:600; font-size:22px; letter-spacing:-.01em; color:var(--txt-hot); line-height:1; }
+  .wm small{ display:block; font-family:"Spline Sans Mono",monospace; font-weight:400;
+             font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--txt-mute); margin-top:4px; }
+  .cta{ display:flex; align-items:center; gap:18px; }
+  .cta .ghost{ font-size:12px; color:var(--txt-warm); text-decoration:none; border-bottom:1px solid rgba(201,181,145,.26); padding-bottom:2px; letter-spacing:.01em; }
+  .cta .ghost:hover{ border-color:var(--ember-hot); color:var(--ember-hot); }
+  .cta .prime{ /* the hottest UI control — an ember, deliberately dimmer than the seam */
+    font-size:12.5px; font-weight:600; letter-spacing:.02em; color:#F6E7D4;
+    background:linear-gradient(180deg,#9c4124,#7a3520); border:1px solid #b3552e;
+    padding:10px 17px; cursor:pointer;
+    box-shadow:0 1px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,184,132,.16);
+  }
+  .cta .prime span{ opacity:.62; margin-right:6px; }
+
+  /* ── HEADLINE band: the promise, warm serif still lit by the seam ── */
+  #c-line{ display:flex; align-items:center; padding:0 40px 0 24px; }
+  .promise{ font-family:"Fraunces",serif; font-weight:500; font-size:39px; line-height:1.07; letter-spacing:-.012em; color:var(--txt-hot); max-width:1140px; }
+  .promise .box{ color:var(--ember-hot); box-shadow:inset 0 -10px 0 rgba(166,72,42,.20); }
+  .promise .sc{ font-size:.84em; letter-spacing:.04em; }
+  .promise em{ font-style:italic; font-weight:500; }
+
+  /* ── SUBHEAD band: the mechanism — heat mostly shed, a machine note ── */
+  #c-sub{ display:flex; align-items:center; padding:0 40px 0 24px; }
+  .sub{ font-size:12.5px; line-height:1.55; color:var(--txt-warm); max-width:980px; letter-spacing:.005em; }
+  .sub b{ color:var(--txt-hot); font-weight:600; box-shadow:inset 0 -7px 0 rgba(166,72,42,.16); }
+
+  /* ── CALIBRATION band: the signature widget (the soul) — now read cold ── */
+  #c-cal{ display:flex; align-items:center; gap:46px; padding:0 36px 0 24px;
+          background:linear-gradient(180deg,#1d150f,#18110d); }
+  .cal-tag{ position:absolute; top:11px; left:24px; font-size:9.5px; letter-spacing:.14em;
+            text-transform:uppercase; color:var(--txt-mute); }
+  .cal-tag b{ color:var(--ember); }
+  .stats{ display:flex; gap:40px; padding-top:14px; }
+  .stat .n{ font-size:33px; font-weight:500; letter-spacing:-.01em; color:#E6D7BC; font-variant-numeric:tabular-nums; line-height:1; }
+  .stat .n u{ text-decoration:none; font-size:18px; color:var(--txt-mute); }
+  .stat .k{ font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--txt-mute); margin-top:7px; }
+  .scale{ flex:1; max-width:430px; padding-top:16px; }
+  .scale .cap{ font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--txt-mute); margin-bottom:18px; }
+  .track{ position:relative; height:2px; background:rgba(214,201,173,.15); }
+  .tick{ position:absolute; top:-4px; width:1px; height:10px; background:rgba(214,201,173,.15); }
+  .gap{ position:absolute; top:-1px; height:4px; background:rgba(166,72,42,.42); }
+  .mk{ position:absolute; top:-7px; transform:translateX(-50%); }
+  .mk .dot{ width:11px; height:11px; }
+  .mk.claim .dot{ border:1.5px solid var(--cream); background:transparent; }
+  .mk.act .dot{ background:var(--ember); box-shadow:0 0 0 3px rgba(166,72,42,.16); }
+  .mk .lab{ position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap;
+            font-size:10px; font-variant-numeric:tabular-nums; }
+  .mk.claim .lab{ bottom:15px; color:var(--cream); }
+  .mk.act .lab{ top:15px; color:var(--ember-hot); font-weight:600; }
+  .verdict-note{ margin-top:30px; font-size:10px; letter-spacing:.04em; color:var(--txt-mute); }
+  .verdict-note b{ color:var(--ember-hot); }
+
+  /* ── PREDICTION bands: four appended JSONL lines, ragged by length, verdict tab at left ── */
+  .pred{ display:flex; align-items:center; padding:0 24px; font-size:13px; }
+  .tab{ flex:none; width:11px; height:11px; margin-right:14px; }
+  .tab.hit{ background:var(--cream); }
+  .tab.miss{ background:transparent; border:1.6px solid var(--txt-dim); }
+  .tab.pend{ background:transparent; border:1.6px dashed var(--ember); }
+  .jl{ white-space:nowrap; font-variant-numeric:tabular-nums; letter-spacing:.005em; color:rgba(214,201,173,.42); }
+  .jl .key{ color:rgba(214,201,173,.28); }
+  .jl .task{ color:var(--cream); font-weight:500; }
+  .jl .num{ color:#a6977a; }
+  .jl .hit{ color:#cabf9e; font-weight:600; }
+  .jl .miss{ color:#cabf9e; font-weight:600; }
+  .jl .nul{ color:var(--ember-hot); font-weight:600; }
+  .flag{ margin-left:14px; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+         color:var(--ember-hot); border:1px solid rgba(166,72,42,.45); padding:2px 7px; }
+
+  /* ── LOOP bands: the three nested cadences, compacting + dimming with depth ── */
+  .loop{ display:flex; align-items:center; gap:22px; padding:0 30px 0 24px; height:100%; }
+  .loop .idx{ font-family:"Fraunces",serif; font-weight:500; font-size:34px; color:var(--ember-lo);
+              width:58px; flex:none; line-height:1; font-variant-numeric:tabular-nums; }
+  .loop .vr{ width:1px; align-self:stretch; background:rgba(166,72,42,.32); margin:14px 0; }
+  .loop .body .lh{ font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--cream); }
+  .loop .body .ld{ font-size:12.5px; color:var(--cream-soft); margin-top:4px; letter-spacing:.005em; }
+  .loop .body .ld b{ color:#C7AE81; font-weight:500; }
+  #c-mon .body .ld{ margin-top:3px; }
+
+  /* ── BEDROCK band: the founding invariant, oldest + deepest, immovable + near-dead ── */
+  #c-bed{ display:flex; flex-direction:column; justify-content:center; gap:14px; padding:0 44px 0 24px; }
+  .bed-lead{ font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--ember-lo); }
+  .bed-lead span{ color:var(--cream-soft); }
+  .bed-q{ font-family:"Fraunces",serif; font-weight:400; font-size:21px; line-height:1.4; color:#A89978; max-width:1180px; }
+  .bed-q b{ font-weight:500; font-style:italic; color:#CBB07F; box-shadow:inset 0 -9px 0 rgba(166,72,42,.20); }
+  .bed-q .d{ color:var(--ember-lo); font-weight:500; }
+</style>
+</head>
+<body>
+<div class="frame" data-geom="frame">
+  <div class="grid">
+
+    <!-- ░░ now seam — nothing may be deposited above this line; the one incandescent thing on screen ░░ -->
+    <div class="seam" title="now — newest record enters at the seam"></div>
+
+    <!-- ── HEADER ── -->
+    <div class="rail" id="r-head">
+      <span class="depth" style="display:flex;align-items:center;gap:5px;">
+        <svg width="6" height="6"><circle cx="3" cy="3" r="3" fill="#9e4124"><animate attributeName="opacity" values=".85;.3;.85" dur="1.8s" repeatCount="indefinite"/></circle></svg>now
+      </span>
+      <span class="rtime">18:42:07+00:00</span>
+      <span class="rid">a9f3c1d0</span>
+      <span class="rlab">seam · live</span>
+    </div>
+    <div class="band" id="c-head">
+      <div class="lockup">
+        <!-- MARK = the primitive itself: a 6-band core sample, ragged right, cooling downward, white-hot seam on top -->
+        <svg data-geom="mark" width="30" height="34" viewBox="0 0 30 34" aria-label="Recursive Harness mark">
+          <rect x="0" y="0"  width="18" height="4" fill="#FFD9A6"/>
+          <rect x="0" y="5"  width="27" height="4" fill="#C06A2E"/>
+          <rect x="0" y="10" width="14" height="4" fill="#8A4A24"/>
+          <rect x="0" y="15" width="30" height="4" fill="#5E3A22"/>
+          <rect x="0" y="20" width="22" height="4" fill="#3E2A1A"/>
+          <rect x="0" y="25" width="26" height="4" fill="#281C12"/>
+          <rect x="0" y="30" width="30" height="4" fill="#140D0A"/>
+        </svg>
+        <span class="wm" data-geom="wordmark">Recursive Harness
+          <small>self-improving operating layer</small>
+        </span>
+      </div>
+      <div class="cta">
+        <a class="ghost" href="#">See how it works ▸</a>
+        <button class="prime"><span>append ▸</span>Start the loop</button>
+      </div>
+    </div>
+
+    <!-- ── HEADLINE ── -->
+    <div class="rail" id="r-line">
+      <span class="depth">004</span>
+      <span class="rid">7e21b8a4</span>
+      <span class="rlab">promise</span>
+    </div>
+    <div class="band" id="c-line">
+      <h1 class="promise">Your AI coding agent, getting <span class="box">measurably better</span> at <span class="sc">YOUR</span> work — and able to <em>prove&nbsp;it.</em></h1>
+    </div>
+
+    <!-- ── SUBHEAD ── -->
+    <div class="rail" id="r-sub">
+      <span class="depth">009</span>
+      <span class="rid">6c0d9f2a</span>
+    </div>
+    <div class="band" id="c-sub">
+      <p class="sub">The model's weights never change. Its repository becomes the <b>learnable layer</b>: every prediction is scored against reality, and every lesson is filed as a permanent, reviewed change.</p>
+      <span class="tail" style="right:34px">"weights":"frozen","learnable":"repo","commit":"reviewed"</span>
+    </div>
+
+    <!-- ── CALIBRATION READOUT (the soul) ── -->
+    <div class="rail" id="r-cal">
+      <span class="depth">021</span>
+      <span class="rid">4b8e07f1</span>
+      <span class="rtime">17:30:11+00:00</span>
+      <span class="rlab">calibration.rollup</span>
+    </div>
+    <div class="band" id="c-cal">
+      <div class="cal-tag">calibration.rollup &nbsp;·&nbsp; <b>state/predictions.jsonl</b></div>
+      <div class="stats">
+        <div class="stat"><div class="n">176</div><div class="k">scored</div></div>
+        <div class="stat"><div class="n">80<u>%</u></div><div class="k">hit-rate</div></div>
+        <div class="stat"><div class="n">0.16</div><div class="k">brier score</div></div>
+      </div>
+      <div class="scale">
+        <div class="cap">confidence &nbsp;·&nbsp; predicted vs observed</div>
+        <div class="track">
+          <div class="tick" style="left:0%"></div>
+          <div class="tick" style="left:25%"></div>
+          <div class="tick" style="left:50%"></div>
+          <div class="tick" style="left:75%"></div>
+          <div class="tick" style="left:100%"></div>
+          <div class="gap" style="left:70%; width:6%"></div>
+          <div class="mk claim" style="left:70%"><div class="dot"></div><span class="lab">claimed 0.70</span></div>
+          <div class="mk act" style="left:76%"><div class="dot"></div><span class="lab">actual 0.76</span></div>
+        </div>
+        <div class="verdict-note">gap <b>+0.06</b> — the agent is slightly <b>underconfident</b>.</div>
+      </div>
+    </div>
+
+    <!-- ── PREDICTIONS — four appended lines, ragged by their own length ── -->
+    <div class="rail" id="r-pend"><span class="depth">033</span><span class="rid">d23a6c90</span></div>
+    <div class="band" id="c-pend">
+      <div class="pred">
+        <span class="tab pend" title="pending — unscored"></span>
+        <span class="jl"><span class="key">{ </span>"made":<span class="num">"16:58Z"</span>, "task":<span class="task">"rewrite the cache layer"</span>, "confidence":<span class="num">0.70</span>, "result":<span class="nul">null</span>, "scored_at":<span class="nul">null</span><span class="key"> }</span></span>
+        <span class="flag">unscored → debt</span>
+      </div>
+    </div>
+
+    <div class="rail" id="r-miss"><span class="depth">048</span><span class="rid">0af71e35</span></div>
+    <div class="band" id="c-miss">
+      <div class="pred">
+        <span class="tab miss" title="miss"></span>
+        <span class="jl"><span class="key">{ </span>"made":<span class="num">"15:12Z"</span>, "task":<span class="task">"migrate the schema"</span>, "confidence":<span class="num">0.90</span>, "result":<span class="miss">"miss"</span><span class="key"> }</span></span>
+      </div>
+    </div>
+
+    <div class="rail" id="r-h1"><span class="depth">061</span><span class="rid">b6c4820d</span></div>
+    <div class="band" id="c-h1">
+      <div class="pred">
+        <span class="tab hit" title="hit"></span>
+        <span class="jl"><span class="key">{ </span>"made":<span class="num">"Jun27"</span>, "task":<span class="task">"refactor the auth flow"</span>, "confidence":<span class="num">0.65</span>, "result":<span class="hit">"hit"</span><span class="key"> }</span></span>
+      </div>
+    </div>
+
+    <div class="rail" id="r-h2"><span class="depth">072</span><span class="rid">1f9038ec</span></div>
+    <div class="band" id="c-h2">
+      <div class="pred">
+        <span class="tab hit" title="hit"></span>
+        <span class="jl"><span class="key">{ </span>"made":<span class="num">"Jun27"</span>, "task":<span class="task">"resolve flaky test"</span>, "confidence":<span class="num">0.80</span>, "result":<span class="hit">"hit"</span><span class="key"> }</span></span>
+      </div>
+    </div>
+
+    <!-- ── THREE LOOPS — nested cadences, compacting with depth ── -->
+    <div class="rail dark" id="r-task"><span class="depth">090</span><span class="rid">8d52a7b3</span><span class="rlab">loop · task</span></div>
+    <div class="band dark" id="c-task">
+      <div class="loop">
+        <div class="idx">01</div><div class="vr"></div>
+        <div class="body">
+          <div class="lh">every task</div>
+          <div class="ld"><b>predict → act → score.</b> A stated claim, checked against what actually happened.</div>
+        </div>
+      </div>
+      <span class="tail" style="right:40px">"loop":"task","steps":["predict","act","score"]</span>
+    </div>
+
+    <div class="rail dark" id="r-sess"><span class="depth">118</span><span class="rid">3e0c91fa</span><span class="rlab">loop · session</span></div>
+    <div class="band dark" id="c-sess">
+      <div class="loop">
+        <div class="idx">02</div><div class="vr"></div>
+        <div class="body">
+          <div class="lh">every session</div>
+          <div class="ld">The gaps become <b>reviewed changes</b> — new procedures, guardrails, calibration.</div>
+        </div>
+      </div>
+      <span class="tail" style="right:96px">"loop":"session","emits":"reviewed_diff"</span>
+    </div>
+
+    <div class="rail dark" id="r-mon"><span class="depth">150</span><span class="rid">c7a1056e</span><span class="rlab">loop · month</span></div>
+    <div class="band dark" id="c-mon">
+      <div class="loop">
+        <div class="idx">03</div><div class="vr"></div>
+        <div class="body">
+          <div class="lh">every month</div>
+          <div class="ld">Audit, prune, and <b>earn more autonomy</b> — measured, never assumed.</div>
+        </div>
+      </div>
+      <span class="tail" style="right:58px">"loop":"month","autonomy":"earned"</span>
+    </div>
+
+    <!-- ── BEDROCK — the founding invariant: oldest, deepest, sealed ── -->
+    <div class="rail dark" id="r-bed">
+      <span class="depth">200</span>
+      <span class="rid">00000001</span>
+      <span class="rtime">2026-01-04T00:00Z</span>
+      <span class="rlab">sealed</span>
+    </div>
+    <div class="band dark" id="c-bed">
+      <div class="bed-lead">founding invariant <span>· sealed 2026-01-04 · cannot be rewritten from above</span></div>
+      <p class="bed-q">Unscored predictions show up as <span class="d">debt</span>. Anything unverifiable counts as a <span class="d">miss</span>. <b>The agent can never quietly weaken the rules that measure it.</b></p>
+    </div>
+
+  </div>
+
+  <!-- residual heat shed by the seam over the freshest strata; decays fast -->
+  <div class="afterglow"></div>
+</div>
+</body>
+</html>
