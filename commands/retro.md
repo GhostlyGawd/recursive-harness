@@ -59,7 +59,7 @@ Run the retrospection procedure (skill: retrospection). Concretely:
      session end by hooks/session_end.py): `touch "$HARNESS/state/retro_gate_<session_id>"`.
    - durable completion ledger (PERSISTS; /retro-backlog reads it to skip done
      sessions): `"$HARNESS/bin/harness" retro-done add <session_id> --slug <slug>`.
-   Then report to the user: events found, routes chosen, PR links. One line each.
+   Then report to the user: events found, routes chosen, PR links (one line each) — and if a routed artifact changed harness STRUCTURE (skill/command/agent/hook/ADR/eval or settings wiring), run `python3 "$HARNESS/cartograph/atlas.py" --check` and re-sync via `/atlas` when it reports STALE (the chosen stay-synced mechanism; Atlas sync is a ritual, not a CI blocker — cartograph/test_atlas.py, proposals/2026-06-28-atlas-autosync.md).
    If nothing met the signal bar, SAY SO and stop — empty retros are honest;
    padded ones poison the trunk.
 8. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` returns to a possibly-STALE local main — a PR merged on GitHub isn't there until pulled — so the `--ff-only` refresh keeps the next run from re-proposing already-merged work. If that FF aborts on an untracked local file an incoming PR now adds as TRACKED (e.g. a `proposals/*.md` you wrote this session), confirm the local copy is redundant — byte-identical, or EOL-only via `git show origin/main:<path> | diff --strip-trailing-cr - <path>` — then `rm` it and re-run; stop if it has REAL local edits. /retro branches
@@ -81,4 +81,3 @@ Paired with the SessionStart banner warning (hooks/session_start.py). -->
 (steps 1-3): the ESCALATE feed (recurring + failed fix) is now machine-readable signal for
 the miner, and accepted events get stamped `escalate route` so a routed root stops
 re-surfacing. Closes the loop the auto-healer SKILL only documented in v1. -->
-
