@@ -4,13 +4,32 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-06-28` from extract.py @ `03beb05`.
+**Build stamp** - generated `2026-06-28` from extract.py @ `4095fc5`.
+
+---
+
+## Harness health score  `[derived: cartograph/health.py]`
+
+One pure-graph vital sign (0-100) distilled from the extracted graph - structural integrity in a single number, comparable across git history. Advisory: it INFORMS /meta-retro, never blocks or prunes. The **trend** matters more than the absolute - run `python cartograph/health.py --trend` for the trajectory /meta-retro reads.
+
+**Score: 76.0/100**
+
+| Sub-score | Value | Weight | Measures |
+|---|---:|---:|---|
+| rot_free | 1.000 | 0.4 | structural-rot warnings (all build() reports, pre-baseline) - 0 is ideal |
+| connectedness | 0.744 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
+| provenance | 0.474 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
+| adr_load_bearing | 0.583 | 0.2 | ADRs something actually cites (in-degree > 0) |
+
+Counts: 0 rot · 11/43 orphan artifacts · 37/78 provenanced · 7/12 ADRs referenced.
+
+Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:fleet`, `cli:health`, `cli:skill-fired`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:language-selection`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
 
 ---
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **80%** hit-rate (140 hit / 35 miss / 1 open over 176). Open follow-ups: **18**. The breakdowns below localize the friction.
+Overall prediction calibration: **78%** hit-rate (142 hit / 39 miss / 1 open over 182). Open follow-ups: **19**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -18,13 +37,13 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 | Category | Hit | Miss | Hit-rate | Signal |
 |---|---:|---:|---:|---|
-| enforcement-hooks | 0 | 2 | 0% | ⚠ friction |
+| enforcement-hooks | 0 | 3 | 0% | ⚠ friction |
 | hooks | 0 | 1 | 0% |  |
 | design | 1 | 2 | 33% | ⚠ friction |
-| harness-authoring | 1 | 1 | 50% | ⚠ friction |
+| harness-authoring | 1 | 2 | 33% | ⚠ friction |
 | harness | 1 | 1 | 50% | ⚠ friction |
 | implementation | 3 | 2 | 60% |  |
-| general | 116 | 24 | 83% |  |
+| general | 118 | 26 | 82% |  |
 | build | 11 | 2 | 85% |  |
 | debugging | 1 | 0 | 100% |  |
 | coding | 1 | 0 | 100% |  |
@@ -38,8 +57,8 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 | `retro` | 24 |
 | `run-evals` | 14 |
 | `calibration` | 12 |
+| `worktree` | 10 |
 | `harness-authoring` | 9 |
-| `worktree` | 9 |
 | `standup` | 8 |
 | `build-loop` | 8 |
 | `brainstorm` | 5 |
@@ -48,8 +67,8 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 ### Backlog & friction
 
-- Open follow-ups: **18**
-- Corrections logged (all-time ledger): **90**
+- Open follow-ups: **19**
+- Corrections logged (all-time ledger): **93**
 
 ### Where bugs cluster - the heal ledger
 
