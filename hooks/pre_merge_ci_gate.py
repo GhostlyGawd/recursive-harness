@@ -39,13 +39,16 @@ because "never merge red" is a mechanical always-rule, not command-local prose
 session; this is the local fast-feedback layer.
 """
 import json
-import os
 import re
 import subprocess
 import sys
 
+# Shared hatch helpers (truthy / env-hatch / inline-hatch), parameterized by env-var name
+# (follow-up 261eb8). Hard import: hooks/ ships as a unit (ADR 0004), so _guard_common.py
+# always sits beside this guard; there is no safe no-op for a security check.
+from _guard_common import env_hatch, inline_hatch
+
 _GH_TIMEOUT = 20
-_TRUTHY = ("1", "true", "yes", "on")
 
 # A real `gh pr merge` INVOCATION: at a command boundary (start, after ; & | ( {,
 # or && / ||), past any leading `VAR=val` assignments. Anchoring to a boundary keeps
@@ -58,15 +61,6 @@ _MERGE_RE = re.compile(
 )
 # `--auto` queues the merge to fire WHEN checks pass -- already safe; never block it.
 _AUTO_RE = re.compile(r"(?:^|\s)--auto(?:[\s=]|$)")
-# Leading inline hatch, bash `VAR=1 cmd` or powershell `$env:VAR='1'; cmd`. Anchored
-# to the START so a mid-command / quoted mention can never enable it.
-_INLINE_HATCH_RE = re.compile(
-    r"^\s*(?:"
-    r"(?:[A-Za-z_]\w*=\S*\s+)*HARNESS_PRE_MERGE_OK=(?P<bash>\S+)\s+\S"
-    r"|"
-    r"\$env:HARNESS_PRE_MERGE_OK\s*=\s*(?P<ps>'[^']*'|\"[^\"]*\"|\S+)\s*;"
-    r")",
-)
 # The merge command's tail (up to the next separator), then the first PR reference in
 # it: a /pull/<n> URL or a bare/`#`-prefixed number. None -> let `gh` resolve the PR
 # from the current branch.
@@ -74,22 +68,7 @@ _MERGE_TAIL_RE = re.compile(r"gh\s+pr\s+merge\b([^\n;&|]*)", re.IGNORECASE)
 _PR_URL_RE = re.compile(r"/pull/(\d+)")
 _PR_NUM_RE = re.compile(r"(?:^|\s)#?(\d+)\b")
 
-
-def _truthy(val) -> bool:
-    if val is None:
-        return False
-    return str(val).strip().strip("'\"").lower() in _TRUTHY
-
-
-def _env_hatch() -> bool:
-    return _truthy(os.environ.get("HARNESS_PRE_MERGE_OK"))
-
-
-def _inline_hatch(command: str) -> bool:
-    if not command:
-        return False
-    m = _INLINE_HATCH_RE.match(command)
-    return bool(m) and _truthy(m.group("bash") or m.group("ps"))
+_HATCH_VAR = "HARNESS_PRE_MERGE_OK"
 
 
 def _pr_ref(command: str):
@@ -181,7 +160,7 @@ def main() -> int:
             return 0
         if _AUTO_RE.search(cmd):
             return 0  # --auto merges only when green -> already safe
-        if _env_hatch() or _inline_hatch(cmd):
+        if env_hatch(_HATCH_VAR) or inline_hatch(cmd, _HATCH_VAR):
             return 0
         cwd = data.get("cwd")
         if not isinstance(cwd, str) or not cwd.strip():

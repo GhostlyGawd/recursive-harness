@@ -17,7 +17,13 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOOK = os.path.join(ROOT, "hooks", "pre_merge_ci_gate.py")
+HOOKS = os.path.join(ROOT, "hooks")
+HOOK = os.path.join(HOOKS, "pre_merge_ci_gate.py")
+
+# hooks/ on sys.path so the module's `from _guard_common import ...` (shared hatch helpers,
+# follow-up 261eb8) resolves when the hook is loaded IN-PROCESS here (mirrors how
+# test_forbid_scratchpad.py imports a _guard_common-using hook).
+sys.path.insert(0, HOOKS)
 
 spec = importlib.util.spec_from_file_location("pre_merge_ci_gate", HOOK)
 mod = importlib.util.module_from_spec(spec)
@@ -93,16 +99,17 @@ check("merge: gh pr list does NOT match", not mod._MERGE_RE.search("gh pr list -
 check("auto: --auto detected", bool(mod._AUTO_RE.search("gh pr merge --auto")))
 check("auto: plain merge has no --auto", not mod._AUTO_RE.search("gh pr merge 5 --squash"))
 
-# --- Hatch detection ------------------------------------------------------------
-check("hatch: bash inline", mod._inline_hatch("HARNESS_PRE_MERGE_OK=1 gh pr merge 5"))
+# --- Hatch detection (shared _guard_common.inline_hatch, parameterized by varname) ----
+_V = "HARNESS_PRE_MERGE_OK"
+check("hatch: bash inline", mod.inline_hatch("HARNESS_PRE_MERGE_OK=1 gh pr merge 5", _V))
 check("hatch: powershell inline",
-      mod._inline_hatch("$env:HARNESS_PRE_MERGE_OK='1'; gh pr merge 5"))
-check("hatch: plain command is not hatched", not mod._inline_hatch("gh pr merge 5"))
+      mod.inline_hatch("$env:HARNESS_PRE_MERGE_OK='1'; gh pr merge 5", _V))
+check("hatch: plain command is not hatched", not mod.inline_hatch("gh pr merge 5", _V))
 check("hatch: trailing mention does NOT enable",
-      not mod._inline_hatch("gh pr merge 5 # HARNESS_PRE_MERGE_OK=1"),
+      not mod.inline_hatch("gh pr merge 5 # HARNESS_PRE_MERGE_OK=1", _V),
       "a mid/trailing mention must not flip the hatch")
 check("hatch: falsy value does not enable",
-      not mod._inline_hatch("HARNESS_PRE_MERGE_OK=0 gh pr merge 5"))
+      not mod.inline_hatch("HARNESS_PRE_MERGE_OK=0 gh pr merge 5", _V))
 
 # --- PR-ref extraction ----------------------------------------------------------
 check("pr_ref: bare number", mod._pr_ref("gh pr merge 176 --squash") == "176")

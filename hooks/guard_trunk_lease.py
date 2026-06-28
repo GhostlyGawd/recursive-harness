@@ -86,12 +86,14 @@ except Exception:  # never let a config-reader import brick a guard
     def num(key, default):
         return float(default)
 
-# A ".claude/worktrees/<name>" segment (case-insensitive, '/' or '\\') -> this cwd
-# is a WORKTREE, which Guard B governs; Guard C skips it.
-_WT_RE = re.compile(
-    r"[\\/]\.claude[\\/]worktrees[\\/][^\\/]+",
-    re.IGNORECASE,
-)
+# Worktree detection ("is this cwd a worktree Guard B already governs?") and the hatch
+# helpers (truthy / env-hatch / inline-hatch, parameterized by env-var name) are shared
+# (follow-ups 579fb9 + 261eb8). Hard import: hooks/ ships as a unit (ADR 0004), so these
+# always sit beside this guard; there is no safe no-op for a security check.
+from _wtpaths import is_worktree_path as _is_worktree
+from _guard_common import env_hatch, inline_hatch
+
+_HATCH_VAR = "HARNESS_TRUNK_LEASE_OK"
 
 _FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 _SHELLS = ("Bash", "PowerShell")
@@ -133,39 +135,10 @@ _MUTATING_CMD = re.compile(
     re.IGNORECASE,
 )
 
-_TRUTHY = ("1", "true", "yes", "on")
-
-# Leading inline hatch: HARNESS_TRUNK_LEASE_OK=1 <cmd> (bash) or
-# $env:HARNESS_TRUNK_LEASE_OK='1'; <cmd> (powershell). Anchored to the START (after
-# optional other leading bash assignments) so an inert/quoted mid-command MENTION can
-# never enable it -- the same posture as guard_worktree_isolation's inline hatch.
-_INLINE_HATCH_RE = re.compile(
-    r"^\s*(?:"
-    r"(?:[A-Za-z_]\w*=\S*\s+)*HARNESS_TRUNK_LEASE_OK=(?P<bash>\S+)\s+\S"
-    r"|"
-    r"\$env:HARNESS_TRUNK_LEASE_OK\s*=\s*(?P<ps>'[^']*'|\"[^\"]*\"|\S+)\s*;"
-    r")",
-)
-
-
-def _truthy(val) -> bool:
-    if val is None:
-        return False
-    return str(val).strip().strip("'\"").lower() in _TRUTHY
-
-
-def _env_hatch() -> bool:
-    """Session-wide disable: launch with HARNESS_TRUNK_LEASE_OK truthy."""
-    return _truthy(os.environ.get("HARNESS_TRUNK_LEASE_OK"))
-
-
-def _inline_hatch(command: str) -> bool:
-    if not command:
-        return False
-    m = _INLINE_HATCH_RE.match(command)
-    if not m:
-        return False
-    return _truthy(m.group("bash") or m.group("ps"))
+# The session-wide env hatch (HARNESS_TRUNK_LEASE_OK truthy) and the leading inline hatch
+# (`HARNESS_TRUNK_LEASE_OK=1 <cmd>` bash / `$env:HARNESS_TRUNK_LEASE_OK='1'; <cmd>` ps,
+# anchored to the START so a quoted/mid-command mention can never enable it) are the shared
+# _guard_common.env_hatch / inline_hatch, parameterized by _HATCH_VAR (261eb8).
 
 
 def _git(args, cwd):
@@ -182,10 +155,6 @@ def _git(args, cwd):
 def _toplevel(cwd):
     """The git working-tree root of cwd, or None if cwd is not in a git repo."""
     return _git(["rev-parse", "--show-toplevel"], cwd)
-
-
-def _is_worktree(path: str) -> bool:
-    return bool(path) and bool(_WT_RE.search(path.replace("\\", "/")))
 
 
 def _under_state(chunk: str) -> bool:
@@ -369,7 +338,7 @@ def _block(mine, cur) -> None:
 
 def main() -> int:
     # Session-wide disable hatch (launch-time), mirroring the other guards.
-    if _env_hatch():
+    if env_hatch(_HATCH_VAR):
         return 0
     # LOCKED flag (ADR 0008): the block can be disabled only via the enforcement-
     # PROTECTED features.json, never the gitignored local override -- an agent must
@@ -421,7 +390,7 @@ def main() -> int:
 
         # PreToolUse = the CHECK.
         # An inline HARNESS_TRUNK_LEASE_OK=1 prefix re-baselines and allows this op.
-        if tool in _SHELLS and _inline_hatch(ti.get("command", "")):
+        if tool in _SHELLS and inline_hatch(ti.get("command", ""), _HATCH_VAR):
             _write_lease(lease_dir, sid, fp)
             return 0
 

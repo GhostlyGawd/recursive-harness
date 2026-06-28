@@ -19,6 +19,7 @@ guard silently mis-scope.
 """
 import os
 import re
+from functools import lru_cache
 
 # The file-WRITER verbs shared by both guards — every create/overwrite verb the guard
 # hardened over three auditor rounds (followup 1b1ddc: dd `of=`, install `src dst`,
@@ -64,3 +65,56 @@ def realpath_in_root(path: str, root: str):
     if not real.startswith(rroot + os.sep) and real != rroot:
         return None
     return real
+
+
+# ── guard hatch helpers (follow-up 261eb8) ──────────────────────────────────────
+# pre_merge_ci_gate.py (HARNESS_PRE_MERGE_OK) and guard_trunk_lease.py
+# (HARNESS_TRUNK_LEASE_OK) each carried byte-identical truthy / env-hatch / inline-hatch
+# logic that differed ONLY in the env-var name. Parameterizing by varname folds both onto
+# ONE implementation, so a future hardening of what counts as a hatch hardens BOTH guards at
+# once. It is NOT a weakening: for the two existing var names (both [A-Za-z_]-only) re.escape
+# is a no-op, so the compiled inline-hatch pattern is byte-identical to each guard's former
+# local _INLINE_HATCH_RE, and truthy / env_hatch reproduce the originals exactly. (261eb8)
+_TRUTHY = ("1", "true", "yes", "on")
+
+
+def truthy(val) -> bool:
+    r"""A hatch-value truthiness test: '1'/'true'/'yes'/'on' (case-insensitive) after
+    stripping surrounding whitespace and one layer of matching quotes (so a powershell
+    `'1'` capture counts). None / anything else -> False. (261eb8)"""
+    if val is None:
+        return False
+    return str(val).strip().strip("'\"").lower() in _TRUTHY
+
+
+def env_hatch(varname: str) -> bool:
+    """Session-wide disable: the env var ``varname`` is set truthy at launch. (261eb8)"""
+    return truthy(os.environ.get(varname))
+
+
+@lru_cache(maxsize=None)
+def _inline_hatch_re(varname: str) -> "re.Pattern":
+    r"""Compile the LEADING inline-hatch regex for ``varname``: a bash `VAR=val <cmd>`
+    (after any other leading `K=v` assignments, requiring a following token) or a powershell
+    `$env:VAR='val'; <cmd>`. Anchored to the START so an inert/quoted mid-command MENTION can
+    never enable the hatch; the value is captured as group 'bash' or 'ps'. re.escape keeps a
+    var name with regex metachars literal (a no-op for the existing [A-Za-z_] names). Cached
+    so the pattern compiles once per varname, as the guards' module-level copies did. (261eb8)"""
+    v = re.escape(varname)
+    return re.compile(
+        r"^\s*(?:"
+        rf"(?:[A-Za-z_]\w*=\S*\s+)*{v}=(?P<bash>\S+)\s+\S"
+        r"|"
+        rf"\$env:{v}\s*=\s*(?P<ps>'[^']*'|\"[^\"]*\"|\S+)\s*;"
+        r")",
+    )
+
+
+def inline_hatch(command: str, varname: str) -> bool:
+    r"""True if ``command`` LEADS with a truthy inline hatch for ``varname`` -- bash
+    `VAR=1 <cmd>` or powershell `$env:VAR='1'; <cmd>`. False on an empty/None command or a
+    mid/trailing or falsy-valued mention. (261eb8)"""
+    if not command:
+        return False
+    m = _inline_hatch_re(varname).match(command)
+    return bool(m) and truthy(m.group("bash") or m.group("ps"))
