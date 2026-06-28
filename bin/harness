@@ -70,6 +70,14 @@ def _resolve_state_dir(start=None):
 
 # state/ resolves to the MAIN checkout (single canonical ledger) — see _resolve_state_dir.
 STATE = _resolve_state_dir()
+# The MAIN-checkout root that STATE resolved into (its parent). The HUMAN_APPROVED marker
+# MUST live here: guard_enforcement_layer.py checks the marker at ITS OWN hook root, which
+# is the main checkout wired by absolute path (ADR 0004). Placing it at this script's own
+# ROOT instead made a LINKED-WORKTREE `approve`/`--revoke` land where the guard never looks,
+# so the unlock/revoke silently missed (followup a0f3b7). Derive it from STATE to reuse the
+# single git resolution (no extra git call, no duplicated logic). Git-absent: STATE falls
+# back to <script-root>/state, so MAIN_ROOT falls back to this script's own root too.
+MAIN_ROOT = os.path.dirname(STATE)
 
 PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
 CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
@@ -81,7 +89,7 @@ APPROVALS = os.path.join(STATE, "approvals.jsonl")
 # NOT a retro_gate_* name, so hooks/session_end.py's per-session cleanup never deletes
 # it). /retro writes it; /retro-backlog reads it to skip already-mined sessions.
 RETRO_LOG = os.path.join(STATE, "retro_log.jsonl")
-MARKER = os.path.join(ROOT, "HUMAN_APPROVED")
+MARKER = os.path.join(MAIN_ROOT, "HUMAN_APPROVED")
 
 # --- feature flags (ADR 0008) -------------------------------------------------
 FEATURES = os.path.join(ROOT, "features.json")
@@ -484,6 +492,13 @@ def cmd_approve(args) -> int:
     Fabricating a grant here is the same betrayal as hand-touching the marker —
     the audit trail (state/approvals.jsonl) is what makes it checkable.
     """
+    # Transparency (followup a0f3b7): when run from a linked worktree the marker is
+    # resolved to the MAIN checkout root (where the guard checks it, ADR 0004), NOT this
+    # worktree. Surface that on a root mismatch so the human sees where it actually lands.
+    if os.path.realpath(MAIN_ROOT) != os.path.realpath(ROOT):
+        print(f"note: HUMAN_APPROVED marker resolves to the main checkout root "
+              f"({MAIN_ROOT}), not this worktree ({ROOT}) — that is where the guard checks it.",
+              file=sys.stderr)
     if args.status:
         present = os.path.exists(MARKER)
         recs = _read(APPROVALS)
