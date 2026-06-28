@@ -1,6 +1,6 @@
 ---
 description: Review, close, or clear your captured follow-ups (deferred task items). The PULL side of the follow-up system — nothing is ever pushed at you; run this when you want to triage outstanding work. Use when the user asks "what's outstanding", "any follow-ups", "what did we defer", or wants to act on parked work.
-provenance: session 56295237, 2026-06-13 — user: "follow-ups overload me"; capture silently, surface on pull (skill: follow-up-handling, user-model entry). · session e8b739e9, 2026-06-20 (/retro) — added step 2 (reconcile) after a 45-item sweep found 12 items already resolved by merged PRs. · session 79f022c5, 2026-06-24 — added native synthesis (steps 3-5): cluster the ledger + propose independently-refuted root-cause FOLDS (the 213888 pattern). The pile was draining but flat — no cross-item view found root causes until a human noticed by luck.
+provenance: session 56295237, 2026-06-13 — user: "follow-ups overload me"; capture silently, surface on pull (skill: follow-up-handling, user-model entry). · session e8b739e9, 2026-06-20 (/retro) — added step 2 (reconcile) after a 45-item sweep found 12 items already resolved by merged PRs. · session 79f022c5, 2026-06-24 — added native synthesis (steps 3-5): cluster the ledger + propose independently-refuted root-cause FOLDS (the 213888 pattern). The pile was draining but flat — no cross-item view found root causes until a human noticed by luck. · sessions 689f12f4 + 2148ee65, 2026-06-26 (routed /retro-backlog 2026-06-28) — step 3 no longer spawns the `followup-synthesizer` type: it is NOT a registered spawnable agent (the Agent/Task tool errors "Agent type 'followup-synthesizer' not found"), so both sessions fell back to general-purpose carrying its verbatim contract. · session 78e89fa6, 2026-06-28 — step 4 "drain by doing": when intent is to CLEAR the queue, default to working items down, not triage-only (the user read fold/close-without-shrinking as a junk pile).
 ---
 
 For $ARGUMENTS (default: show open):
@@ -16,18 +16,34 @@ For $ARGUMENTS (default: show open):
    up front rather than re-doing them. (2026-06-20: 12 of 45 open follow-ups were
    already resolved by merged PRs — a snapshot ledger never auto-reflects later merges.)
 3. **Synthesize — run this yourself, do not wait to be asked.** If the open list is
-   large OR any theme has >=3 items, spawn the **followup-synthesizer** agent on the
-   open ledger + recent retro titles + corrections; it returns theme CLUSTERS and
-   candidate ROOT-CAUSE FOLDS (symptom sets one fix dissolves — the 213888 pattern).
-   SKIP synthesis when the list is small/clear: forcing folds on it manufactures
-   noise, the exact failure this must avoid. For EACH candidate fold spawn an
-   INDEPENDENT fresh-context **critic**, prompted to DEFAULT-REFUTE ("one cause, or
-   just shared vocabulary? which distinct work dies if this is wrong?"); DROP any
-   fold the critic does not clear. A bad fold closes distinct work — unsure ⇒ drop.
+   large OR any theme has >=3 items, synthesize the open ledger + recent retro titles
+   + corrections into theme CLUSTERS and candidate ROOT-CAUSE FOLDS (symptom sets one
+   fix dissolves — the 213888 pattern). The dedicated `followup-synthesizer` agent
+   (agents/followup-synthesizer.md holds the contract) is NOT a registered spawnable
+   type — the Agent/Task tool errors "Agent type 'followup-synthesizer' not found"
+   (confirmed: sessions 689f12f4 + 2148ee65, 2026-06-26; re-probed live and STILL not
+   found 2026-06-28, so this is a standing registration gap, not session-start
+   staleness). Until it is registered as a spawnable type, the synthesis gate must NOT
+   depend on it: spawn a **general-purpose** agent whose prompt is the VERBATIM
+   contract from agents/followup-synthesizer.md (plus any prior refuter-killed folds to
+   carry forward) — the fallback both sessions used. SKIP synthesis when the list is
+   small/clear: forcing folds on it manufactures noise, the exact failure this must
+   avoid. For EACH candidate fold spawn an INDEPENDENT fresh-context **critic**,
+   prompted to DEFAULT-REFUTE ("one cause, or just shared vocabulary? which distinct
+   work dies if this is wrong?"); DROP any fold the critic does not clear. A bad fold
+   closes distinct work — unsure ⇒ drop.
 4. Triage WITH the user — SURVIVING FOLDS first ("fold: <root cause> ⇐ symptoms
    [ids] · blast if wrong: …"), then the loose items one by one. The user approves
    which folds to apply and which items to act on now; never auto-apply a fold or
    auto-close an item. For an item to do now: do it, then `followup done <id>`.
+   **Disposition — read the intent.** When the user asks to CLEAR / EMPTY / work
+   THROUGH the queue (not merely review it), the default is to DRAIN BY DOING: work
+   the eligible items down by actually doing them — worktree-isolated if a peer session
+   is live — and offer triage-only / fold-and-close as the conservative FALLBACK, not
+   the lead option. Folding and closing without the pile shrinking-by-doing reads as a
+   junk pile to this user; "clear the queue" means drain, not reorganize (2026-06-28,
+   session 78e89fa6: a triage-only default to "clear the queue" landed as "what's the
+   point", and only items-actually-done satisfied it).
 5. Apply an APPROVED fold: `python3 bin/harness followup done <id>` for EACH symptom
    (note "folded -> <root>"); then put the root cause in its DURABLE home —
    architectural or >=3 symptom ids ⇒ a one-paragraph `memory/decisions/` record (it
