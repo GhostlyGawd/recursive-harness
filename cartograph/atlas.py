@@ -54,6 +54,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 import extract  # noqa: E402  (the cartograph engine - single source of the graph)
+import health   # noqa: E402  (BET D: the derived harness-health vital sign, same graph)
 
 ROOT = extract.ROOT
 
@@ -703,6 +704,45 @@ def section_gaps(g, warnings, notes, audit):
     return "\n".join(L)
 
 
+def section_health(h):
+    """The one derived harness-health vital sign (BET D) - rendered into the PULSE (the
+    live companion /meta-retro already reads), not the structural map. Advisory; the trend
+    matters more than the absolute, so it points at `health.py --trend`."""
+    L = []
+    L.append("## Harness health score  `[derived: cartograph/health.py]`")
+    L.append("")
+    L.append("One pure-graph vital sign (0-100) distilled from the extracted graph - "
+             "structural integrity in a single number, comparable across git history. "
+             "Advisory: it INFORMS /meta-retro, never blocks or prunes. The **trend** matters "
+             "more than the absolute - run `python cartograph/health.py --trend` for the "
+             "trajectory /meta-retro reads.")
+    L.append("")
+    L.append(f"**Score: {h['score']}/100**")
+    L.append("")
+    meanings = {
+        "rot_free": "structural-rot warnings (all build() reports, pre-baseline) - 0 is ideal",
+        "connectedness": "skill/agent/cli nothing references (in-degree 0)",
+        "provenance": "artifacts carrying a session-lineage (born_in) edge",
+        "adr_load_bearing": "ADRs something actually cites (in-degree > 0)",
+    }
+    L.append("| Sub-score | Value | Weight | Measures |")
+    L.append("|---|---:|---:|---|")
+    for k, c in h["components"].items():
+        L.append(f"| {k} | {c['value']:.3f} | {c['weight']} | {meanings.get(k, '-')} |")
+    L.append("")
+    cnt = h["counts"]
+    L.append(f"Counts: {cnt['rot']} rot · {cnt['orphan_artifacts']}/{cnt['referenceable']} orphan "
+             f"artifacts · {cnt['provenanced']}/{cnt['artifacts']} provenanced · "
+             f"{cnt['load_bearing_adrs']}/{cnt['adrs']} ADRs referenced.")
+    if h["orphans"]:
+        L.append("")
+        L.append("Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): "
+                 + ", ".join(f"`{o}`" for o in h["orphans"]) + ".")
+    L.append("")
+    L.append("---")
+    return "\n".join(L)
+
+
 def section_snapshot(overlay, heal, clusters):
     L = []
     p = overlay["predictions"]
@@ -813,6 +853,7 @@ def build_atlas():
     ]) + "\n"
     pulse = "\n\n".join([
         pulse_header(stamp),
+        section_health(health.score(g, warnings)),
         section_snapshot(overlay, heal, clusters),
     ]) + "\n"
     return structural, pulse
