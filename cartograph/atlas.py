@@ -818,6 +818,81 @@ def build_atlas():
     return structural, pulse
 
 
+# ---------------------------------------------------------------- drift check (advisory)
+# A staleness predicate, NOT a CI gate. test_atlas.py records the standing decision:
+# "Atlas sync is a ritual, not a blocker" - a hard regenerate-or-CI-fails gate would tax
+# every structural PR. So --check exits non-zero when the committed map is STALE, but it
+# is deliberately NOT wired into ci.yml; it powers the /retro re-sync nudge and on-demand
+# human checks. (Provenance: 2026-06-28 atlas-autosync; supersedes the 2026-06-27
+# proposal's follow-up #1 hard gate.) NB this is a DIFFERENT --check from
+# `extract.py --check`, the CI-wired cartograph structural-rot GATE; this one is advisory
+# committed-map staleness, that one blocks on un-baselined graph rot.
+def _strip_volatile(md):
+    """Normalise the structural map for a drift COMPARISON by dropping the parts that vary
+    by build host / machine state, so --check reflects topology, not the environment.
+    It compares ONLY lenses §1-§6 + the node/edge header (all derived purely from tracked
+    files + git history, hence deterministic). Dropped, from `## 7.` to EOF:
+      * the **Build stamp** line  - date + HEAD commit change on every regen;
+      * §7 Subsystem inventory     - file counts walk the working tree (a local dir
+        carrying __pycache__/untracked files differs from a clean CI checkout);
+      * §8 Gaps/rot/audit          - its dead-weight list reads gitignored state
+        (skill_usage fires) and a today()-relative 90-day threshold, so it drifts with
+        neither structure nor tracked content. §8's domain - structural rot - is already
+        gated by `extract.py --check` (the CI-wired cartograph gate), so atlas --check
+        need not re-police it."""
+    out = []
+    for line in md.splitlines():
+        if line.startswith("**Build stamp**"):
+            continue
+        if line.startswith("## 7."):
+            break                     # §7 + §8 trail the topology lenses - drop to EOF
+        out.append(line)
+    return "\n".join(out).strip()
+
+
+def _sections(md):
+    """Split a normalised map into {heading: body}; text before §1 is 'graph header'
+    (where the node/edge counts live)."""
+    secs, cur, buf = {}, "graph header (node/edge counts)", []
+    for line in md.splitlines():
+        if line.startswith("## "):
+            secs[cur] = "\n".join(buf)
+            cur, buf = line.strip(), [line]
+        else:
+            buf.append(line)
+    secs[cur] = "\n".join(buf)
+    return secs
+
+
+def section_drift(live_md, committed_md):
+    """The lens names whose normalised content differs between the live graph and the
+    committed map - the human-readable 'what moved' for the --check / nudge message."""
+    a, b = _sections(_strip_volatile(live_md)), _sections(_strip_volatile(committed_md))
+    keys = list(dict.fromkeys(list(a) + list(b)))
+    return [k for k in keys if a.get(k, "") != b.get(k, "")]
+
+
+def run_check(path):
+    """Advisory drift check (returns a process exit code, never raises): 0 = the
+    committed ATLAS.md is structurally in sync with the live graph, 1 = STALE. Ignores
+    the build stamp + §7 file counts (see _strip_volatile)."""
+    structural, _pulse = build_atlas()
+    rel = extract.rel(path)
+    if not os.path.isfile(path):
+        sys.stdout.write(f"atlas --check: {rel} missing - run /atlas to generate it\n")
+        return 1
+    with open(path, encoding="utf-8") as fh:
+        committed = fh.read()
+    if _strip_volatile(structural) == _strip_volatile(committed):
+        sys.stdout.write(f"atlas --check: in sync - {rel} matches the live graph\n")
+        return 0
+    moved = ", ".join(section_drift(structural, committed)) or "structure"
+    sys.stdout.write(
+        f"atlas --check: STALE - {rel} differs from the live graph in: {moved}. "
+        "Re-sync with /atlas (advisory, not a CI blocker).\n")
+    return 1
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Generate the Harness Atlas: ATLAS.md (structural) + ATLAS-PULSE.md (live).")
@@ -825,7 +900,15 @@ def main(argv=None):
                     help="output dir for ATLAS.md + ATLAS-PULSE.md (default cartograph/)")
     ap.add_argument("--stdout", action="store_true",
                     help="print both docs to stdout instead of writing files")
+    ap.add_argument("--check", action="store_true",
+                    help="ADVISORY drift check: exit 1 if the committed ATLAS.md is structurally "
+                         "stale vs the live graph (ignores build stamp + §7 file counts). NOT a CI "
+                         "gate - Atlas sync is a ritual, not a blocker (see test_atlas.py).")
+    ap.add_argument("--path", default=None,
+                    help="ATLAS.md path for --check (default cartograph/ATLAS.md)")
     args = ap.parse_args(argv)
+    if args.check:
+        return run_check(args.path or os.path.join(ROOT, "cartograph", "ATLAS.md"))
     structural, pulse = build_atlas()
     if args.stdout:
         sys.stdout.write(structural + "\n\n" + pulse)
