@@ -16,7 +16,12 @@ Enforced invariants (each one exists to kill a specific failure mode):
   F2  every skill/command/agent created after v1 carries a 'provenance:' line
   S1  state/*.jsonl parse as JSONL (corrupt ledgers poison calibration)
   S2  autonomy.json: schema valid AND enforcement category can never auto-merge
-  H1  hooks/*.py compile and are executable
+  H1  hooks/*.py compile, are executable on disk, AND every tracked hook carries
+      git index mode 100755 (CI reads the committed mode, not the Windows fs bit)
+
+Skills + commands shipped inside plugins/*/ (plugins/*/skills, plugins/*/commands,
+and a plugin-level SKILL.md) clear the SAME B2/B3/B4/F2 budgets — a plugin is not a
+budget-bypass; first-party plugins are not vendored, so B3 is not waived for them.
 
 Exit nonzero on any violation. Run by CI and by /retro before opening a PR.
 """
@@ -98,11 +103,35 @@ def git_ignored(path: str) -> bool:
         return False
 
 
-def check_skills() -> None:
-    sdir = os.path.join(ROOT, "skills")
+def check_skill_md(skill_md: str, rel: str) -> None:
+    """Apply the skill budgets (B2 description, B3 body, F2 provenance) to one
+    SKILL.md. `rel` is the skill's repo-relative dir (e.g. skills/foo or
+    plugins/bar/skills/baz); it keys VENDORED_SKILLS / SEED_ARTIFACTS and labels
+    messages. Defined ONCE so skills/ and plugins/*/skills/ share identical budgets
+    — a plugin cannot ship a skill under a looser (or absent) rule."""
+    fm = frontmatter(skill_md)
+    desc = fm.get("description", "")
+    if not desc:
+        err("B2", f"{rel}: frontmatter has no description (it can never trigger)")
+    elif len(desc) > 600:
+        err("B2", f"{rel}: description {len(desc)} chars (budget 600; it is always-loaded)")
+    n = nonempty_lines(skill_md)
+    if n > 200 and rel not in VENDORED_SKILLS:
+        err("B3", f"{rel}: SKILL.md {n} lines (budget 200; move detail to references/)")
+    elif n > 200 and rel in VENDORED_SKILLS:
+        print(f"  note: {rel}: SKILL.md {n} lines - B3 waived (allowlisted vendored import; "
+              f"trigger-load cost is opt-in). B2 + provenance still enforced.")
+    if rel not in SEED_ARTIFACTS and "provenance:" not in open(skill_md, encoding="utf-8").read():
+        err("F2", f"{rel}: no provenance line — where did this learning come from?")
+
+
+def check_skills_dir(sdir: str, rel_prefix: str) -> None:
+    """Lint every skill subdir of `sdir` against the skill budgets. Used for the
+    top-level skills/ tree (rel_prefix='skills') and for each plugins/*/skills/ tree
+    (rel_prefix='plugins/<plugin>/skills'), so both go through one code path."""
     for name in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
         skill_md = os.path.join(sdir, name, "SKILL.md")
-        rel = f"skills/{name}"
+        rel = f"{rel_prefix}/{name}"
         # A gitignored skill dir is not a trunk artifact — it's an external / vendored-live
         # repo (often with its own remote, e.g. skills/brand-foundry) that merely lives under
         # skills/. Lint governs trunk artifacts only, so skip it. NOT self-assertable from a
@@ -119,20 +148,39 @@ def check_skills() -> None:
         if not os.path.exists(skill_md):
             err("B3", f"{rel}: missing SKILL.md")
             continue
-        fm = frontmatter(skill_md)
-        desc = fm.get("description", "")
-        if not desc:
-            err("B2", f"{rel}: frontmatter has no description (it can never trigger)")
-        elif len(desc) > 600:
-            err("B2", f"{rel}: description {len(desc)} chars (budget 600; it is always-loaded)")
-        n = nonempty_lines(skill_md)
-        if n > 200 and rel not in VENDORED_SKILLS:
-            err("B3", f"{rel}: SKILL.md {n} lines (budget 200; move detail to references/)")
-        elif n > 200 and rel in VENDORED_SKILLS:
-            print(f"  note: {rel}: SKILL.md {n} lines - B3 waived (allowlisted vendored import; "
-                  f"trigger-load cost is opt-in). B2 + provenance still enforced.")
-        if rel not in SEED_ARTIFACTS and "provenance:" not in open(skill_md, encoding="utf-8").read():
-            err("F2", f"{rel}: no provenance line — where did this learning come from?")
+        check_skill_md(skill_md, rel)
+
+
+def check_skills() -> None:
+    check_skills_dir(os.path.join(ROOT, "skills"), "skills")
+
+
+def check_plugins() -> None:
+    """Plugins ship skills + commands too, so they must clear the SAME budgets — a
+    plugin is not a budget-bypass (un-linted plugin content was shipping). Scans
+    plugins/*/skills/ (B2/B3/F2) and plugins/*/commands/ (B4/F2) through the shared
+    paths, plus a plugin-level SKILL.md if one sits at the plugin root. A gitignored
+    plugin dir is an external / vendored-live plugin repo (its own .git, e.g. a
+    nested-repo plugin) — out of trunk scope, skipped + surfaced exactly like a
+    gitignored skill. First-party (tracked) plugins are NOT vendored: B3 is not
+    waived for them. (VENDORED_SKILLS holds skills/huashu-design ONLY; brand-foundry
+    is NOT in it — it's a gitignored vendored-live repo caught by the skip path
+    above, not a B3 waiver.) (3f9acb)"""
+    pdir = os.path.join(ROOT, "plugins")
+    for name in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
+        plugin_dir = os.path.join(pdir, name)
+        if not os.path.isdir(plugin_dir):
+            continue
+        rel = f"plugins/{name}"
+        if git_ignored(plugin_dir):
+            print(f"  note: {rel}: gitignored (external/vendored-live plugin repo, not a "
+                  f"trunk artifact) — lint skipped")
+            continue
+        plugin_skill = os.path.join(plugin_dir, "SKILL.md")
+        if os.path.exists(plugin_skill):
+            check_skill_md(plugin_skill, rel)
+        check_skills_dir(os.path.join(plugin_dir, "skills"), f"{rel}/skills")
+        check_dir(f"plugins/{name}/commands", 80, "B4")
 
 
 def check_dir(dirname: str, budget: int, rule: str, need_fm: bool = False) -> None:
@@ -202,6 +250,33 @@ def check_autonomy() -> None:
                 err("S2", f"autonomy.json: category '{name}' missing '{k}'")
 
 
+def tracked_hook_index_modes() -> "dict[str, str] | None":
+    """Git INDEX mode of every tracked file under hooks/, as {repo-rel path: mode}
+    (e.g. {'hooks/x.py': '100755'}). Returns None when git is unavailable or this is
+    not a checkout, so the caller degrades to the filesystem check alone instead of
+    crashing. CI reads this committed mode; the Windows filesystem exec bit does NOT
+    track it, which is why a hook can pass local os.access yet fail CI. (e4c889)"""
+    try:
+        out = subprocess.run(
+            ["git", "-C", ROOT, "ls-files", "-s", "--", "hooks/"],
+            capture_output=True, text=True,
+        )
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    modes: dict[str, str] = {}
+    for line in out.stdout.splitlines():
+        # `git ls-files -s` line: "<mode> <object> <stage>\t<path>"
+        if "\t" not in line:
+            continue
+        meta, path = line.split("\t", 1)
+        fields = meta.split()
+        if fields:
+            modes[path.strip()] = fields[0]
+    return modes
+
+
 def check_hooks() -> None:
     hdir = os.path.join(ROOT, "hooks")
     for fname in sorted(os.listdir(hdir)) if os.path.isdir(hdir) else []:
@@ -214,6 +289,18 @@ def check_hooks() -> None:
             err("H1", f"hooks/{fname}: does not compile: {e}")
         if not os.access(path, os.X_OK):
             err("H1", f"hooks/{fname}: not executable (chmod +x)")
+    # The git INDEX mode is the authority CI checks; os.access above reads the Windows
+    # filesystem exec bit, which does NOT track the committed mode, so a hook can pass
+    # local lint yet fail CI 'not-executable' (recurred this session: _wtpaths.py,
+    # _guard_common.py). Check the tracked mode directly; degrade gracefully when git is
+    # unavailable. Flags any tracked hook .py committed as 100644 instead of 100755. (e4c889)
+    index_modes = tracked_hook_index_modes()
+    if index_modes is not None:
+        for rel, mode in sorted(index_modes.items()):
+            if rel.endswith(".py") and mode != "100755":
+                err("H1", f"{rel}: git index mode {mode} (tracked hooks must be 100755; "
+                          f"run `git update-index --chmod=+x {rel}`). CI reads the index "
+                          f"mode, not the filesystem bit.")
 
 
 def main() -> int:
@@ -226,6 +313,7 @@ def main() -> int:
             pass
     check_kernel()
     check_skills()
+    check_plugins()
     check_dir("commands", 80, "B4")
     check_dir("agents", 80, "B5", need_fm=True)
     check_user_model()
