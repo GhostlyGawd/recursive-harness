@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recursive Harness — Identity</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<!-- Google Fonts: the two role-bound faces named in LANGUAGE.md S3/S6 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Spline+Sans+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<!-- THE SHARED COMPONENT LAYER. Type scale (.bf-role-*) + lockup (.bf-lockup) come from here;
+     this surface must NOT re-derive sizes or the lockup gap by hand (that is the cross-surface
+     SIZE DRIFT the layer kills). brand.css resolves its var(--font-*) / var(--gap-brand) refs
+     from a surface's inline :root — provided just below, per the sheet's own header note. -->
+<link rel="stylesheet" href="../dist/brand.css">
+
+<style>
+/* ---- surface-local :root: the real token values brand.css composes against.
+        (dist/tokens.css ships malformed custom-property names for --ink etc., so the
+        layer's documented "surface inline :root" path is used instead.) ---- */
+:root{
+  --font-serif:"Fraunces", serif;
+  --font-mono:"Spline Sans Mono", monospace;
+  --gap-brand:13px;                 /* drives .bf-lockup's gap to the S3 lockup value */
+
+  /* excavation gradient — the strata (LANGUAGE.md S5) */
+  --void:#0e0a06;
+  --b-head:#E3DDD4; --b-line:#D0C7B9; --b-sub:#BEB19C; --b-cal:#AC9B81;
+  --b-pend:#9B8668; --b-miss:#8A7150; --b-hit1:#775D3C; --b-hit2:#644A2B;
+  --b-task:#50381E; --b-sess:#3C2713; --b-month:#28180A; --b-bed:#150B04;
+
+  /* one ink, by pressure — flips once to bone below the burial line */
+  --ink:#1C1005; --grain:#1C1005; --ink-buried:#E3DDD4; --ink-soft:#6A5C40;
+
+  /* the one rationed accent */
+  --oxide:#B5482B; --oxide-lit:#CB6A3F;
+
+  /* hairlines & rules */
+  --bed-line:rgba(70,48,22,0.16);
+  --rail-rule:color-mix(in srgb, var(--oxide) 30%, transparent);
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; }
+body{
+  background:var(--void);
+  font-family:var(--font-mono);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding:54px 0 90px;
+}
+
+/* ---- the fixed-size artboard, mounted on the void (frame mount only, not a content shadow) ---- */
+.frame{
+  width:1440px; margin:0 auto; position:relative; overflow:hidden;
+  background:var(--b-head);
+  box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.5);
+}
+
+/* ---- the bright now-seam: 3px oxide bar; nothing may sit above it ---- */
+.seam{
+  position:relative; height:3px;
+  background:linear-gradient(90deg,#D9582F 0%,#E0764A 38%,#C9512C 70%,#9c3d22 100%);
+  box-shadow:0 3px 10px -2px rgba(181,72,43,.55);
+  overflow:hidden;
+}
+.seam i{                              /* the warm-white deposition tick sweeping the seam */
+  position:absolute; top:0; left:0; height:3px; width:90px;
+  background:linear-gradient(90deg, transparent, rgba(255,235,220,.85), transparent);
+  animation:seam-run 6.5s linear infinite;
+}
+@keyframes seam-run{ from{ transform:translateX(-90px); } to{ transform:translateX(1440px); } }
+
+/* ---- every region is a full-width stratum: a 132px ledger rail + the core sample ---- */
+.band{ display:grid; grid-template-columns:132px 1fr; border-bottom:1px solid var(--bed-line); }
+
+/* the ruled left margin */
+.rail{
+  position:relative; padding:8px 10px 0 12px;
+  border-right:1px solid var(--rail-rule);
+  font-family:var(--font-mono); font-size:9px; line-height:1.32;
+}
+.rail .notch{ position:absolute; top:8px; right:-1px; width:10px; height:2px; background:var(--oxide); }
+.r-num{ display:block; font-size:9.5px; letter-spacing:.08em; color:var(--oxide); }
+.r-hex{ display:block; margin-top:7px; color:color-mix(in srgb, var(--ink) 64%, transparent); }
+.r-ts { display:block; margin-top:2px; color:color-mix(in srgb, var(--ink) 50%, transparent); }
+.r-lab{ display:block; margin-top:9px; font-size:8px; letter-spacing:.06em; text-transform:uppercase;
+        color:color-mix(in srgb, var(--ink) 46%, transparent); }
+
+/* the core cell — content left-flush to 24px, held by max-width (never a right gutter) */
+.core{ position:relative; padding:22px 0 24px 24px; }
+.cw{ max-width:940px; }
+
+/* eyebrow / caption microlabels (size + uppercase from .bf-role-microlabel) */
+.eyebrow{ letter-spacing:.18em; color:color-mix(in srgb, var(--ink) 58%, transparent); }
+.cap{ letter-spacing:.04em; color:color-mix(in srgb, var(--ink) 56%, transparent); line-height:1.55; }
+.cap b{ color:var(--ink); font-weight:500; }
+
+/* body copy: size+family from .bf-role-body, weight/leading local */
+.bf-role-body{ line-height:1.55; font-weight:400; color:color-mix(in srgb, var(--ink) 80%, transparent); }
+
+/* ---- the wordmark lockup. Sizes/gap from .bf-lockup + .bf-role-wordmark; only weight/tracking/colour here ---- */
+.bf-role-wordmark{ font-weight:600; letter-spacing:-.01em; line-height:1; color:var(--ink); }
+.wmark{ display:inline-flex; flex-direction:column; }
+.wm-tag{ margin-top:6px; letter-spacing:.16em; color:var(--ink-soft); }
+.mk{ display:block; }                 /* no radius, no shadow — hard rectangles */
+
+/* ---- mark-at-sizes row ---- */
+.sizes{ display:flex; align-items:flex-end; gap:46px; margin-top:20px; }
+.sizes figure{ margin:0; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.sizes figcaption{ letter-spacing:.12em; color:color-mix(in srgb, var(--ink) 56%, transparent); }
+.fav-chip{ display:block; outline:1px solid var(--bed-line); } /* favicon shown as the bone chip it is */
+
+/* ---- construction: enlarged mark + the annotated spec ---- */
+.constr{ display:flex; align-items:flex-start; gap:46px; margin-top:18px; }
+.spec{ font-family:var(--font-mono); font-size:13px; line-height:1.7;
+       font-variant-numeric:tabular-nums; color:color-mix(in srgb, var(--ink) 56%, transparent); }
+.spec .y{ color:color-mix(in srgb, var(--ink) 42%, transparent); }
+.spec .w{ color:var(--ink); }
+.spec .hex{ color:color-mix(in srgb, var(--ink) 80%, transparent); }
+.spec .sw{ display:inline-block; width:10px; height:10px; margin-right:8px; vertical-align:-1px; }
+.spec .role{ color:var(--oxide); }
+
+/* ---- clear-space diagram (guides are quiet ink hairlines — oxide stays reserved) ---- */
+.cs-stage{ display:flex; align-items:center; gap:40px; margin-top:16px; }
+.cs-guide{ position:relative; padding:10px; outline:1px solid var(--bed-line); }
+.cs-mark{ display:block; outline:1px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.cs-mod{ position:absolute; font-size:8px; letter-spacing:.1em; text-transform:uppercase;
+         color:color-mix(in srgb, var(--ink) 46%, transparent); }
+.cs-mod.t{ top:-12px; left:10px; }
+.cs-mod.l{ left:-58px; top:50%; transform:translateY(-50%); }
+
+/* ---- wordmark lockup with the shared-vertical-centre guide ---- */
+.lk-stage{ position:relative; margin-top:18px; display:inline-block; padding:26px 0; }
+.lk-centre{ position:absolute; left:0; right:-210px; top:50%; height:1px;
+            background:color-mix(in srgb, var(--ink) 20%, transparent); }
+.lk-centre span{ position:absolute; right:0; top:-13px; font-size:8px; letter-spacing:.1em;
+                 text-transform:uppercase; color:color-mix(in srgb, var(--ink) 46%, transparent); }
+
+/* ---- knockout swatches ---- */
+.ko-row{ display:flex; align-items:flex-end; gap:40px; margin-top:18px; }
+.ko-dark{ background:var(--void); padding:14px 18px; outline:1px solid rgba(0,0,0,.5); }
+
+/* ---- favicon-on-tabs mockups (hard rectangles, no radius, no shadow) ---- */
+.tabs{ display:flex; gap:40px; margin-top:18px; flex-wrap:wrap; }
+.winbar{ width:420px; }
+.winbar .strip{ display:flex; align-items:stretch; height:34px; }
+.tab{ display:flex; align-items:center; gap:8px; padding:0 12px; font-size:11px;
+      letter-spacing:.02em; border-right:1px solid rgba(0,0,0,.18); }
+.tab.active{ font-weight:500; }
+.tab .x{ margin-left:6px; opacity:.5; }
+.winbar.light .strip{ background:#C7BCA8; }
+.winbar.light .tab{ color:color-mix(in srgb, #1C1005 70%, transparent); }
+.winbar.light .tab.active{ background:#E3DDD4; color:#1C1005; }
+.winbar.dark .strip{ background:#0e0a06; }
+.winbar.dark .tab{ color:color-mix(in srgb, #E3DDD4 55%, transparent); border-right-color:rgba(255,255,255,.06); }
+.winbar.dark .tab.active{ background:#28180A; color:#E3DDD4; }
+.winbar .body{ height:48px; }
+.winbar.light .body{ background:#E3DDD4; }
+.winbar.dark  .body{ background:#150B04; }
+.winlabel{ margin-top:10px; letter-spacing:.12em; }
+
+/* ---- palette swatch strip (real token values) ---- */
+.swatches{ display:flex; flex-wrap:wrap; gap:2px; margin-top:16px; }
+.sw-cell{ width:108px; }
+.sw-cell .chip{ height:40px; }
+.sw-cell .lab{ margin-top:6px; font-size:8.5px; letter-spacing:.04em; line-height:1.4;
+               color:color-mix(in srgb, var(--ink) 56%, transparent); }
+.sw-cell .lab b{ color:var(--ink); font-weight:500; }
+.accents{ display:flex; gap:2px; margin-top:14px; }
+.accents .sw-cell .chip{ height:30px; }
+
+/* ---- the signature texture: real, uneven JSONL ghosted into the right margin,
+        terminating ragged, masked in from the left — the torn-ledger silhouette ---- */
+.grain{
+  position:absolute; top:16px; right:24px; width:300px; margin:0;
+  font-family:var(--font-mono); font-size:11px; line-height:1.5; white-space:pre;
+  color:color-mix(in srgb, var(--grain) 22%, transparent);
+  pointer-events:none; user-select:none;
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 58%);
+          mask-image:linear-gradient(to right, transparent, #000 58%);
+}
+
+/* ---- the ink flips ONCE to bone at the burial line; below it only the ground darkens ---- */
+.band.buried .core{ color:var(--ink-buried); }
+.band.buried .rail{ border-right-color:color-mix(in srgb, var(--oxide-lit) 34%, transparent); }
+.band.buried .r-num{ color:var(--oxide-lit); }
+.band.buried .notch{ background:var(--oxide-lit); }
+.band.buried .r-hex{ color:color-mix(in srgb, var(--ink-buried) 64%, transparent); }
+.band.buried .r-ts { color:color-mix(in srgb, var(--ink-buried) 50%, transparent); }
+.band.buried .r-lab{ color:color-mix(in srgb, var(--ink-buried) 46%, transparent); }
+.band.buried .eyebrow{ color:color-mix(in srgb, var(--ink-buried) 60%, transparent); }
+.band.buried .cap{ color:color-mix(in srgb, var(--ink-buried) 62%, transparent); }
+.band.buried .cap b{ color:var(--ink-buried); }
+.band.buried .bf-role-body{ color:color-mix(in srgb, var(--ink-buried) 82%, transparent); }
+.band.buried .winlabel{ color:color-mix(in srgb, var(--ink-buried) 56%, transparent); }
+.band.buried .grain{ color:color-mix(in srgb, var(--ink-buried) 20%, transparent); }
+
+/* bedrock colophon */
+.bedrock .core{ padding:30px 0 34px 24px; }
+.bf-role-bedrock-quote{ font-weight:400; line-height:1.4; color:var(--ink-buried);
+                        max-width:760px; font-style:italic; }
+.bf-role-bedrock-quote em{ font-weight:600; }
+.sealed{ display:inline-block; margin-top:18px; padding:2px 7px; font-size:8px; letter-spacing:.06em;
+         text-transform:uppercase; color:var(--oxide-lit); border:1px solid var(--oxide-lit); }
+.colophon{ margin-top:18px; letter-spacing:.04em; line-height:1.7;
+           color:color-mix(in srgb, var(--ink-buried) 56%, transparent); }
+.colophon b{ color:var(--ink-buried); font-weight:500; }
+</style>
+</head>
+
+<body>
+<!-- hidden symbol library: the canonical marks, used at every size below -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <symbol id="mark" viewBox="0 0 30 34">
+    <rect x="0" y="0"  width="18" height="4" fill="#B5482B"/>
+    <rect x="0" y="5"  width="27" height="4" fill="#C8BCA4"/>
+    <rect x="0" y="10" width="14" height="4" fill="#A28A66"/>
+    <rect x="0" y="15" width="30" height="4" fill="#7C603E"/>
+    <rect x="0" y="20" width="22" height="4" fill="#553C20"/>
+    <rect x="0" y="25" width="26" height="4" fill="#321F0F"/>
+    <rect x="0" y="30" width="30" height="4" fill="#150B04"/>
+  </symbol>
+  <symbol id="mark-mono" viewBox="0 0 30 34" fill="currentColor">
+    <rect x="0" y="0"  width="18" height="4"/>
+    <rect x="0" y="5"  width="27" height="4"/>
+    <rect x="0" y="10" width="14" height="4"/>
+    <rect x="0" y="15" width="30" height="4"/>
+    <rect x="0" y="20" width="22" height="4"/>
+    <rect x="0" y="25" width="26" height="4"/>
+    <rect x="0" y="30" width="30" height="4"/>
+  </symbol>
+  <symbol id="favicon" viewBox="0 0 32 32">
+    <rect x="0" y="0"  width="32" height="32" fill="#E3DDD4"/>
+    <rect x="4" y="4"  width="16" height="7" fill="#B5482B"/>
+    <rect x="4" y="13" width="25" height="7" fill="#7C603E"/>
+    <rect x="4" y="22" width="20" height="7" fill="#150B04"/>
+  </symbol>
+</svg>
+
+<div class="frame" data-geom="frame">
+  <div class="seam"><i></i></div>
+
+  <!-- 00 · MASTHEAD — the lockup at the bright now-seam (palest stratum) -->
+  <section class="band" style="background:var(--b-head)">
+    <div class="rail">
+      <span class="r-num">00</span>
+      <span class="r-hex">a9f3c1d0</span>
+      <span class="r-ts">2026-06-28T15:42:07+00:00</span>
+      <span class="r-lab">mark</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"surface":"identity","mark":"core-sample"}
+{"viewBox":"30x34","bars":7,"radius":0}
+{"seam":"#B5482B","bedrock":"#150B04"}
+{"ragged":[18,27,14,30,22,26,30]}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">Recursive Harness · Identity</span>
+        <div class="bf-lockup" style="margin-top:18px">
+          <svg class="mk" data-geom="mark" width="48" height="54" viewBox="0 0 30 34" role="img" aria-label="Recursive Harness mark"><use href="#mark"/></svg>
+          <span class="wmark" data-geom="wordmark">
+            <span class="bf-role-wordmark">Recursive Harness</span>
+            <span class="bf-role-microlabel wm-tag">Self-Improving Operating Layer</span>
+          </span>
+        </div>
+        <p class="bf-role-body" style="margin:20px 0 0; max-width:680px">
+          The mark is the primitive itself — a seven-band stratigraphic core sample. Deposit at the
+          bright oxide seam on top; darken one countable step with age downward to bedrock; never
+          align the right edge. The palette, the grid, the rule weight, and the type grain, compressed
+          into one stamp.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 · THE MARK AT SEVERAL SIZES -->
+  <section class="band" style="background:var(--b-line)">
+    <div class="rail">
+      <span class="r-num">01</span>
+      <span class="r-hex">7e21b8a4</span>
+      <span class="r-ts">2026-06-28T15:42:19+00:00</span>
+      <span class="r-lab">sizes</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"min_legible_px":30,"below":"3-band reduction"}
+{"96":"full","64":"full","48":"full"}
+{"30":"native min","16":"favicon"}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">The mark · several sizes</span>
+        <div class="sizes">
+          <figure><svg class="mk" width="96" height="109" viewBox="0 0 30 34" aria-label="mark at 96"><use href="#mark"/></svg><figcaption class="bf-role-microlabel">96</figcaption></figure>
+          <figure><svg class="mk" width="64" height="73" viewBox="0 0 30 34" aria-label="mark at 64"><use href="#mark"/></svg><figcaption class="bf-role-microlabel">64</figcaption></figure>
+          <figure><svg class="mk" width="48" height="54" viewBox="0 0 30 34" aria-label="mark at 48"><use href="#mark"/></svg><figcaption class="bf-role-microlabel">48</figcaption></figure>
+          <figure><svg class="mk" width="30" height="34" viewBox="0 0 30 34" aria-label="mark at native 30"><use href="#mark"/></svg><figcaption class="bf-role-microlabel">30 · min</figcaption></figure>
+          <figure><svg class="fav-chip" width="16" height="16" viewBox="0 0 32 32" aria-label="favicon at 16"><use href="#favicon"/></svg><figcaption class="bf-role-microlabel">16 · favicon</figcaption></figure>
+        </div>
+        <p class="cap bf-role-microlabel" style="margin-top:18px; max-width:620px">
+          The full seven bands hold down to the native <b>30px</b>. Below that the mark drops to the
+          three-band reduction — oxide seam · one mid umber · bedrock — keeping the ragged right.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 · CONSTRUCTION (real geometry, real token values) -->
+  <section class="band" style="background:var(--b-sub)">
+    <div class="rail">
+      <span class="r-num">02</span>
+      <span class="r-hex">c4d8e0f2</span>
+      <span class="r-ts">2026-06-28T15:42:31+00:00</span>
+      <span class="r-lab">construction</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"viewBox":"0 0 30 34","bar_h":4,"pitch":5}
+{"gaps":1,"radius":0,"normalise_right":false}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">Construction · dug-earth ramp</span>
+        <div class="constr">
+          <svg class="mk" width="132" height="150" viewBox="0 0 30 34" aria-label="mark construction"><use href="#mark"/></svg>
+          <div class="spec">
+            <div><span class="sw" style="background:#B5482B"></span><span class="y">y0&nbsp;&nbsp;</span> <span class="w">w18</span>&nbsp; <span class="hex">#B5482B</span>&nbsp; <span class="role">now seam · oxide</span></div>
+            <div><span class="sw" style="background:#C8BCA4"></span><span class="y">y5&nbsp;&nbsp;</span> <span class="w">w27</span>&nbsp; <span class="hex">#C8BCA4</span></div>
+            <div><span class="sw" style="background:#A28A66"></span><span class="y">y10&nbsp;</span> <span class="w">w14</span>&nbsp; <span class="hex">#A28A66</span></div>
+            <div><span class="sw" style="background:#7C603E"></span><span class="y">y15&nbsp;</span> <span class="w">w30</span>&nbsp; <span class="hex">#7C603E</span></div>
+            <div><span class="sw" style="background:#553C20"></span><span class="y">y20&nbsp;</span> <span class="w">w22</span>&nbsp; <span class="hex">#553C20</span></div>
+            <div><span class="sw" style="background:#321F0F"></span><span class="y">y25&nbsp;</span> <span class="w">w26</span>&nbsp; <span class="hex">#321F0F</span></div>
+            <div><span class="sw" style="background:#150B04"></span><span class="y">y30&nbsp;</span> <span class="w">w30</span>&nbsp; <span class="hex">#150B04</span>&nbsp; <span class="role">bedrock</span></div>
+          </div>
+        </div>
+        <p class="cap bf-role-microlabel" style="margin-top:18px; max-width:640px">
+          <b>30 × 34</b> viewBox · 7 bars, each 4 tall on a 5 pitch (1px gaps) · radius 0 · top bar is
+          always the live oxide seam, the only oxide in the mark · the ragged right edge is never
+          normalised to a clean block.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 · CLEAR SPACE -->
+  <section class="band" style="background:var(--b-cal)">
+    <div class="rail">
+      <span class="r-num">03</span>
+      <span class="r-hex">1b6a9c33</span>
+      <span class="r-ts">2026-06-28T15:42:44+00:00</span>
+      <span class="r-lab">clear-space</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"clear_space":">= 1 stratum-pitch all sides"}
+{"crowd_the_ragged_edge":false}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">Clear space</span>
+        <div class="cs-stage">
+          <div class="cs-guide">
+            <span class="cs-mod t">1 stratum</span>
+            <span class="cs-mod l">1 stratum</span>
+            <svg class="cs-mark" width="60" height="68" viewBox="0 0 30 34" aria-label="mark with clear space"><use href="#mark"/></svg>
+          </div>
+          <p class="cap bf-role-microlabel" style="max-width:340px">
+            Keep clear space of at least <b>one stratum-pitch</b> on every side — measured from the
+            widest bar. Nothing crowds the ragged right edge; it must read as a torn ledger, not a
+            boxed logo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · WORDMARK LOCKUP — mark + wordmark on one vertical centre -->
+  <section class="band" style="background:var(--b-pend)">
+    <div class="rail">
+      <span class="r-num">04</span>
+      <span class="r-hex">5f0e7d12</span>
+      <span class="r-ts">2026-06-28T15:42:58+00:00</span>
+      <span class="r-lab">lockup</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"gap_px":13,"mark":"left","centre":"shared"}
+{"name":"serif","tagline":"mono uppercase"}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">Wordmark lockup</span>
+        <div class="lk-stage">
+          <div class="lk-centre"><span>shared vertical centre</span></div>
+          <div class="bf-lockup">
+            <svg class="mk" data-geom="mark" width="42" height="48" viewBox="0 0 30 34" role="img" aria-label="Recursive Harness mark"><use href="#mark"/></svg>
+            <span class="wmark" data-geom="wordmark">
+              <span class="bf-role-wordmark">Recursive Harness</span>
+              <span class="bf-role-microlabel wm-tag">Self-Improving Operating Layer</span>
+            </span>
+          </div>
+        </div>
+        <p class="cap bf-role-microlabel" style="margin-top:20px; max-width:640px">
+          Mark left of the wordmark · <b>13px</b> gap · one shared vertical centre. The name is the
+          serif (Fraunces); the tagline is always mono uppercase, never serif. Oxide never touches
+          the wordmark — it is paper-and-ink.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · KNOCKOUT — one colour, depth sacrificed, ragged silhouette holds. (burial line) -->
+  <section class="band" style="background:var(--b-miss)">
+    <div class="rail">
+      <span class="r-num">05</span>
+      <span class="r-hex">8c2b41a7</span>
+      <span class="r-ts">2026-06-28T15:43:09+00:00</span>
+      <span class="r-lab">knockout</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"knockout":"one ink","oxide":false}
+{"on_light":"ink","on_dark":"bone"}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">One-colour knockout</span>
+        <div class="ko-row">
+          <figure style="margin:0; display:flex; flex-direction:column; align-items:center; gap:12px">
+            <svg class="mk" width="64" height="73" viewBox="0 0 30 34" style="color:var(--ink)" aria-label="knockout in ink"><use href="#mark-mono"/></svg>
+            <figcaption class="bf-role-microlabel" style="letter-spacing:.12em; color:color-mix(in srgb, var(--ink) 56%, transparent)">ink · on light</figcaption>
+          </figure>
+          <figure style="margin:0; display:flex; flex-direction:column; align-items:center; gap:12px">
+            <span class="ko-dark"><svg class="mk" width="64" height="73" viewBox="0 0 30 34" style="color:var(--ink-buried)" aria-label="knockout in bone on dark"><use href="#mark-mono"/></svg></span>
+            <figcaption class="bf-role-microlabel" style="letter-spacing:.12em; color:color-mix(in srgb, var(--ink) 56%, transparent)">bone · on dark</figcaption>
+          </figure>
+          <p class="cap bf-role-microlabel" style="max-width:360px">
+            Single ink, depth colour sacrificed for one-colour reproduction. The stepped bars and the
+            ragged silhouette still read as the core. Ink on light, bone on dark — and oxide never
+            enters the knockout.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · FAVICON on a light tab + a brand-coloured tab (ink flips to bone here) -->
+  <section class="band buried" style="background:var(--b-hit1)">
+    <div class="rail">
+      <span class="r-num">06</span>
+      <span class="r-hex">02f5b8e4</span>
+      <span class="r-ts">2026-06-28T15:43:22+00:00</span>
+      <span class="r-lab">favicon</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <pre class="grain" aria-hidden="true">{"favicon":"3-band","chip":"#E3DDD4"}
+{"holds_on":["light","brand-dark"]}</pre>
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow">Favicon · on tab</span>
+        <div class="tabs">
+          <div class="winbar light">
+            <div class="strip">
+              <div class="tab active">
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-label="favicon"><use href="#favicon"/></svg>
+                Recursive Harness<span class="x">×</span>
+              </div>
+              <div class="tab">state/predictions.jsonl<span class="x">×</span></div>
+            </div>
+            <div class="body"></div>
+          </div>
+          <div class="winbar dark">
+            <div class="strip">
+              <div class="tab active">
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-label="favicon"><use href="#favicon"/></svg>
+                Recursive Harness<span class="x">×</span>
+              </div>
+              <div class="tab">memory/user-model.md<span class="x">×</span></div>
+            </div>
+            <div class="body"></div>
+          </div>
+        </div>
+        <p class="cap bf-role-microlabel" style="margin-top:18px; max-width:660px">
+          The bone chip carries the near-black bedrock band, so the favicon reads on light browser
+          chrome <b>and</b> on a brand-dark tab. Three ragged bands at 16px — countable, unfakeable.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 · PALETTE — depth is the palette; one rationed accent -->
+  <section class="band buried" style="background:var(--b-hit2)">
+    <div class="rail">
+      <span class="r-num">07</span>
+      <span class="r-hex">d7194c6b</span>
+      <span class="r-ts">2026-06-28T15:43:36+00:00</span>
+      <span class="r-lab">palette</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <div class="cw" style="max-width:1180px">
+        <span class="bf-role-microlabel eyebrow">Palette · the excavation gradient</span>
+        <div class="swatches">
+          <div class="sw-cell"><div class="chip" style="background:#E3DDD4"></div><div class="lab"><b>--b-head</b><br>#E3DDD4</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#D0C7B9"></div><div class="lab"><b>--b-line</b><br>#D0C7B9</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#BEB19C"></div><div class="lab"><b>--b-sub</b><br>#BEB19C</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#AC9B81"></div><div class="lab"><b>--b-cal</b><br>#AC9B81</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#9B8668"></div><div class="lab"><b>--b-pend</b><br>#9B8668</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#8A7150"></div><div class="lab"><b>--b-miss</b><br>#8A7150</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#775D3C"></div><div class="lab"><b>--b-hit1</b><br>#775D3C</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#644A2B"></div><div class="lab"><b>--b-hit2</b><br>#644A2B</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#50381E"></div><div class="lab"><b>--b-task</b><br>#50381E</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#3C2713"></div><div class="lab"><b>--b-sess</b><br>#3C2713</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#28180A"></div><div class="lab"><b>--b-month</b><br>#28180A</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#150B04"></div><div class="lab"><b>--b-bed</b><br>#150B04</div></div>
+        </div>
+        <div class="accents">
+          <div class="sw-cell"><div class="chip" style="background:#B5482B"></div><div class="lab"><b>--oxide</b><br>#B5482B</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#CB6A3F"></div><div class="lab"><b>--oxide-lit</b><br>#CB6A3F</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#1C1005"></div><div class="lab"><b>--ink</b><br>#1C1005</div></div>
+          <div class="sw-cell"><div class="chip" style="background:#E3DDD4"></div><div class="lab"><b>--ink-buried</b><br>#E3DDD4</div></div>
+        </div>
+        <p class="cap bf-role-microlabel" style="margin-top:16px; max-width:660px">
+          Depth is the palette — one OKLCH ramp, <b>−0.067 L</b> per band, bone to bedrock. One
+          rationed accent: iron-oxide, for a miss · unscored debt · the live seam · sealed states.
+          No second hue.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · BEDROCK — the sealed colophon -->
+  <section class="band buried bedrock" style="background:var(--b-bed); border-bottom:none">
+    <div class="rail">
+      <span class="r-num">11</span>
+      <span class="r-hex">000000f1</span>
+      <span class="r-ts">2026-06-28T15:44:04+00:00</span>
+      <span class="r-lab">sealed</span>
+      <i class="notch"></i>
+    </div>
+    <div class="core">
+      <div class="cw">
+        <span class="bf-role-microlabel eyebrow" style="color:var(--oxide-lit)">Founding invariant · sealed</span>
+        <p class="bf-role-bedrock-quote" style="margin:14px 0 0">
+          The mark is the rule, compressed: deposit at the seam, darken with age, <em>never align the
+          right edge.</em>
+        </p>
+        <span class="sealed">sealed 2026-06-28 · cannot be rewritten from above</span>
+        <p class="colophon bf-role-microlabel">
+          recursive-harness · identity · <b>mark.svg</b> · <b>mark-mono.svg</b> · <b>favicon.svg</b><br>
+          set in Fraunces + Spline Sans Mono · type scale &amp; lockup from dist/brand.css · radius 0 · one accent
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

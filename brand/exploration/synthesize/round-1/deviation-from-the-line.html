@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recursive Harness — Deviation From The Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e7e4db;
+    --over:#e2dfd5;
+    --under:#edeae1;
+    --ink:#1f1f1b;
+    --ink2:#4c4a42;
+    --mut:#74715f;
+    --hair:#cfcabd;
+    --red:#c0341e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:#cdc9bd;}
+  .frame{
+    position:relative;width:1440px;height:900px;overflow:hidden;
+    background:var(--paper);
+    font-family:"Spline Sans",sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  svg.field{position:absolute;inset:0;width:1440px;height:900px;}
+  .mono{font-family:"Spline Sans Mono",monospace;font-variant-numeric:tabular-nums;}
+  /* identity */
+  .id{position:absolute;left:46px;top:34px;}
+  .lock{display:flex;align-items:center;gap:11px;}
+  .word{font-weight:700;font-size:19px;letter-spacing:-0.012em;line-height:1;color:var(--ink);}
+  .kick{font-family:"Spline Sans Mono",monospace;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--mut);margin-top:9px;margin-left:1px;}
+  /* status */
+  .status{position:absolute;right:48px;top:30px;font-family:"Spline Sans Mono",monospace;
+    font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink2);
+    font-variant-numeric:tabular-nums;text-align:right;}
+  .status b{color:var(--ink);font-weight:600;}
+  /* headline / subhead */
+  .head{position:absolute;left:118px;top:122px;width:566px;
+    font-weight:700;font-size:39px;line-height:1.07;letter-spacing:-0.018em;color:#1b1b18;}
+  .head u{text-decoration:none;border-bottom:3px solid var(--ink);padding-bottom:1px;}
+  .sub{position:absolute;left:118px;top:300px;width:432px;
+    font-family:"Spline Sans Mono",monospace;font-size:13px;line-height:1.62;color:var(--ink2);}
+  .sub b{color:var(--ink);font-weight:600;}
+  /* honesty quote */
+  .quote{position:absolute;left:118px;top:476px;width:300px;
+    border-left:2px solid var(--ink);padding-left:15px;
+    font-family:"Spline Sans Mono",monospace;font-size:12px;line-height:1.66;color:#33322b;}
+  .quote .qmk{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--mut);margin-bottom:9px;}
+  /* dial labels */
+  .dialcap{position:absolute;left:32px;top:104px;font-family:"Spline Sans Mono",monospace;}
+  .dialcap .lab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);}
+  .dialcap .num{font-size:23px;font-weight:600;color:var(--ink);line-height:1;margin-top:3px;
+    font-variant-numeric:tabular-nums;}
+  /* field drift tags */
+  .tag{position:absolute;font-family:"Spline Sans Mono",monospace;font-size:11px;
+    letter-spacing:.02em;color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .tag.red{color:var(--red);font-weight:700;letter-spacing:.06em;}
+  .tag .d{color:var(--mut);}
+  .tag.dash{color:var(--mut);}
+  .tag.dash span{border-bottom:1.5px dashed var(--mut);}
+  /* calibration callout */
+  .calib{position:absolute;left:786px;top:452px;width:206px;
+    border:1px solid var(--ink);background:rgba(231,228,219,0.78);padding:11px 13px 12px;}
+  .calib .l1{font-family:"Spline Sans Mono",monospace;font-size:15px;color:var(--ink);
+    letter-spacing:.01em;font-variant-numeric:tabular-nums;}
+  .calib .l1 .ar{color:var(--mut);}
+  .calib .l2{font-family:"Spline Sans Mono",monospace;font-size:10.5px;color:var(--ink2);
+    margin-top:6px;letter-spacing:.04em;}
+  .calib .l3{font-family:"Spline Sans Mono",monospace;font-size:9.5px;color:var(--mut);
+    margin-top:7px;letter-spacing:.08em;text-transform:uppercase;}
+  /* ledger */
+  .ledg{position:absolute;left:1026px;top:120px;width:370px;}
+  .ledg .lh{font-family:"Spline Sans Mono",monospace;font-size:11px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--ink);
+    padding-bottom:7px;display:flex;justify-content:space-between;}
+  .ledg .lhs{color:var(--mut);letter-spacing:.1em;}
+  .row{display:flex;align-items:flex-start;gap:11px;padding:11px 0 10px;
+    border-bottom:1px solid var(--hair);}
+  .row .g{flex:0 0 16px;margin-top:1px;}
+  .row .body{flex:1;}
+  .row .nm{font-size:14px;font-weight:500;letter-spacing:-0.01em;color:var(--ink);
+    display:flex;justify-content:space-between;}
+  .row .nm .cf{font-family:"Spline Sans Mono",monospace;font-size:12.5px;color:var(--ink);
+    font-variant-numeric:tabular-nums;}
+  .row .dr{font-family:"Spline Sans Mono",monospace;font-size:10.5px;letter-spacing:.04em;
+    color:var(--mut);margin-top:4px;}
+  .row .dr.red{color:var(--red);font-weight:700;letter-spacing:.07em;}
+  .row .dr.dash span{border-bottom:1.5px dashed var(--mut);}
+  /* cta */
+  .cta{position:absolute;left:1026px;top:452px;}
+  .btn{display:inline-flex;align-items:center;gap:11px;background:var(--ink);color:var(--paper);
+    padding:15px 24px;font-weight:600;font-size:15px;letter-spacing:.01em;
+    box-shadow:5px 5px 0 rgba(31,31,27,0.18);}
+  .btn .pin{width:9px;height:9px;border-radius:50%;background:var(--paper);}
+  .sec{margin-top:20px;display:inline-flex;align-items:center;gap:10px;
+    font-family:"Spline Sans Mono",monospace;font-size:13px;color:var(--ink);
+    letter-spacing:.02em;}
+  .sec .ring{width:10px;height:10px;border-radius:50%;border:1.6px solid var(--ink);}
+  .sec u{text-decoration:none;border-bottom:1px solid var(--ink);}
+  /* feature strip */
+  .feat{position:absolute;top:792px;display:flex;flex-direction:column;width:336px;}
+  .feat .ix{font-family:"Spline Sans Mono",monospace;font-size:11px;letter-spacing:.14em;
+    color:var(--mut);}
+  .feat .ti{font-weight:700;font-size:13px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--ink);margin-top:6px;}
+  .feat .de{font-family:"Spline Sans Mono",monospace;font-size:11px;line-height:1.5;
+    color:var(--ink2);margin-top:8px;}
+  .feat .de b{color:var(--ink);font-weight:600;}
+  .featrule{position:absolute;top:772px;left:300px;width:1056px;height:1px;background:var(--hair);}
+  .featrule::before{content:"";position:absolute;left:0;top:-3px;width:1px;height:7px;background:var(--ink);}
+</style>
+</head>
+<body>
+<div class="frame" data-geom="frame">
+
+  <!-- ===================== GEOMETRY FIELD ===================== -->
+  <svg class="field" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <radialGradient id="redwash" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#c0341e" stop-opacity="0.12"/>
+        <stop offset="100%" stop-color="#c0341e" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <!-- half-plane fields, divided by the truth-line A(140,900)->B(1040,0) -->
+    <polygon points="0,0 1040,0 140,900 0,900" fill="#e2dfd5"/>
+    <polygon points="1040,0 1440,0 1440,900 140,900" fill="#edeae1"/>
+    <!-- alarm wash where the overconfident miss is stranded -->
+    <circle cx="741" cy="83" r="170" fill="url(#redwash)"/>
+
+    <!-- Brier dial: vertical quality gauge, 0.000 (top) .. 1.000 (bottom) -->
+    <rect x="60" y="150" width="9" height="620" fill="#d7d3c6"/>
+    <rect x="60" y="150" width="9" height="99.2" fill="#1f1f1b"/>
+    <!-- marker at brier 0.16 -->
+    <line x1="50" y1="249.2" x2="82" y2="249.2" stroke="#1f1f1b" stroke-width="1.4"/>
+    <g font-family="Spline Sans Mono, monospace" font-size="9" fill="#74715f" letter-spacing="0.04em">
+      <text x="76" y="153">0.000</text>
+      <text x="76" y="277">0.200</text>
+      <text x="76" y="401">0.400</text>
+      <text x="76" y="525">0.600</text>
+      <text x="76" y="649">0.800</text>
+      <text x="76" y="773">1.000</text>
+      <text x="36" y="788" letter-spacing="0.14em">BRIER ↓ BETTER</text>
+    </g>
+
+    <!-- faint calibration cloud: 176 scored predictions hugging the line -->
+    <g>
+<circle cx="609.9" cy="471.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="698.5" cy="392.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="642.2" cy="411.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="520.9" cy="480.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="600.5" cy="399.4" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="489.9" cy="544.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="593.7" cy="468.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="705.4" cy="330.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="689.2" cy="375.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="729.6" cy="329.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="577.6" cy="447.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="755.0" cy="281.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="541.3" cy="479.1" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="733.9" cy="303.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="875.4" cy="203.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="685.8" cy="413.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="698.5" cy="367.3" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="585.1" cy="455.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="631.3" cy="383.6" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="810.5" cy="198.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="737.8" cy="324.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="887.4" cy="178.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="712.4" cy="319.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="657.0" cy="405.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="761.6" cy="306.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="535.6" cy="469.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="668.5" cy="426.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="812.6" cy="268.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="606.9" cy="390.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="808.4" cy="263.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="549.6" cy="500.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="651.5" cy="382.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="630.2" cy="411.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="713.5" cy="386.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="700.6" cy="339.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="779.3" cy="243.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="620.1" cy="422.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="612.9" cy="459.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="619.9" cy="446.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="788.6" cy="252.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="601.3" cy="441.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="614.7" cy="359.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="577.4" cy="494.2" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="682.9" cy="382.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="701.5" cy="390.7" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="793.7" cy="267.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="560.7" cy="481.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="685.9" cy="382.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="604.1" cy="459.9" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="814.1" cy="296.6" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="771.7" cy="281.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="599.4" cy="432.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="743.2" cy="335.0" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="690.6" cy="449.6" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="596.6" cy="422.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="552.7" cy="508.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="817.6" cy="256.8" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="643.8" cy="378.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="698.4" cy="310.1" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="759.6" cy="294.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="744.1" cy="274.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="781.5" cy="303.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="832.0" cy="216.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="522.8" cy="544.2" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="774.5" cy="292.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="798.2" cy="301.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="681.7" cy="367.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="672.7" cy="373.5" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="662.8" cy="432.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="541.2" cy="471.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="546.1" cy="487.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="802.2" cy="231.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="823.4" cy="258.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="797.6" cy="218.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="645.5" cy="410.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="519.2" cy="537.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="728.2" cy="300.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="682.0" cy="362.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="570.4" cy="475.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="645.6" cy="359.9" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="636.2" cy="398.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="645.4" cy="361.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="677.3" cy="373.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="821.2" cy="213.2" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="535.9" cy="457.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="836.9" cy="226.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="638.6" cy="401.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="577.4" cy="518.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="816.3" cy="258.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="733.8" cy="311.3" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="843.5" cy="196.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="824.3" cy="201.1" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="788.6" cy="287.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="627.5" cy="398.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="592.9" cy="458.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="586.8" cy="441.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="856.2" cy="171.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="864.4" cy="209.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="766.0" cy="303.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="459.3" cy="534.3" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="581.9" cy="504.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="795.7" cy="214.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="724.5" cy="319.1" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="715.8" cy="344.1" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="785.7" cy="259.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="569.7" cy="417.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="477.8" cy="553.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="562.5" cy="506.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="541.3" cy="524.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="588.9" cy="467.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="508.4" cy="520.2" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="746.4" cy="313.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="492.2" cy="490.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="778.4" cy="287.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="673.4" cy="396.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="716.3" cy="311.2" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="617.2" cy="461.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="609.7" cy="402.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="750.4" cy="312.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="808.8" cy="276.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="577.8" cy="477.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="643.8" cy="404.0" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="723.7" cy="410.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="843.8" cy="199.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="635.3" cy="446.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="673.9" cy="391.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="586.2" cy="503.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="632.1" cy="428.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="553.3" cy="502.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="677.8" cy="376.8" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="774.6" cy="234.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="606.6" cy="465.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="715.0" cy="337.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="796.0" cy="292.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="756.4" cy="270.5" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="646.1" cy="349.0" r="2.2" fill="#e7e4db" stroke="#23231f" stroke-opacity="0.34" stroke-width="1"/>
+<circle cx="774.7" cy="278.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="794.1" cy="240.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="784.8" cy="280.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="694.3" cy="327.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="764.7" cy="289.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="702.5" cy="315.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="744.7" cy="309.6" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="748.6" cy="318.1" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="763.8" cy="326.7" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="656.9" cy="392.0" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="737.8" cy="283.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="487.0" cy="537.4" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="740.0" cy="300.9" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+<circle cx="559.5" cy="472.3" r="2.2" fill="#23231f" fill-opacity="0.30"/>
+    </g>
+
+    <!-- confidence ticks along the spine -->
+    <g stroke="#1f1f1b" stroke-width="1.2">
+      <line x1="266" y1="774" x2="260.3" y2="768.3"/>
+      <line x1="395.6" y1="644.4" x2="389.9" y2="638.7"/>
+      <line x1="525.2" y1="514.8" x2="519.5" y2="509.1"/>
+      <line x1="654.8" y1="385.2" x2="649.1" y2="379.5"/>
+      <line x1="784.4" y1="255.6" x2="778.7" y2="249.9"/>
+      <line x1="914" y1="126" x2="908.3" y2="120.3"/>
+    </g>
+    <g font-family="Spline Sans Mono, monospace" font-size="10" fill="#74715f" font-variant-numeric="tabular-nums">
+      <text x="276" y="792">0.00</text>
+      <text x="604" y="468">0.50</text>
+      <text x="924" y="140">1.00</text>
+    </g>
+
+    <!-- THE TRUTH-LINE: claimed == actual, the master spine -->
+    <line x1="140" y1="900" x2="1040" y2="0" stroke="#1f1f1b" stroke-width="2"/>
+
+    <!-- spine + territory captions, set along the 45deg axis -->
+    <text x="470" y="586" transform="rotate(-45 470 586)" text-anchor="middle"
+      font-family="Spline Sans Mono, monospace" font-size="11.5" letter-spacing="0.22em"
+      fill="#1f1f1b">claimed = actual</text>
+    <text x="338" y="706" transform="rotate(-45 338 706)" text-anchor="middle"
+      font-family="Spline Sans Mono, monospace" font-size="9.5" letter-spacing="0.18em"
+      fill="#74715f">confidence  0 → 1</text>
+    <text x="512" y="430" transform="rotate(-45 512 430)" text-anchor="middle"
+      font-family="Spline Sans Mono, monospace" font-size="10.5" letter-spacing="0.26em"
+      fill="#8a8676">overconfident</text>
+    <text x="676" y="470" transform="rotate(-45 676 470)" text-anchor="middle"
+      font-family="Spline Sans Mono, monospace" font-size="10.5" letter-spacing="0.26em"
+      fill="#9a9685">underconfident</text>
+
+    <!-- ===== the four signed-deviation dots ===== -->
+    <!-- each FILLED(hit)/HOLLOW(miss) dot leader-ruled back to its foot on the line -->
+
+    <!-- schema: MISS, overconfident, stranded -> drift red -->
+    <line x1="741" y1="82.6" x2="849.2" y2="190.8" stroke="#c0341e" stroke-width="1"/>
+    <rect x="846.2" y="187.8" width="6" height="6" fill="#c0341e"/>
+    <circle cx="741" cy="82.6" r="8" fill="#e7e4db" stroke="#c0341e" stroke-width="2.4"/>
+
+    <!-- flaky: HIT, underconfident -->
+    <line x1="808.4" y1="279.6" x2="784.4" y2="255.6" stroke="#1f1f1b" stroke-width="1"/>
+    <circle cx="784.4" cy="255.6" r="2.2" fill="#1f1f1b"/>
+    <circle cx="808.4" cy="279.6" r="7.5" fill="#1f1f1b"/>
+
+    <!-- auth: HIT, underconfident -->
+    <line x1="729.3" y1="394.9" x2="687.2" y2="352.8" stroke="#1f1f1b" stroke-width="1"/>
+    <circle cx="687.2" cy="352.8" r="2.2" fill="#1f1f1b"/>
+    <circle cx="729.3" cy="394.9" r="7.5" fill="#1f1f1b"/>
+
+    <!-- cache: PENDING, unscored = debt -> dashed hollow ON the line -->
+    <circle cx="719.6" cy="320.4" r="7.5" fill="#e7e4db" stroke="#1f1f1b" stroke-width="1.8"
+      stroke-dasharray="3 3"/>
+  </svg>
+
+  <!-- ===================== TEXT LAYER ===================== -->
+
+  <!-- identity -->
+  <div class="id">
+    <div class="lock">
+      <svg width="32" height="32" viewBox="0 0 30 30" data-geom="mark" aria-label="mark">
+        <line x1="5" y1="25" x2="25" y2="5" stroke="#1f1f1b" stroke-width="1.8"/>
+        <line x1="15" y1="15" x2="21.5" y2="21.5" stroke="#1f1f1b" stroke-width="1"/>
+        <circle cx="15" cy="15" r="1.5" fill="#1f1f1b"/>
+        <circle cx="21.5" cy="21.5" r="3.4" fill="#1f1f1b"/>
+      </svg>
+      <span class="word" data-geom="wordmark">Recursive Harness</span>
+    </div>
+    <div class="kick">weights frozen · the repo is the learnable layer</div>
+  </div>
+
+  <!-- status line -->
+  <div class="status">scored&nbsp;<b>176</b>&nbsp;&nbsp;·&nbsp;&nbsp;hit-rate&nbsp;<b>80%</b>&nbsp;&nbsp;·&nbsp;&nbsp;pending&nbsp;<b>1</b></div>
+
+  <!-- headline + subhead -->
+  <h1 class="head">Your AI coding agent, getting measurably better at YOUR work — and able to <u>prove it.</u></h1>
+  <p class="sub">The model's weights never change. Its repository becomes the learnable layer — <b>every prediction is scored against reality</b>, and every lesson is filed as a permanent, reviewed change.</p>
+
+  <!-- honesty pull-quote -->
+  <div class="quote">
+    <span class="qmk">— honest by construction</span>
+    Unscored predictions show up as debt. Anything unverifiable counts as a miss. The agent can never quietly weaken the rules that measure it.
+  </div>
+
+  <!-- Brier dial readout -->
+  <div class="dialcap">
+    <div class="lab">brier</div>
+    <div class="num">0.16</div>
+  </div>
+
+  <!-- field drift tags -->
+  <div class="tag red" style="left:756px;top:64px;">←&nbsp;OVERCONFIDENT&nbsp;&nbsp;<span class="d" style="color:#c0341e">Δ−0.90</span></div>
+  <div class="tag" style="left:822px;top:271px;">underconfident →&nbsp;&nbsp;<span class="d">Δ+0.20</span></div>
+  <div class="tag" style="left:742px;top:404px;">underconfident →&nbsp;&nbsp;<span class="d">Δ+0.35</span></div>
+  <div class="tag dash" style="left:556px;top:312px;width:152px;text-align:right;"><span>unscored = debt</span></div>
+
+  <!-- calibration callout, annotating the spine -->
+  <div class="calib">
+    <div class="l1">claimed 0.70 <span class="ar">→</span> actual 0.76</div>
+    <div class="l2">slightly underconfident — you did better than you claimed</div>
+    <div class="l3">bucket 0.65–0.75 · n = 24</div>
+  </div>
+
+  <!-- recent predictions ledger -->
+  <div class="ledg">
+    <div class="lh"><span>recent predictions</span><span class="lhs">scored vs reality</span></div>
+
+    <div class="row">
+      <span class="g"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="#1f1f1b"/></svg></span>
+      <div class="body">
+        <div class="nm"><span>resolve flaky test</span><span class="cf">0.80</span></div>
+        <div class="dr">hit · underconfident · Δ+0.20</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="g"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="#1f1f1b"/></svg></span>
+      <div class="body">
+        <div class="nm"><span>refactor the auth flow</span><span class="cf">0.65</span></div>
+        <div class="dr">hit · underconfident · Δ+0.35</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="g"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#c0341e" stroke-width="1.8"/></svg></span>
+      <div class="body">
+        <div class="nm"><span>migrate the schema</span><span class="cf">0.90</span></div>
+        <div class="dr red">miss · ←&nbsp;OVERCONFIDENT · Δ−0.90</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="g"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#1f1f1b" stroke-width="1.8" stroke-dasharray="3 3"/></svg></span>
+      <div class="body">
+        <div class="nm"><span>rewrite the cache layer</span><span class="cf">0.70</span></div>
+        <div class="dr dash"><span>pending · unscored = debt</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <a class="btn"><span class="pin"></span>Start the loop</a>
+    <div class="sec"><span class="ring"></span><u>See how it works →</u></div>
+  </div>
+
+  <!-- feature strip -->
+  <div class="featrule"></div>
+  <div class="feat" style="left:300px;">
+    <div class="ix">01 — the inner loop</div>
+    <div class="ti">Every task</div>
+    <div class="de"><b>predict → act → score.</b> A stated claim, checked against what actually happened.</div>
+  </div>
+  <div class="feat" style="left:660px;">
+    <div class="ix">02 — the session loop</div>
+    <div class="ti">Every session</div>
+    <div class="de">The gaps become <b>reviewed changes</b> — new procedures, guardrails, calibration.</div>
+  </div>
+  <div class="feat" style="left:1020px;">
+    <div class="ix">03 — the outer loop</div>
+    <div class="ti">Every month</div>
+    <div class="de">Audit, prune, and <b>earn more autonomy</b> — measured, never assumed.</div>
+  </div>
+
+</div>
+</body>
+</html>
