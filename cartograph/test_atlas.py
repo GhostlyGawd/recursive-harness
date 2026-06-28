@@ -90,6 +90,44 @@ if os.path.exists(committed):
             print(f"NOTE  committed ATLAS.md shows {m.group(1)} nodes; live graph has "
                   f"{live} - run /atlas to re-sync (advisory, not a failure)")
 
+# (7) --check drift predicate: in-sync round-trip + tamper detection. --check is an
+# ADVISORY staleness signal (powers the /retro re-sync nudge + on-demand human checks),
+# deliberately NOT wired into ci.yml - Atlas sync is a ritual, not a blocker (see the
+# module docstring above + atlas.run_check). Round-trips through a temp dir so it never
+# depends on whether the committed ATLAS.md happens to be current.
+import tempfile  # noqa: E402
+import shutil    # noqa: E402
+
+_td = tempfile.mkdtemp()
+try:
+    atlas.main(["--dir", _td])
+    _ap = os.path.join(_td, "ATLAS.md")
+    check("--check: a freshly generated map is in sync (exit 0)",
+          atlas.run_check(_ap) == 0, "round-trip drift check failed on a fresh map")
+    with open(_ap, encoding="utf-8") as fh:
+        _txt = fh.read()
+    with open(_ap, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(_txt.replace("## 5. Dependency", "## 5. MUTATED Dependency"))
+    check("--check: a mutated structural lens is detected as stale (exit 1)",
+          atlas.run_check(_ap) == 1, "drift check missed a tampered section")
+    check("--check: a missing map reports stale (exit 1)",
+          atlas.run_check(os.path.join(_td, "nope.md")) == 1, "missing map should read stale")
+finally:
+    shutil.rmtree(_td, ignore_errors=True)
+
+# (8) _strip_volatile removes every host/state-volatile part (build stamp + §7 file
+# counts + §8 state/time-dependent gaps-audit) so the drift check reflects STRUCTURE
+# (lenses §1-§6 + the node/edge header), never the build environment.
+_norm = atlas._strip_volatile(structural)
+check("_strip_volatile drops the build-stamp line", "**Build stamp**" not in _norm,
+      "build stamp leaked into the drift comparison")
+check("_strip_volatile drops §7 (volatile file counts)", "## 7." not in _norm,
+      "§7 file counts leaked into the drift comparison")
+check("_strip_volatile drops §8 (state/time-dependent audit)", "## 8." not in _norm,
+      "§8 gaps/audit (gitignored state + today() threshold) leaked into the comparison")
+check("_strip_volatile keeps the topology lenses (§1-§6)",
+      "## 1." in _norm and "## 6." in _norm, "a structural lens was lost from the comparison")
+
 if FAIL:
     print(f"\nFAILED: {len(FAIL)} check(s)")
     sys.exit(1)
