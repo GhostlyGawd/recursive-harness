@@ -16,6 +16,9 @@ precondition that SessionStart never fetches), and monkeypatch
 directly with the repo as session_cwd. This exercises the actual git fast-forward (so
 HEAD really moves on success) and stays NETWORK-FREE (origin is a local path, and the
 hook only runs `merge --ff-only`, never `pull`/`fetch`)."""
+import datetime as dt
+import io
+import json
 import os
 import subprocess
 import sys
@@ -122,6 +125,42 @@ check("dirty+behind: banner still warns 'behind'", "behind" in banner_d,
       f"banner={banner_d!r}")
 check("dirty+behind: banner did NOT auto-act", "refreshed local" not in banner_d,
       f"banner={banner_d!r}")
+
+# --- banner must NOT push the open-follow-up count (2026-06-28): the count is
+#     pull-only via /followups (the user's "surface only on pull, never push" rule).
+#     Even with OPEN, in-TTL items in the ledger, the SessionStart banner must stay
+#     silent about them. RED before the fix: the old banner appended " | N open
+#     follow-ups (/followups)". The banner itself must still print (calibration line). ---
+def run_banner(followups):
+    """Drive session_start.main() with a temp STATE holding `followups` + one scored
+    prediction (so the calibration line still prints), and a non-git cwd (so the
+    branch-warning stays empty). Returns captured stdout."""
+    tmp = tempfile.mkdtemp(prefix="ss_banner_")
+    with open(os.path.join(tmp, "followups.jsonl"), "w", encoding="utf-8") as f:
+        for r in followups:
+            f.write(json.dumps(r) + "\n")
+    with open(os.path.join(tmp, "predictions.jsonl"), "w", encoding="utf-8") as f:
+        f.write(json.dumps({"id": "p1", "result": "hit"}) + "\n")
+    old_state, old_in, old_out = session_start.STATE, sys.stdin, sys.stdout
+    session_start.STATE = tmp
+    sys.stdin = io.StringIO(json.dumps({"cwd": tmp}))   # tmp is not a git repo -> no branch line
+    cap = io.StringIO()
+    sys.stdout = cap
+    try:
+        session_start.main()
+    finally:
+        session_start.STATE, sys.stdin, sys.stdout = old_state, old_in, old_out
+    return cap.getvalue()
+
+
+_today = dt.date.today().isoformat()
+_open_fus = [{"id": f"b{i}", "ts": f"{_today}T00:00:00+00:00", "text": "x", "status": "open"}
+             for i in range(3)]
+_out = run_banner(_open_fus)
+check("banner still prints its status line (calibration present)",
+      "calibration" in _out.lower(), f"out={_out!r}")
+check("banner does NOT push the open-follow-up count (pull-only via /followups)",
+      "follow-up" not in _out.lower() and "/followups" not in _out, f"out={_out!r}")
 
 print(f"\n{'ALL TESTS PASS' if not FAILURES else str(len(FAILURES)) + ' FAILURES: ' + ', '.join(FAILURES)}")
 sys.exit(1 if FAILURES else 0)
