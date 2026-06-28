@@ -27,11 +27,35 @@ Block-cases assert "worktree" appears in stderr so a MISSING hook (which exits
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOOK = os.path.join(ROOT, "hooks", "guard_worktree_isolation.py")
+def _primary_base(path):
+    r"""If this suite runs from a LINKED `.claude/worktrees/<name>` tree, return the
+    PRIMARY checkout root (strip the three trailing worktree segments); else return
+    `path` unchanged. The synthetic WT_A/WT_B fixtures below must classify as REAL
+    sibling worktrees of a main checkout. When ROOT is itself a worktree they would
+    nest under it (`.../worktrees/<outer>/.claude/worktrees/wt-a`), so the guard --
+    which keys off the FIRST `.claude/worktrees/<name>` segment -- would stamp them
+    with the OUTER worktree id, collapsing the cross-worktree vs own-worktree
+    distinction this suite asserts (both block- and allow-cases break). Anchoring the
+    fixtures + session cwd to the primary checkout fixes that; HOOK still points at
+    THIS tree's copy of the guard (behaviour is location-independent). Pure path math
+    (follow-up 50d529)."""
+    # chr(92) is a single backslash; normalising to '/' keeps the regex separator-
+    # and OS-agnostic (Windows abspath returns backslash paths). '[.]' is a literal dot.
+    norm = path.replace(chr(92), "/")
+    m = re.match(r"^(.*?/[.]claude/worktrees/[^/]+)(?:/.*)?$", norm, re.IGNORECASE)
+    if not m:
+        return path
+    return os.path.normpath(
+        os.path.dirname(os.path.dirname(os.path.dirname(m.group(1)))))
+
+
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HOOK = os.path.join(_REPO, "hooks", "guard_worktree_isolation.py")
+ROOT = _primary_base(_REPO)
 FAILURES = []
 
 WT = os.path.join(ROOT, ".claude", "worktrees")
