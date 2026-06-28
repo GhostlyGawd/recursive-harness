@@ -1,0 +1,16 @@
+{
+  "month": "2026-06",
+  "generated": "2026-06-28T06:25:20+00:00",
+  "label": "recursive-harness",
+  "repo_key": "recursive-harness-481a64",
+  "n_bugs": 3,
+  "live": 2,
+  "healed": 1,
+  "wontfix": 0,
+  "recurrence_events": 0,
+  "recurrence_rate": 0.0,
+  "stuck_count": 0,
+  "escalate_count": 0,
+  "mean_attempts_to_heal": 1.0,
+  "mean_escalation_latency_days": null
+}
