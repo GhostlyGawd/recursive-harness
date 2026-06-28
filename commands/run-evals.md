@@ -7,8 +7,13 @@ provenance: 2026-06-12, user correction "there should be no headless" (ADR 0003)
 For each case in evals/corpus/ (or only those named in $ARGUMENTS):
 
 1. `python3 evals/run_evals.py --reset` once at the start of the run.
-2. Sandbox: `mkdir -p /tmp/evalrun-<slug>` and copy in the case's fixture
-   files (everything EXCEPT task.md, check.py, rubric.md, meta.json). Then set
+2. Sandbox: `rm -rf /tmp/evalrun-<slug> && mkdir -p /tmp/evalrun-<slug>` — CLEAR
+   first. `mkdir -p` alone leaves a prior run's artifacts in a reused sandbox, so an
+   agent-deliverable doer can "verify" stale files and grade PASS against last run's
+   output, masking a regression (2026-06-28, session a4a7fb9d: a jsonl-rotate sandbox
+   retained Jun-23 artifacts and the doer verified rather than rewrote). Then copy in
+   the case's fixture files (everything EXCEPT task.md, check.py, rubric.md, meta.json).
+   Then set
    `SANDBOX=$(cygpath -w /tmp/evalrun-<slug>)` (the Windows-resolved path) and
    pass `"$SANDBOX"` to every grader call that takes the sandbox path (step 4's
    `--grade` and the critic) — never a bare `/tmp/...`.
