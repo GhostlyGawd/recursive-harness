@@ -177,36 +177,23 @@ def main() -> int:
                              if s.get("ts", "9999")[:10] > last.isoformat())
         except ValueError:
             pass
-    # Quiet open-follow-up count (mirrors `harness followup count`: open AND within
-    # the TTL). Shown only when >0 so a clean ledger stays silent. SOFT flag (ADR 0008):
-    # same tunable decay window the harness CLI uses; default 30 if unset/garbage.
-    try:
-        _ttl_days = float(flag("workflow.followup_ttl_days", 30))
-        if _ttl_days <= 0:
-            _ttl_days = 30
-    except (TypeError, ValueError):
-        _ttl_days = 30
-    fu_cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=_ttl_days)
-
-    def _fu_open(r):
-        if r.get("status") != "open":
-            return False
-        try:
-            return dt.datetime.fromisoformat(r["ts"]) >= fu_cutoff
-        except Exception:
-            return True  # never silently drop an unparseable follow-up
-    open_fu = sum(1 for r in _jsonl("followups.jsonl") if _fu_open(r))
-    fu = f" | {open_fu} open follow-ups (/followups)" if open_fu else ""
+    # NOTE (2026-06-28): the open-follow-up COUNT was removed from this banner.
+    # Follow-ups are pull-only (`/followups`) by the user's "surface only on pull,
+    # never push" rule -- a count recited every SessionStart was itself the push that
+    # rule forbids, and read as an ever-climbing junk pile. The ledger audited HEALTHY
+    # (91% closed, nothing stale > ~10d, median time-to-close 0d), so a per-session
+    # count bought no benefit it didn't already get from `/followups`. Deliberately NOT
+    # replaced with a delta/staleness alarm: that is still a push and new accretion,
+    # against the user's reduce-net-weight stance; revisit only if items start to rot.
     # SOFT flag (ADR 0008): banner verbosity. "off" suppresses the status summary;
     # the stranded-branch safety warning below is independent and always prints.
     banner = flag("observability.session_banner", "full")
     if banner == "minimal":
-        print(f"[harness] {calib} | {pending} unscored predictions{fu}")
+        print(f"[harness] {calib} | {pending} unscored predictions")
     elif banner != "off":
         print(f"[harness] {calib} | {pending} unscored predictions"
               f" | {since_meta} sessions since last /meta-retro"
-              f" | learnings route to artifacts, not memory (routing-learnings skill)"
-              f"{fu}")
+              f" | learnings route to artifacts, not memory (routing-learnings skill)")
     if banner != "off":
         # Extra surfacing (ADR 0008): one line whenever the local override file
         # diverges from defaults, so a flipped flag is never silently forgotten.
