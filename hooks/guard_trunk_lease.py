@@ -110,7 +110,16 @@ _MUTATING_CMD = re.compile(
     # HARNESS_TRUNK_LEASE_OK=1 hatch silently no-opped (the hatch sits behind _is_mutating).
     # (session f36989d6, 2026-06-21 - narrows the heuristic miss conceded in KNOWN GAPS (2).)
     r"git\s+(?:(?:-C|-c)\s+(?:\"[^\"]*\"|'[^']*'|\S+)\s+|--no-pager\s+)*"
-    r"(?:checkout|switch|reset|merge|rebase|commit|stash|pull|cherry-pick"
+    # `add` STAGES into the index -- a tracked/index change the dirty fingerprint
+    # captures. It was MISSING here, so a `git add` (the staging step of every commit
+    # flow, incl. /gc) never re-stamped the lease; the FOLLOWING `git commit` then
+    # PreToolUse-compared the now-staged tree to a stale clean lease and BLOCKED the
+    # session against its OWN staging (the /gc self-block, 2026-06-28). Matched broadly:
+    # unlike `branch` (whose -a/-r/-vv READ forms drove NIT-A's enumerate-mutating-only),
+    # `add`'s only read form is the rare `--dry-run`/`-n`; over-checking that is a
+    # harmless lease re-stamp (recoverable, non-destructive), so a simple token beats a
+    # lookahead. (tests/test_guard_trunk_lease.py case 17.)
+    r"(?:checkout|switch|reset|merge|rebase|commit|add|stash|pull|cherry-pick"
     r"|am|revert|restore|apply|clean"
     # `branch` only when it MUTATES a ref (-d/-D/-m/-M/-c/-C and the --delete/--move/
     # --copy long forms). The old `branch\s+-[a-zA-Z]` over-flagged READS (-a/-r/-vv ->

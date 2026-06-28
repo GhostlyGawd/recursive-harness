@@ -290,6 +290,39 @@ try:
     check("f963e5: block hint names the isolation-agent escape for pinned/subagent sessions",
           "isolation" in err.lower(), err[-160:])
 
+    # --- 17. GAP (a /gc run, 2026-06-28): `git add` was MISSING from the
+    #         mutating-subcommand classifier. A /gc run does python-writes (untracked, excluded
+    #         from the fingerprint) then `git add <paths>` (which STAGES them -> the tracked/index
+    #         dirty hash flips) then `git commit`. With `git add` mis-classified a READ, its
+    #         PostToolUse never re-stamped, so the commit's PreToolUse compared the now-staged tree
+    #         against a stale clean lease and BLOCKED the session against its OWN staged change.
+    #         `git add` mutates the index -> it must be gated (so PostToolUse re-stamps). Read-only
+    #         `git status`/`git diff` stay ungated (covered above). ---
+    for addcmd in ("git add -A", "git add .", "git add memory/heal/"):
+        r = fresh()
+        stamp(r, "A")
+        git(["checkout", "-q", "-b", "add-" + addcmd.split()[-1].strip("-./")], r)  # HEAD moved since A's stamp
+        rc, _, err = run(pl("Bash", {"command": addcmd}, r, sid="A"))
+        check(f"git add classified mutating: '{addcmd}' blocks on mismatch", blocked(rc, err), f"rc={rc}")
+    # ...incl. the mandated `git -C "<path>" add` global-options form (commands/harness-pr.md).
+    r = fresh()
+    stamp(r, "A")
+    git(["checkout", "-q", "-b", "addc"], r)
+    rc, _, err = run(pl("Bash", {"command": f'git -C "{r}" add -A'}, r, sid="A"))
+    check("git -C <path> add classified mutating (blocks on mismatch)", blocked(rc, err), f"rc={rc}")
+    # END-TO-END repro of the /gc self-block: stamp; an OWN `git add` re-stamps via PostToolUse;
+    # the following commit at the same staged tree is ALLOWED. RED before the fix (add's PostToolUse
+    # returns early as a non-mutating READ -> no re-stamp -> commit blocks against my own staging).
+    r = fresh()
+    stamp(r, "A")
+    with open(os.path.join(r, "newfile.txt"), "w") as f:
+        f.write("x\n")
+    git(["add", "-A"], r)                                       # ACTUALLY stage it: the tree now has a
+                                                                # real tracked/index change (a flipped dirty hash)
+    run(pl("Bash", {"command": "git add -A"}, r, sid="A", event="PostToolUse"))  # add's PostToolUse re-stamps
+    rc, _, err = run(pl("Bash", {"command": "git commit -m x"}, r, sid="A"))     # commit's PreToolUse check
+    check("after `git add` re-stamps, the follow-up commit is ALLOWED (no self-block)", rc == 0, f"rc={rc} err={err[:60]}")
+
 finally:
     for d in REPOS:
         try:
