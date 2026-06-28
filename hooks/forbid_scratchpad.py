@@ -21,6 +21,11 @@ import os
 import re
 import sys
 
+# Shared enforcement-guard primitives (writer-verb set + realpath repo-scope) — one
+# source with guard_enforcement_layer (follow-up 0b80e1, auditor finding 3). Hard import
+# (hooks/ is the script's own dir; ships as a unit per ADR 0004).
+from _guard_common import realpath_in_root, writer_regex
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # the living-scratchpad anti-pattern: a .md whose basename is a known cross-session scratchpad name.
@@ -34,35 +39,19 @@ _SCRATCH_RE = re.compile(rf"^{_SCRATCH_NAMES}\.md$", re.I)
 # truncate the match — the spaced-path token-split bug that let writes slip past (auditor finding 1).
 _SCRATCH_IN_CMD = re.compile(rf"(?:^|[\s'\"=/\\]){_SCRATCH_NAMES}\.md(?![\w-])", re.I)
 
-# Verbs that CREATE or OVERWRITE a file. A deliberate SUBSET of guard_enforcement_layer.MUTATING:
-# we OMIT rm / chmod / chown because DELETING or re-permissioning a scratchpad is the desired
-# migration path, not a thing to block (blocking cleanup would trap the very files we want gone). We
-# KEEP every WRITER that guard hardened over three auditor rounds — truncate / ln / sed -i / dd /
-# install / a python `open(...,'w'|'a'|'x')` — so the same wrappers cannot bypass THIS guard either
-# (auditor finding 2). `>{1,2}(?!&[0-9-])` is a real file-write redirect, not an fd-dup (2>&1).
-# ON MERGE: factor this writer-set + the realpath scope check into a util shared with
-# guard_enforcement_layer.py rather than keeping a second copy (auditor finding 3).
-_WRITE_VERB = re.compile(
-    r"\b(mv|cp|tee|truncate|ln|dd|install|touch|sed\s+-i|patch|git\s+checkout|git\s+restore)\b"
-    r"|>{1,2}(?!&[0-9-])"
-    r"|open\s*\([^)]*,\s*['\"][wax]"
-)
+# Verbs that CREATE or OVERWRITE a file — the shared WRITER_VERBS from _guard_common,
+# one source with guard_enforcement_layer.MUTATING (followup 0b80e1, auditor finding 3).
+# We pass NO extra verbs, so this is MUTATING minus rm / chmod / chown: DELETING or
+# re-permissioning a scratchpad is the desired migration path, not a thing to block
+# (blocking cleanup would trap the very files we want gone, auditor finding 2).
+_WRITE_VERB = writer_regex()
 
 
 def is_scratchpad(path: str, root: str):
     """The scratchpad basename if `path` is a scratchpad-shaped file INSIDE the harness repo, else
     None. realpath-resolved + repo-scoped so an alias or an out-of-repo path cannot confuse it."""
-    if not path:
-        return None
-    expanded = os.path.expanduser(path)
-    if not os.path.isabs(expanded):
-        expanded = os.path.abspath(expanded)
-    try:
-        real = os.path.realpath(expanded)
-        rroot = os.path.realpath(root)
-    except OSError:
-        return None
-    if not real.startswith(rroot + os.sep) and real != rroot:
+    real = realpath_in_root(path, root)
+    if not real:
         return None
     base = os.path.basename(real)
     return base if _SCRATCH_RE.match(base) else None

@@ -17,6 +17,11 @@ import os
 import re
 import sys
 
+# Shared enforcement-guard primitives (writer-verb set + realpath repo-scope) — one
+# source with forbid_scratchpad (follow-up 0b80e1, auditor finding 3). Hard import
+# (hooks/ is the script's own dir; ships as a unit per ADR 0004).
+from _guard_common import realpath_in_root, writer_regex
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MARKER = os.path.join(HARNESS_ROOT, "HUMAN_APPROVED")
 # bin/ is protected because bin/harness mints the HUMAN_APPROVED unlock (cmd_approve);
@@ -27,25 +32,20 @@ MARKER = os.path.join(HARNESS_ROOT, "HUMAN_APPROVED")
 # deliberately NOT protected. (ADR 0008)
 PROTECTED = ("hooks", "lint", "evals", "bin", ".github", "autonomy.json", "settings.json", "templates", "features.json")
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
-# Bash patterns that can mutate files; reads are fine. The verb arm now also
-# covers non-redirect writers the old regex missed (followup 1b1ddc): `dd` (of=),
-# `install` (src dst), `touch` (create), and a python `open(path, 'w'|'a'|'x')`
-# write that emits no shell redirect for the path scanner to pair with.
-# The redirect arm is `>{1,2}(?!&[0-9-])`: match a real file-write redirect — `>`,
-# `>>`, `2>file`, `&>file`, AND the csh-style `>&file` (both streams INTO a file) —
-# but NOT a file-descriptor DUPLICATION, whose target is a fd number or `-`: `2>&1`,
-# `>&2`, `2>&-`. An fd-dup copies a descriptor and writes NO file, so flagging it as
-# mutating false-blocks merely EXECUTING `<root>/bin/harness ... 2>&1` from a
-# worktree (abs path contains the protected `<root>/bin` prefix) — the regression
-# from 2dcf71f (bin/ joining PROTECTED) that broke the harness CLI in worktrees.
-# CAUTION: the exclusion is `&[0-9-]` (fd targets only), NEVER a bare `&` — a bare
-# `&` would also exclude `>&FILE`, which IS a write; `echo x >& <root>/bin/harness`
-# must stay BLOCKED (it would otherwise clobber the unlock-minting binary).
-MUTATING = re.compile(
-    r"\b(rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|sed\s+-i|patch|git\s+checkout|git\s+restore)\b"
-    r"|>{1,2}(?!&[0-9-])"
-    r"|open\s*\([^)]*,\s*['\"][wax]"
-)
+# Bash patterns that can mutate files; reads are fine. The writer-verb set and the
+# redirect/open arms are the shared _guard_common core (one source with forbid_scratchpad;
+# followup 0b80e1) — MUTATING is that core PLUS rm / chmod / chown (delete + re-perm),
+# which the scratchpad guard deliberately omits. The redirect arm's fd-dup exclusion
+# (`>{1,2}(?!&[0-9-])`: a REAL write redirect — `>`, `>>`, `2>file`, `&>file`, csh `>&file`
+# — but NOT a descriptor DUPLICATION `2>&1` / `>&2` / `2>&-`, whose target is an fd number
+# or `-` and writes no file) lives in _guard_common.REDIRECT_OR_OPEN; it is what lets a
+# worktree merely EXECUTE `<root>/bin/harness ... 2>&1` without false-blocking on the
+# protected `<root>/bin` prefix (regression 2dcf71f). CAUTION preserved there: the
+# exclusion is `&[0-9-]` (fd targets only), never a bare `&` — `>&FILE` IS a write and
+# stays BLOCKED. Verb-alternation order does not affect matching (mutually-exclusive whole
+# words, no prefix overlap), so the composed regex matches byte-for-byte what the prior
+# inline one did — proven by tests/test_hooks + tests/test_forbid_scratchpad.
+MUTATING = writer_regex("rm|chmod|chown")
 # The HUMAN_APPROVED marker gets the SAME any-mutating-token + name-mention check the
 # protected-dir scan below uses, so it is protected exactly as well as hooks/lint/evals
 # -- and no better: a python non-`open` writer (pathlib.write_text, os.open) still slips
@@ -60,20 +60,12 @@ MUTATING = re.compile(
 
 
 def _inside_protected(path: str) -> str | None:
-    """Return the protected component name if `path` resolves inside one."""
-    if not path:
+    """Return the protected component name if `path` resolves inside one (realpath +
+    repo-scope via the shared _guard_common.realpath_in_root; followup 0b80e1)."""
+    real = realpath_in_root(path, HARNESS_ROOT)
+    if not real:
         return None
-    expanded = os.path.expanduser(path)
-    if not os.path.isabs(expanded):
-        expanded = os.path.abspath(expanded)
-    try:
-        real = os.path.realpath(expanded)
-        root = os.path.realpath(HARNESS_ROOT)
-    except OSError:
-        return None
-    if not real.startswith(root + os.sep) and real != root:
-        return None
-    rel = os.path.relpath(real, root)
+    rel = os.path.relpath(real, os.path.realpath(HARNESS_ROOT))
     head = rel.split(os.sep)[0]
     return head if head in PROTECTED else None
 
