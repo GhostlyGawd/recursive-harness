@@ -385,7 +385,9 @@ def _warn_concurrent(peer) -> None:
         f"WARNING (harness): another session looks live in this main checkout "
         f"(session {sid[:8]}, transcript written {int(age)}s ago). Two live sessions "
         f"share one HEAD and working tree and can silently clobber each other. Run "
-        f"EnterWorktree (or `claude --worktree <name>`) to isolate; set "
+        f"EnterWorktree (or `claude --worktree <name>`, or spawn an "
+        f"isolation:worktree Agent if EnterWorktree is unavailable from a pinned "
+        f"session) to isolate; set "
         f"HARNESS_ALLOW_MULTI_SESSION=1 to silence this warning."
     )
     out = {
@@ -419,7 +421,9 @@ def _block(entry: dict, tree: str, now: float) -> None:
         "\n"
         "To work in parallel WITHOUT clobbering, get your own isolated worktree:\n"
         "  - in THIS session, run the EnterWorktree tool with a short name, or\n"
-        "  - in a terminal:  claude --worktree <name>\n"
+        "  - in a terminal:  claude --worktree <name>, or\n"
+        "  - from a pinned / repo-root session where EnterWorktree is unavailable, "
+        "spawn an isolation:worktree Agent to do the write.\n"
         "Your changes then live on their own branch; integrate via a PR to main "
         "(see skill `worktree`).\n"
         "\n"
