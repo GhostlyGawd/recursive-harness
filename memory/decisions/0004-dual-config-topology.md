@@ -36,6 +36,13 @@ This Windows machine runs TWO independent Claude config homes:
   regenerates only `settings.json` WIRING (matchers / which hook fires when) and does
   not touch hook code. (session cbb07617, 2026-06-21 — a PR deploy-note and an auditor
   both stated this backwards.)
+- The settings WIRING that `--sync-settings` regenerates is sourced from
+  `templates/account-settings.json`, NOT the trunk root `settings.json`. So WIRING a
+  hook into a Stop / PreToolUse matcher array means editing
+  `templates/account-settings.json` (the deploy source `account-init.sh
+  --sync-settings` reads into the live silo `settings.json`) — editing only the root
+  `settings.json` does not reach the live config-dir copy, so the hook never fires.
+  (session 9f6014a0, 2026-06-27 — found only at deploy time; scored a prediction miss.)
 
 ## Session store is SHARED (projects/), the brain is symlinked to the trunk
 The four brain dirs (`skills/ hooks/ commands/ agents/`) symlink to the TRUNK so every

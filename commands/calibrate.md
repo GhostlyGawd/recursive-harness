@@ -7,7 +7,12 @@ description: Score pending predictions and review calibration stats. Run every ~
    This command operates entirely on the trunk: address every file as `"$HARNESS/<path>"`
    (a relative path would misroute from a foreign project's cwd — Gap D,
    proposals/2026-06-18-harness-portability.md).
-   `"$HARNESS/bin/harness" stats` — list pending prediction ids.
+   `"$HARNESS/bin/harness" stats` — the calibration headline (hit rate, Brier, pending
+   COUNT). NOTE: `stats` prints only the pending COUNT, not the ids, and there is no
+   `--list-pending` flag — to get the pending ids to score, read the ledger directly:
+   tail `"$HARNESS/state/predictions.jsonl"` and take the records whose `result` is
+   still null (2026-06-25, session f05b63e5: the doc said `stats` lists ids, it does
+   not, which sent the agent guessing a non-existent flag).
 2. Score only predictions that are YOURS to score. For each pending id you can
    reconstruct, score honestly:
    `"$HARNESS/bin/harness" outcome <id> --result hit|miss --notes "<what actually happened>"`.

@@ -15,6 +15,13 @@ you swept. This command exists because the user approved the same sweep repeated
 - Health: unscored predictions (`"$HARNESS/bin/harness" stats` — unscored = debt),
   calibration (SessionStart banner), recent corrections
   (state/corrections.jsonl), cadence (sessions since /meta-retro, retro gate pending).
+  Before flagging any recent correction as an UNROUTED /retro candidate, grep
+  `"$HARNESS/skills/"` + `"$HARNESS/memory/decisions/"` for an existing home — if one
+  exists (especially one already extended with that incident), report "already covered
+  by <skill/ADR> — verify it FIRES", not "needs a /retro". (2026-06-26, session
+  40ff3f76: the Health step manufactured routing debt by calling the Windows-shell
+  correction cluster "unrouted" when skill windows-host-paths already covered it,
+  extended with that exact incident the day before.)
 Lead with a 2-3 line TL;DR, then sections: Shipped / Open / Health / Suggested next.
 - Live view (optional): the same followup / health / inflight signals render in the
   read-only Mission Control console — offer `"$HARNESS/bin/harness" mission-control --root "$HARNESS"`
