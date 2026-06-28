@@ -9,7 +9,9 @@ Run:  python tests/test_subcommand.py
 """
 import importlib.machinery
 import importlib.util
+import json
 import os
+import subprocess
 import sys
 import types
 
@@ -69,6 +71,33 @@ check("root wins when both given (mutual exclusion, root first)", calls == [["--
 
 rc = _mission_control_dispatch(args(), "/repo", launcher=lambda argv: 7)
 check("non-zero launcher code propagates", rc == 7)
+
+
+# --- e2e: the read-only cartograph front-door subcommands (health / ask) -----------
+# These thin dispatchers shell out to cartograph/health.py + extract.py (the source of
+# truth). Exercise them end-to-end as subprocesses (fast, read-only) so the wiring is
+# CI-covered without a separate test_health.py (health logic itself is pinned in
+# cartograph/test_atlas.py). Mirrors the subprocess pattern in cartograph/test_query.py.
+def run_cli(*a):
+    proc = subprocess.run([sys.executable, os.path.join(ROOT, "bin", "harness"), *a],
+                          capture_output=True, text=True)
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+rc, out = run_cli("health")
+check("harness health -> exit 0 + prints the score", rc == 0 and "harness health:" in out)
+rc, out = run_cli("health", "--json")
+check("harness health --json -> exit 0 + valid JSON with a current score",
+      rc == 0 and isinstance(json.loads(out).get("current", {}).get("score"), (int, float)))
+
+rc, out = run_cli("ask", "path", "command:retro", "cli:stats")
+check("harness ask path A B -> exit 0 + a path line", rc == 0 and "path" in out)
+rc, out = run_cli("ask", "dependents", "skill:retrospection", "--json")
+check("harness ask dependents X --json -> exit 0", rc == 0)
+rc, out = run_cli("ask", "--context", "guard_trunk_lease")
+check("harness ask --context X -> exit 0 + the node id", rc == 0 and "guard_trunk_lease" in out)
+rc, out = run_cli("ask")
+check("harness ask (no args) -> non-zero + a usage hint", rc != 0 and "need a query" in out)
 
 print(f"\n{PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
