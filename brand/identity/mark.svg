@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Recursive Harness — a seven-band stratigraphic core sample">
+  <title>Recursive Harness</title>
+  <desc>The mark is the primitive itself: a seven-band stratigraphic core sample (LANGUAGE.md S2). Native 30x34 construction centred on a 64x64 artboard (translate 17,15 = clear space). Bars 4 tall on a 5 pitch (1px gaps); ragged widths 18/27/14/30/22/26/30 are the torn-ledger right edge. The top bar is the live oxide seam; bands descend the dug-earth ramp to near-black bedrock. Hard rectangles only — radius 0. The right edge must never be normalised.</desc>
+  <g transform="translate(17,15)">
+    <rect x="0" y="0"  width="18" height="4" fill="#B5482B"/><!-- 00 · now seam (oxide) -->
+    <rect x="0" y="5"  width="27" height="4" fill="#C8BCA4"/>
+    <rect x="0" y="10" width="14" height="4" fill="#A28A66"/>
+    <rect x="0" y="15" width="30" height="4" fill="#7C603E"/>
+    <rect x="0" y="20" width="22" height="4" fill="#553C20"/>
+    <rect x="0" y="25" width="26" height="4" fill="#321F0F"/>
+    <rect x="0" y="30" width="30" height="4" fill="#150B04"/><!-- 06 · bedrock -->
+  </g>
+</svg>
