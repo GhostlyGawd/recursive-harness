@@ -11,12 +11,34 @@ proposals/2026-06-18-harness-portability.md (eval scenarios T1-T3, T3b, T6).
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _primary_base(path):
+    r"""If this suite runs from a LINKED `.claude/worktrees/<name>` tree, return the
+    PRIMARY checkout root (strip the three trailing worktree segments); else return
+    `path` unchanged. The injector computes HARNESS_ROOT from its OWN location and
+    repo_root() always strips a worktree back to the primary checkout, so a worktree's
+    copy of the hook would see HARNESS_ROOT == the worktree -- a value repo_root()
+    never returns -- making the "trunk/worktree cwd -> emit nothing" assertions
+    unsatisfiable. Anchoring ROOT (hence HOOK's HARNESS_ROOT) to the primary checkout
+    keeps the contract testable from either context; the hook code is byte-identical
+    (locked enforcement layer, branched from origin/main). Pure path math (follow-up
+    50d529)."""
+    # chr(92) is a single backslash; normalising to '/' keeps the regex separator-
+    # and OS-agnostic (Windows abspath returns backslash paths). '[.]' is a literal dot.
+    norm = path.replace(chr(92), "/")
+    m = re.match(r"^(.*?/[.]claude/worktrees/[^/]+)(?:/.*)?$", norm, re.IGNORECASE)
+    if not m:
+        return path
+    return os.path.normpath(
+        os.path.dirname(os.path.dirname(os.path.dirname(m.group(1)))))
+
+
+ROOT = _primary_base(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HOOK = os.environ.get("INJECT_KERNEL_HOOK", os.path.join(ROOT, "hooks", "inject_kernel.py"))
 FAILURES = []
 _TMP = []

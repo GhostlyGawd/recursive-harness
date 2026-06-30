@@ -33,7 +33,10 @@ Optimize for that reader: terse, falsifiable, triggered at the right moment.
    the whole effort — fable's was better "in every way" — so the port was sunk
    work the gate would have prevented.)
 3. **Right artifact check**: re-run the routing-learnings tree. The most common
-   authoring error is writing a skill for what should be a hook.
+   authoring error is writing a skill for what should be a hook. Before proposing an
+   enforcement GATE, grep ADRs + test docstrings + `memory/decisions/` for whether it
+   SHOULD gate — reversing a recorded "advisory, not a blocker" choice is reward-hack-adjacent,
+   and an auditor catches it (edd67875: a CI drift-guard contradicted test_atlas.py's ritual line).
 4. **Source-of-truth gate** (artifacts asserting external behavior): if the
    artifact states facts about an external process, tool, or environment — CLI
    behavior, where files live, how cleanup works, what a hook blocks — verify

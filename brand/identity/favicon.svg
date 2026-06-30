@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Recursive Harness">
+  <title>Recursive Harness</title>
+  <desc>Favicon: the LANGUAGE.md S2 minimum-width reduction — three ragged bands (oxide seam, one mid umber, near-black bedrock) on a bleached-bone chip so the bedrock band still reads on a dark browser tab. Ragged right edge kept (widths 16/25/20). Radius 0.</desc>
+  <rect x="0" y="0"  width="32" height="32" fill="#E3DDD4"/>
+  <rect x="4" y="4"  width="16" height="7"  fill="#B5482B"/><!-- now seam (oxide) -->
+  <rect x="4" y="13" width="25" height="7"  fill="#7C603E"/><!-- one mid umber -->
+  <rect x="4" y="22" width="20" height="7"  fill="#150B04"/><!-- bedrock -->
+</svg>

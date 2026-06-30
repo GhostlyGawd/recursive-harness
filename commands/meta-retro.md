@@ -26,6 +26,11 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    pruning stays your decision (a map that could delete its own nodes to look clean
    is the reward-hack the kernel forbids). On the young trunk it correctly reports
    0/0 — a non-empty list is the signal that this audit found real work.
+   **Structural-integrity trend** (BET D): `python3 "$HARNESS/cartograph/health.py" --trend`
+   prints the one harness-health score (0–100) at the last N landed commits. The TREND is
+   the signal, not the absolute: a falling score localizes where integrity erodes (rising
+   orphans, un-referenced ADRs, dropping provenance coverage, or new rot) — pair it with
+   the heal recurrence trend above. Advisory: it informs this audit, never prunes.
    **Guard-friction audit** (same earns-its-friction test for enforcement HOOKS,
    which have no usage counter): for each guard the user has flagged as noisy, or
    with no logged real catch in 90d, spawn a fresh-context auditor that mines

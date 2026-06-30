@@ -15,7 +15,14 @@ HUMAN_APPROVED
 .claude/settings.local.json
 # Ventures are outputs, not the harness brain — kept on disk, not in the trunk.
 # Each venture is its own repo (or untracked working dir) under products/<slug>/.
-products/
+# EXCEPTION: track the portfolio lens (REGISTRY.md + registry.py) and the thin
+# per-product VENTURE.md stubs; keep all product CODE ignored. See products/registry.py.
+products/*
+!products/REGISTRY.md
+!products/registry.py
+!products/*/
+products/*/*
+!products/*/VENTURE.md
 # brand-foundry is its OWN repo (github.com/GhostlyGawd/brand-foundry), developed
 # in place under skills/ and pushed to its own GitHub — its history is not the
 # harness trunk's. Ignored here so it isn't double-committed; listed in

@@ -90,6 +90,104 @@ if os.path.exists(committed):
             print(f"NOTE  committed ATLAS.md shows {m.group(1)} nodes; live graph has "
                   f"{live} - run /atlas to re-sync (advisory, not a failure)")
 
+# (7) --check drift predicate: in-sync round-trip + tamper detection. --check is an
+# ADVISORY staleness signal (powers the /retro re-sync nudge + on-demand human checks),
+# deliberately NOT wired into ci.yml - Atlas sync is a ritual, not a blocker (see the
+# module docstring above + atlas.run_check). Round-trips through a temp dir so it never
+# depends on whether the committed ATLAS.md happens to be current.
+import tempfile  # noqa: E402
+import shutil    # noqa: E402
+
+_td = tempfile.mkdtemp()
+try:
+    atlas.main(["--dir", _td])
+    _ap = os.path.join(_td, "ATLAS.md")
+    check("--check: a freshly generated map is in sync (exit 0)",
+          atlas.run_check(_ap) == 0, "round-trip drift check failed on a fresh map")
+    with open(_ap, encoding="utf-8") as fh:
+        _txt = fh.read()
+    with open(_ap, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(_txt.replace("## 5. Dependency", "## 5. MUTATED Dependency"))
+    check("--check: a mutated structural lens is detected as stale (exit 1)",
+          atlas.run_check(_ap) == 1, "drift check missed a tampered section")
+    check("--check: a missing map reports stale (exit 1)",
+          atlas.run_check(os.path.join(_td, "nope.md")) == 1, "missing map should read stale")
+finally:
+    shutil.rmtree(_td, ignore_errors=True)
+
+# (8) _strip_volatile removes every host/state-volatile part (build stamp + §7 file
+# counts + §8 state/time-dependent gaps-audit) so the drift check reflects STRUCTURE
+# (lenses §1-§6 + the node/edge header), never the build environment.
+_norm = atlas._strip_volatile(structural)
+check("_strip_volatile drops the build-stamp line", "**Build stamp**" not in _norm,
+      "build stamp leaked into the drift comparison")
+check("_strip_volatile drops §7 (volatile file counts)", "## 7." not in _norm,
+      "§7 file counts leaked into the drift comparison")
+check("_strip_volatile drops §8 (state/time-dependent audit)", "## 8." not in _norm,
+      "§8 gaps/audit (gitignored state + today() threshold) leaked into the comparison")
+check("_strip_volatile keeps the topology lenses (§1-§6)",
+      "## 1." in _norm and "## 6." in _norm, "a structural lens was lost from the comparison")
+
+# (9) Harness health score (BET D) - atlas.py imports health.py and renders its score into
+# the PULSE, so the health companion is in this guard's remit. Cover the integration + the
+# pure scoring logic here (no separate test file -> no ci.yml edit; atlas.py is the consumer).
+import health  # noqa: E402
+
+check("pulse renders the health-score section", "Harness health score" in pulse,
+      "the BET D health vital sign vanished from ATLAS-PULSE.md")
+check("pulse shows a /100 score line", "/100**" in pulse, "health score line missing from pulse")
+
+# weights are an explicit, documented blend that must sum to 1.0 (else the 0-100 scale lies)
+check("health weights sum to 1.0", abs(sum(health.WEIGHTS.values()) - 1.0) < 1e-9,
+      f"weights sum to {sum(health.WEIGHTS.values())}")
+
+# live score is well-formed: 0..100, the 4 documented components, each value in 0..1
+_live = health.current()
+check("health: live score in [0,100]", 0 <= _live["score"] <= 100, f"score={_live['score']}")
+check("health: the four documented sub-scores present",
+      set(_live["components"]) == set(health.WEIGHTS), f"components={list(_live['components'])}")
+check("health: every sub-score in [0,1]",
+      all(0 <= c["value"] <= 1 for c in _live["components"].values()), "a sub-score left [0,1]")
+# pure -> deterministic on the same graph (no state/date/today() in the score path)
+_g2, _w2, _n2, _wd2 = extract.build()
+check("health: scoring is deterministic (pure graph)",
+      health.score(_g2, _w2)["score"] == health.score(_g2, _w2)["score"], "non-deterministic score")
+
+# synthetic graph with KNOWN structure pins the sub-score math:
+#   skills: ref (cited -> in-degree 1) + orphan (in-degree 0)  -> connectedness 1-1/2 = .5
+#   adrs:   ref (referenced) + orphan                          -> adr_load_bearing 1/2 = .5
+#   provenance: only skill:ref has a born_in edge; eligible = {skill:ref,skill:orphan,command:c} -> 1/3
+#   rot_free: 0 warnings -> 1.0;  score = 100*(.4*1 + .2*.5 + .2*(1/3) + .2*.5) = 66.7
+_sg = extract.Graph()
+_sg.node("skill:ref", "skill", "ref"); _sg.node("skill:orphan", "skill", "orphan")
+_sg.node("adr:ref", "adr", "ref"); _sg.node("adr:orphan", "adr", "orphan")
+_sg.node("command:c", "command", "c"); _sg.node("session:s", "session", "s")
+_sg.edge("command:c", "skill:ref", "cites")
+_sg.edge("command:c", "adr:ref", "references")
+_sg.edge("skill:ref", "session:s", "born_in")
+_sh = health.score(_sg, [])
+check("health synthetic: connectedness = 0.5 (1 orphan of 2 skills)",
+      abs(_sh["components"]["connectedness"]["value"] - 0.5) < 1e-9, _sh["components"]["connectedness"])
+check("health synthetic: adr_load_bearing = 0.5 (1 of 2 ADRs referenced)",
+      abs(_sh["components"]["adr_load_bearing"]["value"] - 0.5) < 1e-9, _sh["components"]["adr_load_bearing"])
+check("health synthetic: provenance = 1/3 (1 of 3 eligible has born_in)",
+      _sh["components"]["provenance"]["value"] == round(1/3, 3), _sh["components"]["provenance"])
+check("health synthetic: rot_free = 1.0 (no warnings)",
+      _sh["components"]["rot_free"]["value"] == 1.0, _sh["components"]["rot_free"])
+check("health synthetic: composite score = 66.7", _sh["score"] == 66.7, _sh["score"])
+check("health synthetic: only the referenceable skill is an orphan",
+      _sh["orphans"] == ["skill:orphan"], _sh["orphans"])
+# empty category is perfect, not failing (a graph with no ADRs is not unhealthy governance)
+check("health: empty category scores 1.0, not 0",
+      health.score(extract.Graph(), [])["components"]["adr_load_bearing"]["value"] == 1.0,
+      "an empty ADR set scored as a failure")
+
+# trend smoke: returns a list; any point is well-formed (heavy git path, kept to 1 commit)
+_tr = health.trend(1)
+check("health: trend returns a list", isinstance(_tr, list), type(_tr).__name__)
+check("health: each trend point is well-formed",
+      all({"commit", "date", "score"} <= set(pt) for pt in _tr), "a trend point missing keys")
+
 if FAIL:
     print(f"\nFAILED: {len(FAIL)} check(s)")
     sys.exit(1)

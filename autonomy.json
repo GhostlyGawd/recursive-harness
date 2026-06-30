@@ -1,22 +1,22 @@
 {
   "_doc": "Graduated autonomy ledger. A category may flip auto_merge to true only when proposed >= 20 and accepted/proposed >= 0.95, via /meta-retro, via PR. 'enforcement' (hooks, lint, evals, autonomy.json, settings.json, .github) is graduable: false FOREVER — the lint rejects any change to that.",
-  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts. 2026-06-21 reconcile (/meta-retro, session 04fb5c5c): skills 5->11, commands 4->6 to match current trunk inventory (skills count - 6 seed; commands count - 6 seed); agents 0 and memory 3 unchanged; no graduation (all < 20). 2026-06-24 reconcile (/meta-retro, verbal grant logged state/approvals.jsonl; auditor-corrected): skills 11->12 to match COMMITTED trunk (18 tracked skill dirs - 6 seed = 12 non-seed; +1 since 06-21 = windows-host-paths added 06-23). NOTE: count tracked dirs (git ls-files), not the live filesystem — skills/brand-foundry is gitignored/vendored-live and never reached main, so it is NOT a counted artifact. commands 6 (12 - 6 seed), agents 0 (3 = 3 seed), memory 3 unchanged; no graduation (all < 20).",
+  "_counting": "proposed/accepted count post-v0.1.0 NEW artifacts per category that reached main via PR. Seeds (lint SEED_ARTIFACTS) are the baseline and are NOT counted; edits to seed artifacts are NOT counted. Reconcile against trunk inventory at /meta-retro. 2026-06-14 reconcile (session 9147f304): skills 1->5, commands 1->4, memory 2->3 to match merged non-seed artifacts. 2026-06-21 reconcile (/meta-retro, session 04fb5c5c): skills 5->11, commands 4->6 to match current trunk inventory (skills count - 6 seed; commands count - 6 seed); agents 0 and memory 3 unchanged; no graduation (all < 20). 2026-06-24 reconcile (/meta-retro, verbal grant logged state/approvals.jsonl; auditor-corrected): skills 11->12 to match COMMITTED trunk (18 tracked skill dirs - 6 seed = 12 non-seed; +1 since 06-21 = windows-host-paths added 06-23). NOTE: count tracked dirs (git ls-files), not the live filesystem — skills/brand-foundry is gitignored/vendored-live and never reached main, so it is NOT a counted artifact. commands 6 (12 - 6 seed), agents 0 (3 = 3 seed), memory 3 unchanged; no graduation (all < 20). 2026-06-28 reconcile (/meta-retro, grant 'Grant + land now' logged state/approvals.jsonl): skills 12->14 (added since 06-24: roadmap, specialization), commands 6->8 (added: atlas, roadmap), agents 0->1 (added: followup-synthesizer), matching COMMITTED trunk via git ls-files (20 skill dirs - 6 seed = 14; 14 command files - 6 seed = 8; 4 agent files - 3 seed = 1). memory 3 unchanged — NOTE: memory has no SEED_ARTIFACTS-based mechanical count like skills/commands/agents, so its 3 is precedent-carried, not re-derived (follow-up: define a memory counting rule). No graduation (all < 20).",
   "categories": {
     "skills": {
-      "proposed": 12,
-      "accepted": 12,
+      "proposed": 14,
+      "accepted": 14,
       "auto_merge": false,
       "graduable": true
     },
     "commands": {
-      "proposed": 6,
-      "accepted": 6,
+      "proposed": 8,
+      "accepted": 8,
       "auto_merge": false,
       "graduable": true
     },
     "agents": {
-      "proposed": 0,
-      "accepted": 0,
+      "proposed": 1,
+      "accepted": 1,
       "auto_merge": false,
       "graduable": true
     },

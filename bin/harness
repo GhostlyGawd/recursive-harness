@@ -21,6 +21,9 @@ Subcommands:
                (python -m mission_control; needs textual). --root / --json passthrough.
   map          Regenerate the Harness Atlas (cartograph/atlas.py → ATLAS.md +
                ATLAS-PULSE.md); --html refreshes the interactive page, --check gates rot.
+  health       Harness health score (0-100) from the cartograph graph; --trend for history.
+  ask          Query the cartograph oracle (extract.py --query/--context): read-only
+               structural Q&A (what enforces X / path A→B / dependents). See skill structural-qa.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -70,6 +73,14 @@ def _resolve_state_dir(start=None):
 
 # state/ resolves to the MAIN checkout (single canonical ledger) — see _resolve_state_dir.
 STATE = _resolve_state_dir()
+# The MAIN-checkout root that STATE resolved into (its parent). The HUMAN_APPROVED marker
+# MUST live here: guard_enforcement_layer.py checks the marker at ITS OWN hook root, which
+# is the main checkout wired by absolute path (ADR 0004). Placing it at this script's own
+# ROOT instead made a LINKED-WORKTREE `approve`/`--revoke` land where the guard never looks,
+# so the unlock/revoke silently missed (followup a0f3b7). Derive it from STATE to reuse the
+# single git resolution (no extra git call, no duplicated logic). Git-absent: STATE falls
+# back to <script-root>/state, so MAIN_ROOT falls back to this script's own root too.
+MAIN_ROOT = os.path.dirname(STATE)
 
 PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
 CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
@@ -81,7 +92,7 @@ APPROVALS = os.path.join(STATE, "approvals.jsonl")
 # NOT a retro_gate_* name, so hooks/session_end.py's per-session cleanup never deletes
 # it). /retro writes it; /retro-backlog reads it to skip already-mined sessions.
 RETRO_LOG = os.path.join(STATE, "retro_log.jsonl")
-MARKER = os.path.join(ROOT, "HUMAN_APPROVED")
+MARKER = os.path.join(MAIN_ROOT, "HUMAN_APPROVED")
 
 # --- feature flags (ADR 0008) -------------------------------------------------
 FEATURES = os.path.join(ROOT, "features.json")
@@ -484,6 +495,13 @@ def cmd_approve(args) -> int:
     Fabricating a grant here is the same betrayal as hand-touching the marker —
     the audit trail (state/approvals.jsonl) is what makes it checkable.
     """
+    # Transparency (followup a0f3b7): when run from a linked worktree the marker is
+    # resolved to the MAIN checkout root (where the guard checks it, ADR 0004), NOT this
+    # worktree. Surface that on a root mismatch so the human sees where it actually lands.
+    if os.path.realpath(MAIN_ROOT) != os.path.realpath(ROOT):
+        print(f"note: HUMAN_APPROVED marker resolves to the main checkout root "
+              f"({MAIN_ROOT}), not this worktree ({ROOT}) — that is where the guard checks it.",
+              file=sys.stderr)
     if args.status:
         present = os.path.exists(MARKER)
         recs = _read(APPROVALS)
@@ -649,6 +667,41 @@ def cmd_map(args) -> int:
     return rc
 
 
+def cmd_health(args) -> int:
+    """Harness health score: a thin front door over cartograph/health.py (which stays the
+    source of truth — this only shells out, never re-implements the metric). Prints the
+    0-100 score + sub-scores; --trend [N] adds the score at the last N commits; --json
+    for machines."""
+    health_py = os.path.join(ROOT, "cartograph", "health.py")
+    if not os.path.isfile(health_py):
+        sys.stderr.write("harness health: cartograph/health.py not found\n")
+        return 1
+    cmd = [sys.executable, health_py]
+    if args.trend is not None:
+        cmd += ["--trend", str(args.trend)]
+    if args.json:
+        cmd.append("--json")
+    return subprocess.run(cmd).returncode
+
+
+def cmd_ask(args) -> int:
+    """Query the cartograph oracle: a thin front door over cartograph/extract.py --query /
+    --context (read-only structural Q&A; the engine stays source of truth). `ask <kind>
+    [target...]` forwards to --query; `ask --context <node>` to --context. See skill
+    structural-qa for the question→kind mapping."""
+    extract_py = os.path.join(ROOT, "cartograph", "extract.py")
+    if not args.rest:
+        sys.stderr.write("harness ask: need a query — e.g. `ask path A B`, `ask dependents "
+                         "<node>`, `ask --context <node>` (kinds: blast-radius|dependents|"
+                         "dependencies|path|orphans|node|governed-by|traces)\n")
+        return 2
+    flag = "--context" if args.context else "--query"
+    cmd = [sys.executable, extract_py, flag] + list(args.rest)
+    if args.json:
+        cmd.append("--json")
+    return subprocess.run(cmd).returncode
+
+
 def main() -> int:
     # cp1252 consoles (Windows) crash when a subcommand echoes a non-latin1 char
     # (e.g. an arrow in a correction note) - degrade unencodable output to '?'
@@ -750,6 +803,22 @@ def main() -> int:
     sp.add_argument("--check", action="store_true",
                     help="run the structural-rot gate before regenerating")
     sp.set_defaults(fn=cmd_map)
+
+    sp = sub.add_parser("health",
+                        help="harness health score (0-100) from the cartograph graph; --trend for history")
+    sp.add_argument("--trend", nargs="?", const=6, type=int, default=None, metavar="N",
+                    help="also score the last N first-parent commits (default 6; heavier)")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(fn=cmd_health)
+
+    sp = sub.add_parser("ask",
+                        help="query the cartograph oracle (extract.py --query/--context): read-only structural Q&A")
+    sp.add_argument("--context", action="store_true",
+                    help="node-brief mode (--context <node>) instead of --query")
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("rest", nargs=argparse.REMAINDER,
+                    help="KIND [TARGET...] for --query, or <node> with --context")
+    sp.set_defaults(fn=cmd_ask)
 
     args = p.parse_args()
     return args.fn(args)
