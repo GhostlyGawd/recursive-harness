@@ -65,6 +65,12 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           python3 fleet/test_eventlog.py
+          python3 fleet/test_claims.py
+          python3 fleet/test_units.py
+          python3 fleet/test_postbox.py
+          python3 fleet/test_render.py
+          python3 fleet/test_cli.py
+          python3 fleet/test_extraction.py
           python3 mission_control/test_smoke.py
           python3 mission_control/test_console.py
           python3 mission_control/test_feed.py

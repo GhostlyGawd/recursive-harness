@@ -43,6 +43,54 @@ def test_reap_ring_buffer_cap():
     assert sorted(e["ts"] for e in live) == [907.0, 908.0, 909.0]  # most-recent kept
 
 
+# --- cap fairness (R3.5): protect coordination-critical kinds from disposable-stream eviction ---
+def test_reap_cap_protects_critical_kinds():
+    # an OLD (oldest-ts) critical handoff must survive a flood of newer disposable notes.
+    crit = el.new_event("handoff", target="@r", now_s=100, ttl_s=10_000)  # oldest
+    notes = [el.new_event("note", now_s=200 + i, ttl_s=10_000) for i in range(10)]
+    live = el.reap([crit] + notes, now_s=1000, cap=3)
+    ids = {e["id"] for e in live}
+    assert crit["id"] in ids                                    # critical survives despite age
+    assert len(live) == 3                                       # total still bounded at cap
+    assert sum(1 for e in live if e["kind"] == "note") == 2     # newest disposables fill the rest
+
+
+def test_reap_cap_total_never_exceeds():
+    evs = [el.new_event("note", now_s=100 + i, ttl_s=10_000) for i in range(20)]
+    assert len(el.reap(evs, now_s=1000, cap=5)) == 5
+
+
+def test_reap_cap_critical_also_capped_when_alone_exceed():
+    # criticals must NOT grow unbounded — if they alone exceed cap, keep the newest cap of them.
+    crits = [el.new_event("handoff", target="@r", now_s=100 + i, ttl_s=10_000) for i in range(10)]
+    live = el.reap(crits, now_s=1000, cap=4)
+    assert len(live) == 4
+    assert sorted(e["ts"] for e in live) == [106.0, 107.0, 108.0, 109.0]  # newest criticals kept
+
+
+def test_reap_cap_zero_keeps_nothing():
+    # cap==0 must bound to zero (critic edge: critical[-0:] is the WHOLE list — guard it).
+    crits = [el.new_event("handoff", target="@r", now_s=100 + i, ttl_s=10_000) for i in range(3)]
+    assert el.reap(crits, now_s=1000, cap=0) == []
+
+
+def test_reap_cap_critical_equals_cap_with_disposables():
+    # criticals exactly fill the cap → budget 0 → no disposables sneak in.
+    crits = [el.new_event("claim", target="src/" + str(i), now_s=100 + i, ttl_s=10_000) for i in range(3)]
+    notes = [el.new_event("note", now_s=200 + i, ttl_s=10_000) for i in range(5)]
+    live = el.reap(crits + notes, now_s=1000, cap=3)
+    assert len(live) == 3 and all(e["kind"] == "claim" for e in live)
+
+
+def test_reap_cap_tie_break_deterministic():
+    # equal-ts records straddling the eviction boundary → surviving SET must be order-independent
+    # (codebase (ts,id) convention), not dependent on input position.
+    notes = [el.new_event("note", now_s=500, ttl_s=10_000) for _ in range(4)]
+    fwd = {e["id"] for e in el.reap(list(notes), now_s=1000, cap=2)}
+    rev = {e["id"] for e in el.reap(list(reversed(notes)), now_s=1000, cap=2)}
+    assert fwd == rev
+
+
 # --- live-feed projection -------------------------------------------------------
 def test_live_feed_window_and_order():
     now = 1000.0
