@@ -8,6 +8,10 @@
     {
       "path": "plugins/prospector",
       "remote": "https://github.com/GhostlyGawd/prospector.git"
+    },
+    {
+      "path": "plugins/wraithworld",
+      "remote": "https://github.com/GhostlyGawd/wraithworld.git"
     }
   ]
 }
