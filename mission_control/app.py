@@ -10,6 +10,7 @@ The Console lens (P3) lands on this same model.
 """
 from __future__ import annotations
 
+from rich.markup import escape as esc
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -54,8 +55,10 @@ def lane_markup(lane, lit: bool = True) -> Text:
     markup tags (which have zero visual width) never knock the columns out of alignment. `lit` is the
     work-layer toggle: when off, the work gauge is DARKENED to the faint token (the row stays)."""
     glyph, gcol = STATE_GLYPH.get(lane.state, STATE_GLYPH[STATE_NOMINAL])
-    typ = f"‹{lane.type}›"[:9].ljust(9)
-    name = lane.name[:26].ljust(26)
+    # esc() AFTER truncate+pad: width is set on the visible text, then `[` is neutralised so a
+    # bracket in a component type/name can never open a stray markup tag (mangle) or orphan-close (crash).
+    typ = esc(f"‹{lane.type}›"[:9].ljust(9))
+    name = esc(lane.name[:26].ljust(26))
     fu = f"fu {lane.fu_count}".ljust(6)
     pr = f"pr {lane.pr_count}"
     if not lit:
@@ -75,9 +78,9 @@ def gnode_markup(node, lit: bool = True) -> Text:
     glyph, gcol = STATE_GLYPH.get(node.state, STATE_GLYPH[STATE_NOMINAL])
     if not lit:
         gcol = "#544c3f"
-    typ = f"‹{node.type}›"[:9].ljust(9)
-    name = node.name[:22].ljust(22)
-    deg = f"{node.in_deg}→{node.out_deg}"
+    typ = esc(f"‹{node.type}›"[:9].ljust(9))
+    name = esc(node.name[:22].ljust(22))
+    deg = f"{node.in_deg}→{node.out_deg}"   # ints — no markup hazard
     return Text.from_markup(
         f"[{gcol}]{glyph}[/]  [#7c7261]{typ}[/] [#cdbfa6]{name}[/] [#544c3f]{deg}[/]"
     )
@@ -90,9 +93,11 @@ def terminal_markup(lines) -> Text:
         return Text.from_markup("[#544c3f]— no live events in window —[/]")
     rows = []
     for ln in lines[:12]:
-        tgt = f" [#7c7261]{ln.target}[/]" if ln.target else ""
-        txt = f"  [#a39479]{ln.text}[/]" if ln.text else ""
-        rows.append(f"[#f7b23b]‹{ln.kind}›[/] [#7c7261]{ln.actor}[/]{tgt}{txt}")
+        # every field is event-derived (kind/actor/target/payload-summary) — esc() so a `[` in a
+        # payload value can't open a stray tag or orphan-close and crash the live ticker render.
+        tgt = f" [#7c7261]{esc(ln.target)}[/]" if ln.target else ""
+        txt = f"  [#a39479]{esc(ln.text)}[/]" if ln.text else ""
+        rows.append(f"[#f7b23b]‹{esc(ln.kind)}›[/] [#7c7261]{esc(ln.actor)}[/]{tgt}{txt}")
     return Text.from_markup("\n".join(rows))
 
 
@@ -110,8 +115,8 @@ def proof_markup(counters, lit: bool = True) -> Text:
 
 def chrome_markup(name, channel, inflight, health, structure) -> Text:
     """identity · session crumbs · calibration/ctx strip — every value from the live payload."""
-    sess = (inflight.get("session_owner") or "—")[:8]
-    branch = inflight.get("branch") or "—"
+    sess = esc((inflight.get("session_owner") or "—")[:8])
+    branch = esc(inflight.get("branch") or "—")   # git-derived — a branch name may contain `[`
     leases = len(inflight.get("lease_holders") or [])
     return Text.from_markup(
         f"[b #f7b23b]{name}[/] [#544c3f]· {channel}[/]    "
@@ -129,22 +134,24 @@ def detail_markup(lane) -> Text:
     """The detail bay for the selected lane: header + its followups + its proposals, each under a
     wide-tracked `LABEL · NN` channel-id (Lathe silkscreen). Truncated, never invented."""
     lines = [
-        f"[b #e7dcc4]{lane.name}[/]  [#7c7261]‹{lane.type}›[/]",
-        f"[#7c7261]{lane.file or '—'}[/]",
+        f"[b #e7dcc4]{esc(lane.name)}[/]  [#7c7261]‹{esc(lane.type)}›[/]",
+        f"[#7c7261]{esc(lane.file or '—')}[/]",
         "",
         f"[#7c7261]FOLLOWUPS · {lane.fu_count:02d}[/]",
     ]
     if lane.followups:
         for f in lane.followups[:14]:
-            fid = (f.get("id") or "------")[:6]
-            txt = (f.get("text") or "").strip().replace("\n", " ")[:80]
+            fid = esc((f.get("id") or "------")[:6])
+            # followup text is arbitrary user prose — esc() AFTER truncation so a bracketed tag,
+            # markdown checkbox, or `arr[i]` renders literally instead of crashing/mangling the bay.
+            txt = esc((f.get("text") or "").strip().replace("\n", " ")[:80])
             lines.append(f"  [#a9711f]{fid}[/] [#cdbfa6]{txt}[/]")
     else:
         lines.append("  [#544c3f]— none —[/]")
     lines += ["", f"[#7c7261]PROPOSALS · {lane.pr_count:02d}[/]"]
     if lane.proposals:
         for p in lane.proposals[:14]:
-            lines.append(f"  [#a39479]{p}[/]")
+            lines.append(f"  [#a39479]{esc(p)}[/]")
     else:
         lines.append("  [#544c3f]— none —[/]")
     return Text.from_markup("\n".join(lines))
@@ -155,9 +162,9 @@ def node_detail_markup(node) -> Text:
     identity + loop + edge degree, honestly noting it has no open work rather than inventing rows."""
     glyph, gcol = STATE_GLYPH.get(node.state, STATE_GLYPH[STATE_NOMINAL])
     return Text.from_markup(
-        f"[b #e7dcc4]{node.name}[/]  [#7c7261]‹{node.type}›[/]  [{gcol}]{glyph}[/]\n"
-        f"[#7c7261]{node.file or '—'}[/]\n"
-        f"[#7c7261]LOOP[/] [#cdbfa6]{node.loop or '—'}[/]    "
+        f"[b #e7dcc4]{esc(node.name)}[/]  [#7c7261]‹{esc(node.type)}›[/]  [{gcol}]{glyph}[/]\n"
+        f"[#7c7261]{esc(node.file or '—')}[/]\n"
+        f"[#7c7261]LOOP[/] [#cdbfa6]{esc(node.loop or '—')}[/]    "
         f"[#7c7261]EDGES[/] [#cdbfa6]in {node.in_deg} · out {node.out_deg}[/]\n"
         f"\n[#544c3f]— no open work on this component —[/]"
     )
@@ -321,8 +328,8 @@ class MissionControl(App):
         if self._error:
             chrome.update(
                 Text.from_markup(
-                    f"[b #f7b23b]{self._name}[/] [#544c3f]· {self._channel}[/]    "
-                    f"[#e2503a]DATA OFFLINE[/] [#7c7261]{self._error[:90]}[/]"
+                    f"[b #f7b23b]{esc(self._name)}[/] [#544c3f]· {self._channel}[/]    "
+                    f"[#e2503a]DATA OFFLINE[/] [#7c7261]{esc(self._error[:90])}[/]"
                 )
             )
             return

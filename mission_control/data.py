@@ -79,9 +79,16 @@ def load_mission(root: str | None = None, extract_py: str | None = None, timeout
 
 
 def load_payload(path: str) -> dict:
-    """Load a saved/fixture --mission payload from a JSON file (offline demo + tests)."""
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+    """Load a saved/fixture --mission payload from a JSON file (offline demo + tests).
+
+    Mirrors load_mission's contract: any failure (missing file, unreadable, malformed JSON) is
+    re-raised as RuntimeError so app.load() renders it in the chrome bar ("DATA OFFLINE …") rather
+    than crashing the TUI with an uncaught FileNotFoundError/JSONDecodeError on a bad --json path."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"could not read --json payload {path!r}: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────── view-model derivation
