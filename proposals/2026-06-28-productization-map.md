@@ -45,13 +45,12 @@ Maturity = how shippable today. Extraction = how hard to carve out of the harnes
 | 9 | **agentops-trust-os** *(already extracted)* | "AgentOps Trust OS — SOC2-style evidence, incidents, policy, cost over agent runs" | Compliance / AgentOps | PoC | Done |
 | 10 | **Venture factory** (`venture-build` + workflows) | "Autonomous MVP/venture factory from a charter" | Founders / agencies | Medium | Medium |
 | 11 | **Brand Foundry** (`brand-foundry` + `huashu-design`) | "Code-packaged brand identity generator" | Design / branding | Medium-High | Medium |
-| 12 | **Deep Research** (`deep-research`: fan-out → verify → cited report) | "Adversarially-verified deep-research agent" | Research / analysts | Medium | Easy-Medium |
 
 ---
 
 ## 2. Four product lines  `[curated overlay]`
 
-The 12 segments cluster into four coherent lines — four ways to take the harness to market.
+The 11 segments cluster into four coherent lines — four ways to take the harness to market.
 
 ```mermaid
 flowchart TB
@@ -82,7 +81,6 @@ flowchart TB
     direction TB
     S10["venture factory"]
     S11["brand foundry"]
-    S12["deep research"]
   end
 
   H --> TRUST & LEARN & OBS & BUILD
@@ -129,7 +127,6 @@ quadrantChart
   "Fleet / Agent Mail": [0.62, 0.55]
   "Venture factory": [0.48, 0.5]
   "Brand Foundry": [0.52, 0.66]
-  "Deep Research": [0.64, 0.5]
 ```
 
 ---
@@ -199,6 +196,10 @@ state — no parallel store (honors ADR-0001: one memory).
 ## Provenance
 
 2026-06-28 — productization brief. Slices the harness (per `cartograph/ATLAS.md` §1–7
-machine-truth) into 12 segments / 4 product lines; designs the missing tracked product
+machine-truth) into 11 segments / 4 product lines; designs the missing tracked product
 registry as an extension of `skills/venture-build` + the `cartograph/atlas.py --check`
 sync pattern. Prediction `c944f4ad`. No enforcement-layer edits.
+
+2026-06-30 — correction: removed former segment #12 "Deep Research". `deep-research` is a
+globally-installed marketplace plugin (`~/.claude/plugins/`), NOT a harness artifact —
+it is absent from both `skills/` and `commands/`. Count is now 11 segments, not 12.
