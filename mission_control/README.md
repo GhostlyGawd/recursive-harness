@@ -81,11 +81,25 @@ green/red quarantined to gauges; depth via surface steps + hairlines, never drop
 ## Test
 
 ```bash
-python mission_control/test_smoke.py     # [1] data firewall (no textual) + [2] pilot (Roster)
-python mission_control/test_graph.py     # P2 Map lens + selection-follow
-python mission_control/test_console.py   # P3 Console: Proof counters + layer toggles
-python mission_control/test_feed.py      # P4 Terminal live-feed (read-only, fleet.eventlog)
+python mission_control/test_smoke.py      # [1] data firewall (no textual) + [2] pilot (Roster)
+python mission_control/test_graph.py      # P2 Map lens + selection-follow
+python mission_control/test_console.py    # P3 Console: Proof counters + layer toggles
+python mission_control/test_feed.py       # P4 Terminal live-feed (read-only, fleet.eventlog)
+python mission_control/test_robustness.py # hardening: markup firewall + loader error contract
 ```
+
+## Hardening
+
+Render and load-path robustness, locked by `test_robustness.py`:
+
+- **Markup firewall** — every dynamic, payload-derived string (followup prose, proposal/file paths,
+  event `kind`/`actor`/`target`/`payload`, the DATA-OFFLINE error text) is escaped before it reaches
+  rich's `Text.from_markup`. Otherwise an orphan `[/]` in a followup *crashes* the render and any
+  tag-shaped fragment (`[x]`, `arr[i]`, `[#zzz]`) is silently *dropped* — breaking the faithful-fold
+  contract. Escaping runs **after** truncate+pad, so column widths (set on the visible text) hold.
+- **Loader error contract** — `load_payload` (the `--json` path) mirrors `load_mission`: any failure
+  (missing file, malformed JSON) re-raises as `RuntimeError`, the one exception `app.load()` catches,
+  so a bad `--json` path degrades to "DATA OFFLINE …" in the chrome bar instead of crashing the TUI.
 
 ## Roadmap
 
