@@ -75,6 +75,7 @@ jobs:
           python3 mission_control/test_console.py
           python3 mission_control/test_feed.py
           python3 mission_control/test_graph.py
+          python3 mission_control/test_robustness.py
           python3 skills/auto-healer/test_heal.py
           python3 skills/specialization/test_needs.py
       - name: Mission Control gated-bundle tests (P5 guard, P4 reaper, mission-control verb)
