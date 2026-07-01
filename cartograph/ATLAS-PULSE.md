@@ -4,7 +4,7 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-06-28` from extract.py @ `4095fc5`.
+**Build stamp** - generated `2026-07-01` from extract.py @ `673b4f3`.
 
 ---
 
@@ -29,7 +29,7 @@ Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:a
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **78%** hit-rate (142 hit / 39 miss / 1 open over 182). Open follow-ups: **19**. The breakdowns below localize the friction.
+Overall prediction calibration: **79%** hit-rate (148 hit / 40 miss / 2 open over 190). Open follow-ups: **22**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -43,8 +43,8 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 | harness-authoring | 1 | 2 | 33% | ⚠ friction |
 | harness | 1 | 1 | 50% | ⚠ friction |
 | implementation | 3 | 2 | 60% |  |
-| general | 118 | 26 | 82% |  |
-| build | 11 | 2 | 85% |  |
+| general | 123 | 27 | 82% |  |
+| build | 12 | 2 | 86% |  |
 | debugging | 1 | 0 | 100% |  |
 | coding | 1 | 0 | 100% |  |
 | brand-foundry-dogfood | 3 | 0 | 100% | ✅ strong |
@@ -54,12 +54,12 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 | Skill | Fires |
 |---|---:|
-| `retro` | 24 |
+| `retro` | 25 |
 | `run-evals` | 14 |
 | `calibration` | 12 |
+| `standup` | 10 |
 | `worktree` | 10 |
 | `harness-authoring` | 9 |
-| `standup` | 8 |
 | `build-loop` | 8 |
 | `brainstorm` | 5 |
 | `harness-pr` | 4 |
@@ -67,8 +67,8 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 ### Backlog & friction
 
-- Open follow-ups: **19**
-- Corrections logged (all-time ledger): **93**
+- Open follow-ups: **22**
+- Corrections logged (all-time ledger): **94**
 
 ### Where bugs cluster - the heal ledger
 
@@ -78,6 +78,7 @@ Bug clusters by tag (the heal ledger tags each bug `file:` / `class:` / `area:` 
 
 - **`recursive-harness-481a64`** - 3 bugs (2 live, 0 recurring): `lang:powershell`×2, `file:bin/harness`, `class:encoding`, `area:cli`, `host:windows`, `encoding:utf8-no-bom`, `op:dir-move`, `atomicity`
 - **`retro-synth-session-a43e3c`** - 1 bug (1 live, 0 recurring): `facet:worktree`, `facet:hook`, `facet:return-to-trunk`
+- **`wraithworld`** - 1 bug (1 live, 0 recurring): `domain:css`, `facet:layout`, `facet:aspect-ratio`, `surface:wraithworld-site`
 
 ---
 
