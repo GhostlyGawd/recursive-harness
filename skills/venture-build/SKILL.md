@@ -94,6 +94,20 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
 4. BUILD THE MVP. Define the KEYSTONE CONTRACT first — the one schema/interface every
    component shares — then build the coupled core yourself for coherence. Minimal
    deps; write tests as you go, not after. Exit: package imports and a smoke path runs.
+   4b. CONCURRENT BUILD WAVE (only when modules are separable). Parallel builder
+   subagents on one checkout are safe IFF every brief carries ALL FIVE invariants —
+   drop one and you get file conflicts, phantom-dependency failures, or test-edit
+   reward hacking: (1) OWNERSHIP MANIFEST — each brief lists "YOU OWN (write only
+   these): <paths>" + "DO NOT TOUCH: <paths>"; OWN sets disjoint across the wave;
+   shared surfaces belong to nobody. (2) CONTRACTS FIRST, LEAD-OWNED — the lead
+   writes the shared data/interface files BEFORE launching and marks them frozen in
+   every brief. (3) FROZEN TESTS AS ACCEPTANCE — suite authored red by an
+   independent agent pre-wave; every brief says "tests are truth; do not modify any
+   test". (4) ABSENT-SIBLING TOLERANCE — code touching a concurrent sibling's output
+   must no-op gracefully until it exists; cross-module wiring verifies post-wave,
+   never mid-wave. (5) GIT IS THE LEAD'S — briefs forbid git; one committer, no
+   index races. (2026-07-01, session 54794ff2: wraithworld — 4 concurrent builders
+   on one checkout, zero conflicts, 132/132 first-integration green, 0 test edits.)
 5. VALIDATE LIVE. Run the full suite (green) AND run the app for real: boot the
    server, hit the endpoints, run the demo, observe the critical path end to end.
    Exit: suite green AND a live run captured in the transcript.

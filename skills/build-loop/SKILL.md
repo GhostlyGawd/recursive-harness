@@ -76,6 +76,25 @@ ship.**
    CI-coverage guard went RED on 3 tests a concurrent mission-control merge added to
    main mid-build; local full-suite-green missed them; prediction 970bdc74 named the
    wrong residual risk.)
+   PLACEHOLDER-METADATA HONESTY (a named green-but-wrong class): when the build ships
+   placeholder/generated assets, any displayed metadata about them (durations, sizes,
+   counts) must be DERIVED from the actual files — never hand-written. Hand-authored
+   metadata drifts to the aspirational final state, and structural/BDD tests compare
+   data files to each other, never to the binary assets, so the whole suite stays
+   green while the product lies. Exactly what the fresh-context critic catches — brief
+   it on the RAW source + the user's verbatim goal ("judge only what exists"), not on
+   derived docs. (2026-07-01, session 54794ff2: catalog said 3:47, placeholder audio
+   ended ~1:10; survived 133 tests + 14-check e2e; caught by critic, fixed first-try.)
+   A FRESHLY WRITTEN E2E DRIVER IS ITSELF UNTESTED CODE: on a first-run failure the
+   default hypothesis is driver miscalibration, not a product bug. Two recurring
+   driver errors: (1) one-shot asserts on async state — poll to a deadline instead of
+   sampling once (media needs load time); (2) asserting state written only by an event
+   the script never triggered (a best-score persisted only at game-over — the drive
+   must actually lose first). Read the implementation's state-write points BEFORE
+   touching product code. House the driver in the repo (tests/e2e/ + dev dep + npm
+   script), never a scratchpad — temp dirs can't resolve the repo's node_modules, and
+   the drive must persist as the fix-round's rerunnable gate. (2026-07-01, session
+   54794ff2: 12/14 → 14/14 with zero product changes.)
 6. **CAPTURE.** If the result recurs, was correction-born, or encodes taste the
    user articulated, snapshot it. → skill `eval-capture` + `/run-evals` (passes
    day-one). Where a spec governs the target (phase-1's `governed-by` check), write the
