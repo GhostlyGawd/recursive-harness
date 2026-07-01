@@ -607,51 +607,17 @@ def cmd_features(args) -> int:
 
 # ---------------------------------------------------------------- fleet
 def cmd_fleet(args) -> int:
-    """Lateral-coordination event channel (emit | feed | reap) over the canonical state/.
-    Thin adapter: resolve the one canonical state dir, then delegate to the stdlib-only
-    fleet engine. See proposals/2026-06-22-agent-mail-product.md."""
+    """Agent Mail — the lateral-coordination channel. Thin adapter: inject the ONE canonical
+    state dir, then delegate the full action surface (feed|emit|claims|unit|send|inbox|ack|
+    release|reap) to the unlocked, stdlib-only fleet.cli. Adding a view needs no further edit
+    here. See proposals/2026-06-30-agent-mail-bin-delegation.md + fleet/pm/specs/ARCHITECTURE.md."""
     sys.path.insert(0, ROOT)  # fleet/ lives at the repo root
     try:
-        from fleet import eventlog as el
+        from fleet import cli as fleet_cli
     except ImportError as exc:
         print(f"fleet engine unavailable: {exc}", file=sys.stderr)
         return 1
-    state_dir = _resolve_state_dir()
-    if args.action == "emit":
-        if not args.kind:
-            print("emit needs a KIND (claim|release|progress|handoff|note|...)", file=sys.stderr)
-            return 1
-        payload = {}
-        if args.payload:
-            try:
-                payload = json.loads(args.payload)
-            except json.JSONDecodeError:
-                print("--payload must be a JSON object", file=sys.stderr)
-                return 1
-        ev = el.emit(state_dir, args.kind, actor=(args.actor or None),
-                     target=(args.target or None), payload=payload, ttl_s=args.ttl)
-        print(f"fleet: emitted {ev['kind']} ({ev['id']})")
-        return 0
-    if args.action == "feed":
-        feed = el.read_feed(state_dir, window_s=args.window,
-                            exclude_actor=(args.actor or None))
-        if args.json:
-            print(json.dumps(feed, ensure_ascii=False, indent=2))
-            return 0
-        if not feed:
-            print("fleet: no live events in the window.")
-            return 0
-        for e in feed:
-            t = dt.datetime.fromtimestamp(e["ts"], dt.timezone.utc).strftime("%H:%M:%S")
-            tgt = f" [{e['target']}]" if e.get("target") else ""
-            print(f"  {t}  {e['actor'][:8]}  {e['kind']}{tgt}  {e.get('payload') or ''}")
-        return 0
-    if args.action == "reap":
-        kept, dropped = el.compact(state_dir)
-        print(f"fleet: reaped {dropped} stale, {kept} live remain.")
-        return 0
-    print(f"unknown fleet action {args.action!r} (emit|feed|reap)", file=sys.stderr)
-    return 1
+    return fleet_cli.main(["--state-dir", _resolve_state_dir(), *args.rest])
 
 
 # ---------------------------------------------------------------- mission control
@@ -818,16 +784,10 @@ def main() -> int:
     sp.add_argument("value", nargs="?", default="")
     sp.set_defaults(fn=cmd_features)
 
-    sp = sub.add_parser("fleet", help="lateral-coordination event channel (emit|feed|reap)")
-    sp.add_argument("action", choices=["emit", "feed", "reap"])
-    sp.add_argument("kind", nargs="?", default="",
-                    help="event kind for emit (claim|release|progress|handoff|note|...)")
-    sp.add_argument("--target", default="", help="addressing key: resource | work-unit | handle")
-    sp.add_argument("--payload", default="", help="JSON object payload (emit)")
-    sp.add_argument("--ttl", type=float, default=3600.0, help="seconds-to-live (emit)")
-    sp.add_argument("--actor", default="", help="actor token; on feed, hides your own events")
-    sp.add_argument("--window", type=float, default=900.0, help="feed window seconds")
-    sp.add_argument("--json", action="store_true", help="feed as JSON")
+    sp = sub.add_parser("fleet",
+                        help="Agent Mail — coordination channel (feed|emit|claims|unit|send|inbox|ack|release|reap)")
+    sp.add_argument("rest", nargs=argparse.REMAINDER,
+                    help="forwarded verbatim to `python -m fleet` (run `harness fleet --help` for actions)")
     sp.set_defaults(fn=cmd_fleet)
 
     sp = sub.add_parser("mission-control",

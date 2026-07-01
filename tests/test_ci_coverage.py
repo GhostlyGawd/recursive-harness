@@ -30,6 +30,10 @@ CI_YML = os.path.join(ROOT, ".github", "workflows", "ci.yml")
 # documented escape hatch, NOT a dumping ground. Empty is the healthy steady state.
 INTENTIONALLY_UNWIRED = {
     # "path/to/test_x.py": "why it cannot run in CI (e.g. needs a dep CI lacks)",
+    "fleet/test_mcp.py": "needs the third-party `mcp` SDK; mainline CI is stdlib-only and does "
+                         "not pip-install it. This test enforces the MCP adapter's portability "
+                         "(the engine never imports mcp) locally; the engine/view suites + "
+                         "fleet/test_extraction.py cover the rest in CI.",
 }
 
 # STAGING path prefixes that are NOT mainline CI surface. A test_*.py here is

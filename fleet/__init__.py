@@ -20,18 +20,23 @@ from .eventlog import (
     DEFAULT_TTL_S,
     DEFAULT_WINDOW_S,
     DEFAULT_CAP,
+    CRITICAL_KINDS,
 )
+# Curated VIEW read-entrypoints (the stable surface for consumers like Mission Control /
+# standup). Fold internals (resource_claims, targets_overlap, inbox, …) stay reachable as
+# fleet.<module>.<fn> but are intentionally not re-exported.
+from .claims import read_claims, overlap_pairs, release_target
+# NOTE: re-export the units()-list fn as `live_units` — re-exporting it as bare `units` would
+# shadow the `fleet.units` SUBMODULE in the package namespace (breaks `from . import units`).
+from .units import read_unit, render_unit, units as live_units
+from .postbox import read_inbox, unread_count, send, ack
 
 __all__ = [
-    "new_event",
-    "emit",
-    "append",
-    "read_raw",
-    "reap",
-    "live_feed",
-    "read_feed",
-    "compact",
-    "DEFAULT_TTL_S",
-    "DEFAULT_WINDOW_S",
-    "DEFAULT_CAP",
+    # substrate
+    "new_event", "emit", "append", "read_raw", "reap", "live_feed", "read_feed", "compact",
+    "DEFAULT_TTL_S", "DEFAULT_WINDOW_S", "DEFAULT_CAP", "CRITICAL_KINDS",
+    # views (read entrypoints)
+    "read_claims", "overlap_pairs", "release_target",
+    "read_unit", "render_unit", "live_units",
+    "read_inbox", "unread_count", "send", "ack",
 ]
