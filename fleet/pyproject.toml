@@ -1,0 +1,41 @@
+# Agent Mail — extraction scaffold (Phase 5).
+# On extraction this file moves to the new repo root, one level ABOVE the `fleet/` package:
+#   agent-mail/
+#     pyproject.toml   README.md   LICENSE
+#     fleet/__init__.py  eventlog.py  claims.py  units.py  postbox.py  render.py  cli.py  mcp_server.py
+# The core (engine + views + cli + render) needs NO third-party deps — only [mcp] does.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-mail"
+version = "0.1.0"
+description = "A lateral coordination channel for fleets of AI agents: an append-only, typed, self-reaping event log with projection views (live feed, resource claims, unit doc, postbox)."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+keywords = ["agents", "coordination", "mcp", "multi-agent", "fleet", "event-log"]
+authors = [{ name = "GhostlyGawd" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = []   # core is stdlib-only — the extractability contract
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.0"]  # only the MCP server adapter needs the SDK; the engine never imports it
+
+[project.scripts]
+agentmail = "fleet.cli:main"
+agent-mail-mcp = "fleet.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/GhostlyGawd/agent-mail"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fleet"]
+# pm/ is build-process state, not shippable code:
+exclude = ["fleet/pm", "fleet/test_*.py"]

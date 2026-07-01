@@ -33,6 +33,12 @@ EVENTS_RELPATH = ("fleet", "events.jsonl")  # under the injected state_dir
 DEFAULT_TTL_S = 3600.0      # in-flight state is ephemeral; 1h default
 DEFAULT_WINDOW_S = 900.0    # live feed shows the last 15 min by default
 DEFAULT_CAP = 5000          # ring-buffer hard cap (ADR 0001 junk-drawer ban, mechanical)
+# Cap fairness (R3.5): when the cap bites, evict DISPOSABLE kinds before these
+# coordination-critical ones, so a chatty note/progress stream can't silently drop a
+# directed handoff / live claim. Criticals are still bounded — if they alone exceed cap,
+# the oldest criticals are dropped too (no unbounded growth; ADR 0001 still holds).
+# NOTE: any NEW coordination-critical kind MUST be added here, or it is silently evictable.
+CRITICAL_KINDS = frozenset({"handoff", "ack", "claim", "release"})
 
 
 def _events_path(state_dir):
@@ -104,7 +110,15 @@ def reap(events, *, now_s, cap=DEFAULT_CAP):
             continue
         live.append(e)
     if cap is not None and len(live) > cap:
-        live = sorted(live, key=lambda e: e["ts"])[-cap:]
+        # Cap fairness (R3.5): keep all coordination-critical records (newest `cap` if they alone
+        # overflow), then fill the remaining budget with the newest disposable records.
+        _k = lambda e: (e["ts"], e["id"])  # (ts, id) total order — deterministic at the boundary
+        critical = sorted((e for e in live if e["kind"] in CRITICAL_KINDS), key=_k)
+        disposable = sorted((e for e in live if e["kind"] not in CRITICAL_KINDS), key=_k)
+        keep_critical = critical[-cap:] if cap else []   # cap==0 → keep nothing (not the whole list)
+        budget = cap - len(keep_critical)
+        keep_disposable = disposable[-budget:] if budget > 0 else []
+        live = sorted(keep_critical + keep_disposable, key=_k)
     return live
 
 
