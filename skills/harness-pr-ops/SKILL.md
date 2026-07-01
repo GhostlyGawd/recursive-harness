@@ -37,6 +37,18 @@ chained after a `git checkout`/`restore` or a file write.
 > was the trigger (a bare `git merge … && python …/bin/harness …` is NOT blocked). Splitting
 > `bin/harness` onto its own call ran clean.
 
+## A locked-layer build that adds test files: wire ci.yml in the SAME approve cycle
+When an enforcement-gated change ALSO adds tracked `test_*.py` (a new file or whole new package),
+`test_ci_coverage.py` requires each to be wired into `.github/workflows/ci.yml` (or excused in
+`INTENTIONALLY_UNWIRED`) — and `ci.yml` is itself locked (`.github/`). So the ci.yml wiring is a
+SECOND locked edit. Discover it UP FRONT and batch it into the same `bin/harness approve` →
+edit-all-locked-files → `--revoke` cycle as your primary locked edit, instead of finding it after
+the first commit and paying a second approve/revoke round-trip. Run `python3 tests/test_ci_coverage.py`
+locally as part of pre-push validation so the requirement surfaces before CI, not after.
+> receipt: session 89bd318f, 2026-06-30 — an `bin/harness` delegation landed first; only then did
+> `test_ci_coverage` reveal 7 new `fleet/test_*.py` needed wiring into the (locked) `ci.yml`,
+> costing a second approve cycle. Excused `fleet/test_mcp.py` (needs the `mcp` SDK CI lacks).
+
 ## The human gate is the EXPECTED terminus of locked-layer work — don't forecast auto-land
 A change touching the locked layer (`hooks/ lint/ evals/ bin/ .github/ autonomy.json
 settings.json templates/`) does NOT auto-merge. Even auditor-APPROVED, the binding gate
