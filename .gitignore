@@ -44,3 +44,9 @@ cartograph/map.json
 # registered in worktree-repos.json so it materializes into every worktree. See
 # skills/nested-repos.
 plugins/prospector/
+# wraithworld is its OWN repo (github.com/GhostlyGawd/wraithworld), a multi-skill
+# plugin developed in place under plugins/ and pushed to its own GitHub — its
+# history is not the harness trunk's. Ignored here so it isn't double-committed;
+# registered in worktree-repos.json so it materializes into every worktree. See
+# skills/nested-repos. (Registered 2026-06-30.)
+plugins/wraithworld/
