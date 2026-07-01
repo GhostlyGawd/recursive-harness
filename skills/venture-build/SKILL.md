@@ -101,9 +101,9 @@ why, and is it proven" — read them FIRST and trust nothing you "remember":
    these): <paths>" + "DO NOT TOUCH: <paths>"; OWN sets disjoint across the wave;
    shared surfaces belong to nobody. (2) CONTRACTS FIRST, LEAD-OWNED — the lead
    writes the shared data/interface files BEFORE launching and marks them frozen in
-   every brief. (3) FROZEN TESTS AS ACCEPTANCE — suite authored red by an
-   independent agent pre-wave; every brief says "tests are truth; do not modify any
-   test". (4) ABSENT-SIBLING TOLERANCE — code touching a concurrent sibling's output
+   every brief. (3) FROZEN TESTS AS ACCEPTANCE — the grading-independence gate,
+   applied per brief: suite authored red by an independent agent pre-wave; every
+   brief says "tests are truth; do not modify any test". (4) ABSENT-SIBLING TOLERANCE — code touching a concurrent sibling's output
    must no-op gracefully until it exists; cross-module wiring verifies post-wave,
    never mid-wave. (5) GIT IS THE LEAD'S — briefs forbid git; one committer, no
    index races. (2026-07-01, session 54794ff2: wraithworld — 4 concurrent builders

@@ -78,13 +78,16 @@ ship.**
    wrong residual risk.)
    PLACEHOLDER-METADATA HONESTY (a named green-but-wrong class): when the build ships
    placeholder/generated assets, any displayed metadata about them (durations, sizes,
-   counts) must be DERIVED from the actual files — never hand-written. Hand-authored
-   metadata drifts to the aspirational final state, and structural/BDD tests compare
-   data files to each other, never to the binary assets, so the whole suite stays
-   green while the product lies. Exactly what the fresh-context critic catches — brief
-   it on the RAW source + the user's verbatim goal ("judge only what exists"), not on
-   derived docs. (2026-07-01, session 54794ff2: catalog said 3:47, placeholder audio
-   ended ~1:10; survived 133 tests + 14-check e2e; caught by critic, fixed first-try.)
+   counts) must be DERIVED from — or mechanically TEST-BOUND to — the actual files;
+   never free-floating hand-written values. Hand-authored metadata drifts to the
+   aspirational final state, and structural/BDD tests compare data files to each
+   other, never to the binary assets, so the whole suite stays green while the
+   product lies. Exactly what the fresh-context critic catches — brief it on the RAW
+   source + the user's verbatim goal ("judge only what exists"), not on derived docs.
+   (2026-07-01, session 54794ff2: catalog said 3:47, placeholder audio ended ~1:10;
+   survived 133 tests + 14-check e2e; caught by critic. First fix hand-SYNCED values —
+   a sync, not a derivation; the class stayed open until a test binding catalog
+   durations to the WAV headers landed the same session.)
    A FRESHLY WRITTEN E2E DRIVER IS ITSELF UNTESTED CODE: on a first-run failure the
    default hypothesis is driver miscalibration, not a product bug. Two recurring
    driver errors: (1) one-shot asserts on async state — poll to a deadline instead of
