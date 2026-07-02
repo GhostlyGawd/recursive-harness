@@ -385,3 +385,22 @@ VERSION, worktree-repos.json)
 - Next target: iteration 21 — criterion 5 fresh-context usability run
   (front door + one random README, 5 questions + 3 governing-skill naming),
   then the two-clean-passes endgame on what is landable without the human.
+
+### Iteration 21 — criterion 5 usability run: PASS (A 5/5, B 2/3)
+- Random dept (HEAD-hash mod 10) = brand/. Fresh agent, restricted to front
+  door + brand/README.md, answered all five brand questions correctly
+  (verified 5/5 against ground truth — including the unflattering dist-gap
+  admission) and named governing artifacts 2/3 (stuck-detection ✅,
+  /harness-pr ✅; vendoring-skills ✗ — not derivable because skills/README is
+  still STAGED, its draft does name it).
+- Prescribed one-line front-door fix applied (skills/ row now names
+  vendoring-skills for external imports).
+- The agent disclosed context contamination honestly (kernel auto-injected);
+  both B hits were independently derivable from the permitted files.
+- Criteria status: 1 partial (10/19 landed; 9 blocked on human) · 2 ✅ ·
+  3 ✅ · 4 ✅ · 5 ✅
+- DECIDE: four of five criteria PASS. Criterion 1's remainder is entirely
+  human-gated (5 staged READMEs + lint-skip + loader decision). No workable
+  departments remain → wave-2/3/4 checkpoint: battery + auditor + PR, then
+  STOP with the escalation report (Exit C shape — blocked on human, not
+  stuck).

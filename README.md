@@ -154,7 +154,7 @@ department below self-describes in its own README.
 
 | Department | Role |
 |---|---|
-| [skills/](skills/) | 23 trigger-loaded procedures — the procedural memory ([README staged](proposals/2026-07-02-artifact-dir-readmes-skills-draft.md), loader-surface fix pending) |
+| [skills/](skills/) | 23 trigger-loaded procedures — the procedural memory; external imports go through skill `vendoring-skills` ([README staged](proposals/2026-07-02-artifact-dir-readmes-skills-draft.md), loader-surface fix pending) |
 | [commands/](commands/) | 14 named user-invoked workflows (`/retro`, `/gc`, …; doc [pending the loader-surface decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
 | [agents/](agents/) | 4 fresh-context roles: critic, retro-miner, harness-auditor, followup-synthesizer ([same pending decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
 | [hooks/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | mechanical enforcement: 21 files, 18 wired across 6 events (write-locked; README staged) |
