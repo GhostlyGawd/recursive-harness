@@ -214,3 +214,23 @@ VERSION, worktree-repos.json)
 - Criteria status: 1 partial (2 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
   3 ✅ · 4 ✅ · 5 ✗
 - Next target: iteration 11 — proposals/README.md.
+
+### Iteration 11 — proposals/README.md: first critic FAIL (3.8), fixes applied
+- Wrote proposals/README.md (74 lines). Critic FAILED it: mean 3.8 (Q2=3,
+  Q3=3, Q4=3). All three defects were OVERCLAIMS written from session memory
+  instead of verified: (1) fabricated cross-citation claim about the 07-02
+  oddity proposals (they cite the correction, NOT their predecessor
+  proposals); (2) "every proposal carries Date/Status/Origin" — 15/35 lack
+  Origin, 5 lack all three; (3) "all guard proposals from 06-19 cite the
+  meta-principle" — first citer is 06-21.
+- All three prescribed fixes applied same pass (real example swapped in;
+  "canonical header, older files deviate"; range narrowed to 06-21 onward).
+- VERIFY: lint ✅ · gate ✅ · critic ✗ FAIL pre-fix — re-verification required.
+- Criteria status: 1 partial (2 done + 5 drafted + 1 parked + 1 failed-fixed /
+  19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (o) the failure pattern inverted — every prior doc was
+  researched-then-written and passed; this one leaned on "I was there"
+  session memory for three claims and ALL THREE were the defects. Being the
+  author of the history is not a source; grep anyway.
+- Next target: iteration 12 — re-verify proposals/README.md (fresh critic),
+  then continue wave 2.
