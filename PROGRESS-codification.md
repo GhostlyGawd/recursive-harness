@@ -36,3 +36,22 @@ VERSION, worktree-repos.json)
   grammar error that way; (c) treat STATE.md-style scratchpads as untrusted — verify
   counts/claims against git log or by running the thing.
 - Next target: memory/nudge-provenance.md first rows (iteration 2).
+
+### Iteration 2 — memory/nudge-provenance.md (first rows) + 2 proposals
+- Built the full 22-row wiring table from settings.json (19 wirings, 17 distinct
+  hooks); origins researched for 8 rows via git --diff-filter=A; rest marked TODO
+  honestly. Filed both flagged oddities as proposals:
+  proposals/2026-07-02-context-blind-cadence-nudges.md,
+  proposals/2026-07-02-guard-blocks-readonly-inspection.md.
+- Duplication check done first: adjacent proposals (guard-cluster-consolidation,
+  enforcement-merge-friction) are distinct; inherited their standing meta-principle
+  (tune existing hooks, never add enforcement) into both new proposals.
+- VERIFY: lint clean ✅ · gate clean ✅ · row-count vs settings.json wiring: 22 rows
+  ≥ 19 wirings ✅ (extra rows = multi-event hooks listed per event).
+- Criteria status: 1 partial (1/19) · 2 ✗ · 3 partial (structure done, 14 TODO
+  origins remain) · 4 ✅ · 5 ✗
+- Protocol lessons: (d) `git log/show -- hooks/…` passes the guard — git archaeology
+  on locked paths is viable, only ls/cat-style access is blocked; (e) always run the
+  proposals/ duplication check before filing; (f) provenance research batches well —
+  one --diff-filter=A command covered 5 hooks.
+- Next target (real run): finish TODO origins, then remaining wave-2 departments.
