@@ -50,7 +50,8 @@ DEFINITION OF DONE — every item TRUE and CHECKABLE:
      critic agent locates the right department for 5 sampled "where would I look
      for X?" scenarios, ≥ 4/5 correct.
 3. memory/nudge-provenance.md complete: one row per automated user-facing behavior
-   (all settings.json wirings — 19 as of 2026-07-02 — plus any banner/gate output),
+   (all settings.json wirings — 22 as of 2026-07-02, corrected from the dry run's
+   miscount of 19; 18 distinct hook files — plus any banner/gate output),
    columns: fires-when → emitting file → origin commit/ADR (or honest UNKNOWN) →
    justification. Zero TODO cells remaining: each becomes a researched fact or a
    filed proposal. Before filing any proposal: duplication-check proposals/ and
@@ -184,6 +185,9 @@ than half the departments pass criterion 1.
 
 ## Amendment log
 
+- v2.1 (2026-07-02, iteration 3): corrected criterion 3's wiring count 19→22 (and
+  17→18 distinct hook files) after a full settings.json recount — the dry run's
+  count was wrong. Tightens the row-count floor (22 ≥ 22, one row per wiring).
 - v2 (2026-07-02, dry-run autopsy): fixed EXECUTE's oracle usage (`--context <dir>`
   does not resolve — mapped nodes only, full `--query` grammar spelled out); granted
   the critic execution rights over documented read-only commands (it caught a wrong

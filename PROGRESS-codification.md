@@ -55,3 +55,24 @@ VERSION, worktree-repos.json)
   proposals/ duplication check before filing; (f) provenance research batches well —
   one --diff-filter=A command covered 5 hooks.
 - Next target (real run): finish TODO origins, then remaining wave-2 departments.
+
+### Iteration 3 — memory/nudge-provenance.md COMPLETE (all TODO cells resolved)
+- One batched `git log --diff-filter=A --name-only -- hooks/` covered every hook
+  origin; justifications for the 6 multi-event/opaque hooks sourced from their
+  provenance docstrings (rank-1 source — this repo's hooks carry WHY blocks).
+- CORRECTED two iteration-2 errors: (a) inject_kernel justification was invented
+  from the hook's NAME ("re-injects after compaction") — actual purpose per
+  docstring is kernel injection when running in a FOREIGN project's cwd
+  (portability Gap A); (b) wiring count miscounted as 19/17 — actual is 22
+  wirings / 18 distinct hook files; table now exactly one row per wiring.
+- VERIFY: lint ✅ · gate ✅ · row count 22 == 22 wirings ✅ · zero TODO cells ✅ ·
+  critic (fresh context, execution rights, checked ALL 18 origins + 8 docstrings)
+  mean 5.0 PASS, zero defects.
+- Criteria status: 1 partial (1/19 depts) · 2 ✗ · 3 ✅ COMPLETE · 4 ✅ · 5 ✗
+- AMENDMENT: v2.1 — criterion 3's wiring count corrected 19→22 (tightens the
+  row-count floor; miscount was the dry run's own).
+- Protocol lessons: (g) the loop's OWN prior-iteration counts are untrusted too —
+  recount from source before relying on them; (h) hook docstrings here carry
+  provenance blocks — better justification source than commit subjects.
+- Next target: wave-1 locked-department READMEs (hooks first), staged via
+  /harness-pr per skill harness-pr-ops.
