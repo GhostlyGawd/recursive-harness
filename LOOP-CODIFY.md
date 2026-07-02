@@ -21,9 +21,13 @@ branch: cartograph/README.md (critic 4.6 PASS), memory/nudge-provenance.md (22-r
 skeleton, 14 TODO origins), and two oddity proposals. Resume from
 PROGRESS-codification.md — do not redo finished work.
 
-DEPARTMENTS (the work-list; ✋ = enforcement-locked, doc must land via /harness-pr):
-  agents, brand, cartograph ✅(done), commands, fleet, memory, mission_control,
-  plugins, products, proposals, skills, tests, workflows,
+DEPARTMENTS (the work-list; ✋ = enforcement-locked, doc must land via /harness-pr;
+⚠ = LOADER SURFACE — a plain README.md in the dir breaks lint (skills: B3) or
+risks registering junk artifacts (commands → /README palette entry, agents →
+bogus agent def); gated on proposals/2026-07-02-artifact-dir-readmes.md,
+discovered live iteration 9):
+  ⚠ agents, brand, cartograph ✅(done), ⚠ commands, fleet, memory, mission_control,
+  plugins, products, proposals, ⚠ skills, tests, workflows,
   ✋ hooks, ✋ lint, ✋ evals, ✋ bin, ✋ templates,
   distribution (install.sh, account-init.sh, project-init.sh, sync-*, statusline-*),
   root manifests (autonomy.json ✋, settings.json ✋, features.json, VERSION,

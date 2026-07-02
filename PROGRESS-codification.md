@@ -177,3 +177,29 @@ VERSION, worktree-repos.json)
   merge + marker cycle (drafts → locked paths in a wave-1b follow-up).
 - Next target: iteration 9 — wave 2 begins on stacked branch codify/wave2:
   skills/README.md.
+
+### Iteration 9 — skills/README.md: REGRESSION caught, routed to proposal
+- Wrote skills/README.md → lint went RED: `[B3] skills/README.md: missing
+  SKILL.md` — check_skills_dir treats every skills/ entry as a skill dir.
+  Both my verify run AND the critic caught it independently. REVERTED per
+  guardrail (never stack fixes on a regression); lint green again.
+- Root cause is general: skills/, commands/, agents/ are LOADER SURFACES —
+  commands/README.md would likely register a junk /README slash command,
+  agents/README.md a bogus agent (B5 demands frontmatter). Filed
+  proposals/2026-07-02-artifact-dir-readmes.md (recommended: one-line lint
+  skip for non-dir entries — enforcement-locked, batch into wave-1b marker
+  cycle; commands/agents pending an empirical loader check). Duplication
+  check: clean.
+- Critic content verdict on the draft itself: 4.2 PASS; its three content
+  fixes (vendored imports as third growth path, "17 non-seed skills",
+  promotable-needs terminology) applied to the PARKED draft in
+  proposals/2026-07-02-artifact-dir-readmes-skills-draft.md.
+- VERIFY (post-revert): lint ✅ · gate ✅ · criteria: 1 partial (1 done +
+  5 drafted + 1 parked / 19; skills/commands/agents now ⚠ gated) · 2 ✗ ·
+  3 ✅ · 4 ✅ (red mid-pass, green at pass end) · 5 ✗
+- AMENDMENT: DEPARTMENTS list gained the ⚠ loader-surface marker + gate note.
+- Protocol lessons: (m) writing INTO an artifact-scanned directory is itself a
+  behavior-adjacent change — check the scanner/loader BEFORE placing any new
+  file type there; (n) the per-iteration lint run catches what reading never
+  would — criterion 4's every-iteration cadence just paid for itself.
+- Next target: iteration 10 — memory/README.md (no loader surface, unlocked).
