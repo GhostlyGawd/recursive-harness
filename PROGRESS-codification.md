@@ -129,3 +129,18 @@ VERSION, worktree-repos.json)
   it — when a command and its engine disagree, the COMMAND (user-facing
   procedure) is authoritative and the mismatch is worth surfacing.
 - Next target: iteration 7 — bin/README.md draft (same staging proposal).
+
+### Iteration 7 — bin/README.md drafted (staged in proposals/)
+- Drafted bin/README.md (~68 lines): 16 subcommands in four families, ledger
+  topology (one canonical state/ via git-common-dir), approve semantics,
+  own-Bash-call ergonomics, test coverage map.
+- VERIFY: lint ✅ · gate ✅ · critic (ran --help itself, checked all 6 SHAs)
+  mean 4.4 PASS (Q3=3, Q1=4, rest 5). Both prescribed fixes applied same pass:
+  (a) hooks do NOT spawn bin/harness — they write state/ ledgers directly (the
+  CLI's own help text carries this stale claim; the draft had copied it);
+  (b) health delegates to cartograph/health.py, only ask goes to extract.py.
+- Criteria status: 1 partial (1 done + 4 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (l) a tool's own --help/docstring can misdescribe its
+  CALLERS — verify caller claims in the caller's source, not the callee's.
+- Next target: iteration 8 — templates/README.md draft (completes wave-1
+  staging), then the wave-1 human checkpoint report.
