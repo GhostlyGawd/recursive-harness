@@ -113,3 +113,19 @@ VERSION, worktree-repos.json)
 - Protocol lessons: (j) short hex ids inside commit subjects/comments are often
   ledger ids, not SHAs — resolve before citing as commits.
 - Next target: iteration 6 — evals/README.md draft (same staging proposal).
+
+### Iteration 6 — evals/README.md drafted (staged in proposals/)
+- Drafted evals/README.md (~63 lines) from run_evals.py, ADR 0003, ci.yml,
+  eval-capture skill, /run-evals + /harness-pr commands.
+- VERIFY: lint ✅ · gate ✅ · critic (execution rights; ran --dry-run and
+  --report itself) mean 4.8 PASS (Q3=4, rest 5). All three prescribed fixes
+  applied same pass: (a) subagents spawn only for AGENT-DELIVERABLE cases —
+  run_evals.py's docstring is STALE vs /run-evals step 3 (amended 2026-06-28),
+  the command is authoritative; (b) --record takes 3 args (SLUG STATUS DETAIL);
+  (c) "vN+1 beats vN" phrase attributed to kernel "Where things live", not the
+  honesty note.
+- Criteria status: 1 partial (1 done + 3 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (k) a runner's docstring can lag the command that drives
+  it — when a command and its engine disagree, the COMMAND (user-facing
+  procedure) is authoritative and the mismatch is worth surfacing.
+- Next target: iteration 7 — bin/README.md draft (same staging proposal).
