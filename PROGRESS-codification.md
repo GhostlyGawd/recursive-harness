@@ -1,6 +1,8 @@
 # PROGRESS — harness codification loop
 
-Branch: worktree-codify-dryrun (dry run; real run uses codify/departments)
+Branch: worktree-codify-dryrun (dry run iterations 1–2; the real run RESUMED
+here on 2026-07-02 per LOOP-CODIFY.md session boot — the codify/departments
+branch note is superseded)
 State file per /loop spec. Append-only iteration log below the checklist.
 
 ## Definition of Done
@@ -159,3 +161,19 @@ VERSION, worktree-repos.json)
 - Criteria status: 1 partial (1 done + 5 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
 - Next target: wave-1 checkpoint — full ci.yml battery, open the wave-1 PR,
   then continue wave 2 while the human reviews.
+
+### Wave-1 checkpoint (after iteration 8)
+- Full ci.yml battery locally: ALL GREEN (lint + 34 test scripts + evals
+  --dry-run + cartograph gate).
+- harness-auditor (fresh context, origin/main...HEAD): APPROVE-WITH-NITS.
+  It independently resolved all 29 cited SHAs and reproduced every count.
+  Fixes applied on-branch: (1) readonly-inspection proposal Option 1 had a
+  latent bypass — git log/diff --output=<file> WRITES; flag-level filtering
+  now required, Option 2 re-marked safe default. (5) features.json added to
+  the guard row's protected set. (6-cosmetic) PROGRESS branch note updated.
+  Deferred to PR body: amendment-hunk callout, critic-self-grading
+  acknowledgment, loop-state-files-on-trunk question.
+- Wave-1 PR opened from this branch; wave-1 departments PAUSED until human
+  merge + marker cycle (drafts → locked paths in a wave-1b follow-up).
+- Next target: iteration 9 — wave 2 begins on stacked branch codify/wave2:
+  skills/README.md.

@@ -28,16 +28,19 @@ add nothing.
 
 ## Options
 
-1. **(Recommended)** Allowlist a small fixed set of read-only command heads
-   (`ls`, `cat`, `head`, `tail`, `git log`, `git show`, `git diff`) when they are
-   the command's only verbs — keep blocking anything with redirection, `-exec`,
-   in-place flags, or write verbs.
-2. Keep the block but rewrite the guard's message to name the read-only
-   alternative ("reads are fine via Read/Glob/Grep tools; Bash is blocked
-   wholesale as the cheap conservative rule").
+1. Allowlist a small fixed set of read-only command heads (`ls`, `cat`, `head`,
+   `tail`, `git log`, `git show`, `git diff`) when they are the command's only
+   verbs — keep blocking anything with redirection, `-exec`, in-place flags, or
+   write verbs. ⚠ AUDITOR CAVEAT (wave-1 audit, 2026-07-02): head-level
+   allowlisting alone is UNSAFE — `git log --output=<file>` and
+   `git diff --output=<file>` write files. Implementing 1 requires flag-level
+   filtering (block `--output`/`-o` and kin), not just head matching.
+2. **(Safe default)** Keep the block but rewrite the guard's message to name
+   the read-only alternative ("reads are fine via Read/Glob/Grep tools; Bash is
+   blocked wholesale as the cheap conservative rule").
 
-Option 2 is the do-almost-nothing fallback if 1's parsing is deemed too risky —
-it at least makes the rule legible at the moment of friction.
+Option 2 is the do-almost-nothing fallback and, per the auditor caveat above,
+the recommended starting point; Option 1 only with flag-level filtering.
 
 ## Acceptance
 
