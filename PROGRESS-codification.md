@@ -144,3 +144,18 @@ VERSION, worktree-repos.json)
   CALLERS — verify caller claims in the caller's source, not the callee's.
 - Next target: iteration 8 — templates/README.md draft (completes wave-1
   staging), then the wave-1 human checkpoint report.
+
+### Iteration 8 — templates/README.md drafted — WAVE-1 STAGING COMPLETE
+- Drafted templates/README.md (58 lines) from the template's own _provenance
+  key, commit ba54eba's body, ADR 0004 (the two paid-for deploy rules:
+  wiring-goes-in-the-template 9f6014a0; wiring-deploy ≠ code-activation
+  cbb07617), account-init.sh.
+- VERIFY: lint ✅ · gate ✅ · critic mean 5.0 PASS (all questions 5; it diffed
+  all 22 template wirings against root settings.json itself — 1:1). One minor
+  fix applied (file-count becomes two once README lands).
+- All five wave-1 drafts now staged in
+  proposals/2026-07-02-wave1-locked-dept-readmes.md: hooks 4.8 · lint 4.8 ·
+  evals 4.8 · bin 4.4 · templates 5.0 (all post-fix).
+- Criteria status: 1 partial (1 done + 5 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: wave-1 checkpoint — full ci.yml battery, open the wave-1 PR,
+  then continue wave 2 while the human reviews.
