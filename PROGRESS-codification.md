@@ -177,3 +177,281 @@ VERSION, worktree-repos.json)
   merge + marker cycle (drafts → locked paths in a wave-1b follow-up).
 - Next target: iteration 9 — wave 2 begins on stacked branch codify/wave2:
   skills/README.md.
+
+### Iteration 9 — skills/README.md: REGRESSION caught, routed to proposal
+- Wrote skills/README.md → lint went RED: `[B3] skills/README.md: missing
+  SKILL.md` — check_skills_dir treats every skills/ entry as a skill dir.
+  Both my verify run AND the critic caught it independently. REVERTED per
+  guardrail (never stack fixes on a regression); lint green again.
+- Root cause is general: skills/, commands/, agents/ are LOADER SURFACES —
+  commands/README.md would likely register a junk /README slash command,
+  agents/README.md a bogus agent (B5 demands frontmatter). Filed
+  proposals/2026-07-02-artifact-dir-readmes.md (recommended: one-line lint
+  skip for non-dir entries — enforcement-locked, batch into wave-1b marker
+  cycle; commands/agents pending an empirical loader check). Duplication
+  check: clean.
+- Critic content verdict on the draft itself: 4.2 PASS; its three content
+  fixes (vendored imports as third growth path, "17 non-seed skills",
+  promotable-needs terminology) applied to the PARKED draft in
+  proposals/2026-07-02-artifact-dir-readmes-skills-draft.md.
+- VERIFY (post-revert): lint ✅ · gate ✅ · criteria: 1 partial (1 done +
+  5 drafted + 1 parked / 19; skills/commands/agents now ⚠ gated) · 2 ✗ ·
+  3 ✅ · 4 ✅ (red mid-pass, green at pass end) · 5 ✗
+- AMENDMENT: DEPARTMENTS list gained the ⚠ loader-surface marker + gate note.
+- Protocol lessons: (m) writing INTO an artifact-scanned directory is itself a
+  behavior-adjacent change — check the scanner/loader BEFORE placing any new
+  file type there; (n) the per-iteration lint run catches what reading never
+  would — criterion 4's every-iteration cadence just paid for itself.
+- Next target: iteration 10 — memory/README.md (no loader surface, unlocked).
+
+### Iteration 10 — memory/README.md LANDED (first wave-2 department done)
+- Wrote memory/README.md (73 lines) from ADR 0001, commands/gc.md, lint F1,
+  bin/harness gc, heal.py rollup, kernel "Where things live".
+- VERIFY: lint ✅ · gate ✅ · critic mean 4.6 PASS (Q3=4, Q4=4, rest 5). All
+  three prescribed fixes applied same pass: Guard C example is a HOOK (category
+  fix); "three live amendments (corrected twice, extended once)" not "three
+  corrections"; calibration/ holds no rollup JSON yet (mechanism vs contents).
+- Criteria status: 1 partial (2 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 11 — proposals/README.md.
+
+### Iteration 11 — proposals/README.md: first critic FAIL (3.8), fixes applied
+- Wrote proposals/README.md (74 lines). Critic FAILED it: mean 3.8 (Q2=3,
+  Q3=3, Q4=3). All three defects were OVERCLAIMS written from session memory
+  instead of verified: (1) fabricated cross-citation claim about the 07-02
+  oddity proposals (they cite the correction, NOT their predecessor
+  proposals); (2) "every proposal carries Date/Status/Origin" — 15/35 lack
+  Origin, 5 lack all three; (3) "all guard proposals from 06-19 cite the
+  meta-principle" — first citer is 06-21.
+- All three prescribed fixes applied same pass (real example swapped in;
+  "canonical header, older files deviate"; range narrowed to 06-21 onward).
+- VERIFY: lint ✅ · gate ✅ · critic ✗ FAIL pre-fix — re-verification required.
+- Criteria status: 1 partial (2 done + 5 drafted + 1 parked + 1 failed-fixed /
+  19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (o) the failure pattern inverted — every prior doc was
+  researched-then-written and passed; this one leaned on "I was there"
+  session memory for three claims and ALL THREE were the defects. Being the
+  author of the history is not a source; grep anyway.
+- Next target: iteration 12 — re-verify proposals/README.md (fresh critic),
+  then continue wave 2.
+
+### Iteration 12 — proposals/README.md re-verified: PASS 4.6
+- Fresh critic (different agent from iteration 11's): mean 4.6 PASS (Q2=4,
+  Q3=4, rest 5). Three further precision fixes applied same pass (named the
+  actual meta-principle citers instead of a date range — 06-22-space-split is
+  a non-citing counterexample; excepted parked-draft companions from the
+  header convention; grandfathered the two 2026-06-27 roadmaps).
+- proposals/ department: DONE (landed + verified).
+- VERIFY: lint ✅ · gate ✅ · criteria: 1 partial (3 done + 5 drafted +
+  1 parked / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 13 — wave-3 unlocked departments begin: fleet/ (or
+  workflows/); commands/agents/skills stay gated on the loader-surface
+  proposal.
+
+### Iteration 13 — fleet/README.md: existing product README AUGMENTED, PASS 4.6
+- fleet/ already had a product-grade README (Agent Mail, extraction-ready).
+  Revise-not-rewrite: appended a "Harness department notes" section (dropped
+  on extraction like pm/) covering provenance chain, harness wiring,
+  operations, failure & learning.
+- VERIFY: lint ✅ · gate ✅ · critic mean 4.6 PASS (Q4=3, rest 5 — it ran the
+  README's own CLI examples and the test suites). All three fixes applied:
+  (a) "all eight tests run in ci.yml" → seven run, test_mcp excused;
+  (b) "SPEC-04 folded" was a FABRICATED inference — R4 was the dogfooding
+  gate, no spec existed (critic proved via git log -S); (c) pm/ inventory
+  completed.
+- Criteria status: 1 partial (4 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (p) explaining an ABSENCE (missing spec number) invites
+  fabrication — verify the explanation for a gap as hard as a positive claim.
+- Next target: iteration 14 — mission_control/README.md.
+
+### Iteration 14 — mission_control/README.md augmented: PASS 5.0
+- Existing README was already strong; appended a compact "Department notes"
+  section (provenance commits, extension invariant, failure routing). 143
+  lines total, under budget.
+- VERIFY: lint ✅ · gate ✅ · critic mean 5.0 PASS, zero material defects (it
+  ran all five test suites + the P5 guard test itself: 175 tests green).
+- Criteria status: 1 partial (5 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 15 — workflows/README.md + the iteration-15 mid-loop
+  human checkpoint report (5/19 landed < half — checkpoint fires).
+
+### Iteration 15 — workflows PHANTOM discovered; tests/README.md landed 4.8;
+### MID-LOOP CHECKPOINT
+- workflows is NOT a repo department: no tracked dir; reality is machine-local
+  .claude/workflows/ (one saved Workflow script: cartograph-gate-review.js) +
+  a stray EMPTY workflows/ dir in the main checkout. AMENDMENT: work-list
+  entry corrected to front-door-only (like state/); stray-dir cleanup parked
+  in IDEAS.md (deletions are out of scope).
+- Re-targeted the slot: tests/README.md written (71 lines) from
+  test_ci_coverage.py + ci.yml + 359a9b2/447ce88/c72ba4a. Critic mean 4.8
+  PASS (Q3=4, rest 5); all three fixes applied (PASS/FAIL style not "[n]";
+  CI skip reason is Windows semantics, not pwsh absence; "including" three
+  subsystems).
+- VERIFY: lint ✅ · gate ✅ · coverage guard ✅.
+- ── MID-LOOP CHECKPOINT (iteration 15, per BUDGET clause) ──
+  Landed+verified (6): cartograph 4.6 · memory 4.6 · proposals 4.6 ·
+  fleet 4.6 · mission_control 5.0 · tests 4.8.
+  Staged for human (5): hooks 4.8 · lint 4.8 · evals 4.8 · bin 4.4 ·
+  templates 5.0 (PR #220 + marker cycle needed).
+  Gated on human decision (3): skills (draft parked, 4.2) · commands ·
+  agents (loader-surface proposal).
+  Remaining (5): brand, plugins, products, distribution, front door.
+  Criteria: 1 partial (6/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗.
+  DECISIONS NEEDED FROM HUMAN: (a) merge PR #220; (b) marker grant for
+  wave-1b copy-in of 5 staged READMEs + the one-line lint skip (loader
+  proposal Option 1); (c) loader-check verdict for commands/agents.
+- Next target: iteration 16 — products/README.md, then brand, plugins,
+  distribution; front door last (wave 4).
+
+### Iteration 16 — products/README.md landed: borderline PASS 4.0, 4 fixes
+- Wrote products/README.md (66 lines) from REGISTRY.md's banner, registry.py,
+  ADR 0005, the two 2026-06-28 proposals. Critic: mean exactly 4.0 PASS
+  (Q2=3, Q5=3) — three factual misattributions, all fixed same pass:
+  (a) untracking was b2e8272 (06-13), ADR 0005's provenance is the cross-Grove
+  retro (06-16) — not "forced by the first product"; (b) KNOWN_ISSUES.md was
+  CARRIED then untracked — past tense; (c) islands/zero-composition finding
+  belongs to the 06-30 synergy audit in registry.py, not the landscape
+  proposal (~40 repos). Plus slug = the one REQUIRED stub field.
+- VERIFY: lint ✅ · gate ✅ · registry --check in-sync ✅.
+- Criteria status: 1 partial (7/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (q) causality claims ("X forced Y") need the ADR's own
+  provenance line checked, not inferred from date adjacency.
+- Next target: iteration 17 — brand/README.md.
+
+### Iteration 17 — brand/README.md landed: PASS 4.4
+- Wrote brand/README.md (70 lines) from LANGUAGE.md, 75a2c5e's body,
+  DECISIONS.md, the foundry skill. Critic mean 4.4 PASS (Q2/Q3/Q4=4, rest 5).
+- All three fixes applied: (a) dist/ import claim was ASPIRATIONAL — dist/
+  currently emits invalid declarations and surfaces inline tokens (the
+  dist-gap proposal documents this); (b) dist compiler lives in the external
+  foundry repo, not _build/; (c) DECISIONS.md records approve/keep/graft +
+  a comparison read, not kill/redirect rationales.
+- VERIFY: lint ✅ · gate ✅.
+- Criteria status: 1 partial (8/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (r) a documented CONTRACT can be an intent the repo
+  currently violates — state both the intent and the live deviation, with the
+  filed fix.
+- Next target: iteration 18 — plugins/README.md.
+
+### Iteration 18 — plugins/README.md landed: PASS 4.6
+- Zero tracked content in plugins/ — both residents vendored-live nested
+  repos. README (67 lines) written from the .gitignore rationale comments,
+  check_plugins, worktree-repos.json, the materialization hook. Confirmed
+  safe: check_plugins skips non-dir entries (no skills/-style lint landmine).
+- Critic mean 4.6 PASS (Q3/Q4=4, rest 5); three fixes applied: (a) local
+  exclude CAN hide locally — CI is the boundary, not local runs; (b)
+  vendored-live single-skill = nested-repos leaf 3, vendoring-skills is the
+  vendor-and-COMMIT path (misrouted pointer); (c) "first tracked file" tensed
+  correctly.
+- VERIFY: lint ✅ · gate ✅ · materialization test all-green ✅.
+- Criteria status: 1 partial (9/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 19 — distribution (virtual department: install.sh,
+  account-init.sh, project-init.sh, sync-*, statusline-*) — README placement
+  decision needed (no dir exists; likely a front-door section or a
+  DISTRIBUTION.md at root — check the DoD wording).
+
+### Iteration 19 — DISTRIBUTION.md landed at root: PASS 4.8
+- The department is virtual (six root scripts, no dir); creating a dir means
+  file moves (out of scope) → doc placed at root DISTRIBUTION.md, deviation
+  flagged for the wave-2 PR description.
+- Critic mean 4.8 PASS (Q4=4, rest 5 — it read all six scripts + five
+  commits). Three fixes applied: (a) statusline WIRING half is
+  enforcement-locked (templates/) — split the instruction so readers aren't
+  guard-blocked mid-edit; (b) broken sentence rewritten; (c) CI-skip
+  mechanism is test discovery scope, Windows-specificity is the rationale.
+- VERIFY: lint ✅ · gate ✅.
+- Criteria status: 1 partial (10/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Unlocked wave-2/3 departments now ALL done except the loader-gated three
+  (skills parked · commands · agents). Remaining: front door (criterion 2) +
+  usability (criterion 5) + the human-gated items.
+- Next target: iteration 20 — root README.md front door (criterion 2):
+  REVISE the existing brand-built README (75a2c5e), adding department links +
+  three-loops narrative + state//manifests/workflows sections.
+
+### Iteration 20 — FRONT DOOR revised: criterion 2 PASSES
+- Surgical revision of the brand-built README: linked department table (all
+  18 + Distribution), session-lifecycle + delivery loop narrations added
+  beside the existing three-loops table, state/ + 5 root manifests +
+  .claude/workflows + .claude-private documented, ATLAS named machine-truth,
+  stale counts fixed (21→23 skills, 17→21/18 hooks, 9→12 ADRs, node/edge
+  hard-counts dropped for stability).
+- VERIFY: script-check ✅ (all dept links, all manifests, ATLAS pointer);
+  critic navigation 5/5 (≥4/5 required), all three loop narrations
+  present+accurate (6 spot-checks), zero stale counts; lint ✅ · gate ✅.
+  Both minor fixes applied (dir links point at dirs; deploy command named
+  beside deploy source).
+- Criteria status: 1 partial (10/19 landed) · 2 ✅ PASS · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 21 — criterion 5 fresh-context usability run
+  (front door + one random README, 5 questions + 3 governing-skill naming),
+  then the two-clean-passes endgame on what is landable without the human.
+
+### Iteration 21 — criterion 5 usability run: PASS (A 5/5, B 2/3)
+- Random dept (HEAD-hash mod 10) = brand/. Fresh agent, restricted to front
+  door + brand/README.md, answered all five brand questions correctly
+  (verified 5/5 against ground truth — including the unflattering dist-gap
+  admission) and named governing artifacts 2/3 (stuck-detection ✅,
+  /harness-pr ✅; vendoring-skills ✗ — not derivable because skills/README is
+  still STAGED, its draft does name it).
+- Prescribed one-line front-door fix applied (skills/ row now names
+  vendoring-skills for external imports).
+- The agent disclosed context contamination honestly (kernel auto-injected);
+  both B hits were independently derivable from the permitted files.
+- Criteria status: 1 partial (10/19 landed; 9 blocked on human) · 2 ✅ ·
+  3 ✅ · 4 ✅ · 5 ✅
+- DECIDE: four of five criteria PASS. Criterion 1's remainder is entirely
+  human-gated (5 staged READMEs + lint-skip + loader decision). No workable
+  departments remain → wave-2/3/4 checkpoint: battery + auditor + PR, then
+  STOP with the escalation report (Exit C shape — blocked on human, not
+  stuck).
+
+### Iteration 22 — wave-2 checkpoint: auditor REJECT → mechanical fix cycle
+- Full ci.yml battery: ALL GREEN. harness-auditor on the wave-2 increment:
+  REJECT with ONE mechanical finding (everything else passed a deep audit —
+  all 19 SHAs verified, loader-surface claim REPRODUCED in a throwaway
+  worktree, front-door counts all confirmed).
+- THE FINDING (HIGH): products/README.md never landed — swallowed silently by
+  .gitignore's `products/*` rule; it existed on disk, passed every disk-based
+  verify, and commit d08c6ff carried only the PROGRESS entry. Iterations
+  16–21's "landed" counts were inflated by one (tracked reality was 9/19,
+  not 10/19). CORRECTION, append-only: this entry supersedes those counts;
+  the critic-4.0 content verdict was never in dispute.
+- Fixes: `!products/README.md` whitelisted in .gitignore; file tracked;
+  brand/README self-count 44→45 (auditor nit b — same class as the templates
+  fix in iteration 8, missed on brand); iteration-20 phrasing nit noted here
+  ("all 18 + Distribution" = 18 rows INCLUDING Distribution).
+- AMENDMENT: VERIFICATION METHOD now requires `git ls-files` tracked-ness for
+  every file produced (disk existence is NOT landing) — tighten-only.
+- Auditor LOW note on criterion 5's B-subscore (2/3) acknowledged: recorded
+  for the PR body, criterion text never edited mid-run.
+- Criteria status: 1 partial (10/19 landed — NOW true in the index) · 2 ✅ ·
+  3 ✅ · 4 ✅ · 5 ✅
+- Next: re-confirm with the auditor, push, open the stacked wave-2 PR, score
+  the session prediction, file followups, STOP with the escalation report.
+
+## SESSION CLOSE 2026-07-02 — ESCALATION REPORT (Exit C: blocked on human)
+
+22 of 30 iterations used. Auditor round-2: APPROVE (fix commit 4824975
+verified line-by-line; 22 SHAs independently resolved this session).
+
+DONE: criteria 2 (front door), 3 (nudge provenance), 5 (usability) PASS;
+criterion 4 green throughout (full battery ×2); criterion 1 at 10/19
+landed+critic-verified (cartograph, memory, proposals, fleet, mission_control,
+tests, products, brand, plugins, DISTRIBUTION).
+Session prediction 8952133b scored HIT. Followups filed: 75d270 (wave-1b
+marker cycle), d8ceb3 (loader check), 991393 (stacked-PR retarget).
+
+BLOCKED — every remaining item needs the human:
+- PR #220 (wave 1: provenance + proposals + 5 staged locked READMEs) — merge.
+- PR #221 (waves 2–4, stacked on #220) — merge after #220, retarget to main
+  first (followup 991393).
+- Wave-1b marker cycle: copy the 5 staged READMEs into hooks/ lint/ evals/
+  bin/ templates/ + the one-line lint skip → skills/README lands from its
+  parked draft (followup 75d270).
+- Loader-surface decision for commands/ + agents/
+  (proposals/2026-07-02-artifact-dir-readmes.md; followup d8ceb3).
+
+DIAGNOSIS: not stuck — the loop reached the designed human gates. When the
+four decisions above land, criterion 1 completes to 18/19 + the commands/
+agents resolution, and one final session runs the two-clean-passes check for
+✅ LOOP COMPLETE.

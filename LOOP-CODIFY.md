@@ -21,9 +21,17 @@ branch: cartograph/README.md (critic 4.6 PASS), memory/nudge-provenance.md (22-r
 skeleton, 14 TODO origins), and two oddity proposals. Resume from
 PROGRESS-codification.md — do not redo finished work.
 
-DEPARTMENTS (the work-list; ✋ = enforcement-locked, doc must land via /harness-pr):
-  agents, brand, cartograph ✅(done), commands, fleet, memory, mission_control,
-  plugins, products, proposals, skills, tests, workflows,
+DEPARTMENTS (the work-list; ✋ = enforcement-locked, doc must land via /harness-pr;
+⚠ = LOADER SURFACE — a plain README.md in the dir breaks lint (skills: B3) or
+risks registering junk artifacts (commands → /README palette entry, agents →
+bogus agent def); gated on proposals/2026-07-02-artifact-dir-readmes.md,
+discovered live iteration 9):
+  ⚠ agents, brand, cartograph ✅(done), ⚠ commands, fleet, memory, mission_control,
+  plugins, products, proposals, ⚠ skills, tests,
+  [workflows: PHANTOM — no tracked dir; the real artifact is machine-local
+  .claude/workflows/ (saved Workflow-tool scripts) + a stray empty workflows/
+  dir in the main checkout; documented in the front door like state/ —
+  discovered iteration 15],
   ✋ hooks, ✋ lint, ✋ evals, ✋ bin, ✋ templates,
   distribution (install.sh, account-init.sh, project-init.sh, sync-*, statusline-*),
   root manifests (autonomy.json ✋, settings.json ✋, features.json, VERSION,
@@ -80,9 +88,11 @@ Improvement ideas → IDEAS.md parking lot only.
 
 VERIFICATION METHOD (every iteration): run
 `python3 lint/lint_harness.py && python3 cartograph/extract.py --check`,
-run the critic agent on any doc produced this pass, then re-scan the full
-Definition-of-Done checklist in PROGRESS-codification.md and record pass/fail
-per criterion.
+confirm every file produced this pass is TRACKED (`git ls-files <path>` —
+gitignore whitelists silently swallow a Write; disk existence is NOT landing,
+learned iteration 22), run the critic agent on any doc produced this pass,
+then re-scan the full Definition-of-Done checklist in
+PROGRESS-codification.md and record pass/fail per criterion.
 
 ---
 

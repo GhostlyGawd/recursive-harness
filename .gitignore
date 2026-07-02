@@ -18,6 +18,7 @@ HUMAN_APPROVED
 # EXCEPTION: track the portfolio lens (REGISTRY.md + registry.py) and the thin
 # per-product VENTURE.md stubs; keep all product CODE ignored. See products/registry.py.
 products/*
+!products/README.md
 !products/REGISTRY.md
 !products/registry.py
 !products/*/

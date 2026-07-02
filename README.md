@@ -29,6 +29,23 @@ from that one definition.
 Each loop's scored output is deposited as the next loop's input. Nothing is overwritten;
 the founding invariants sit sealed at the bottom, immovable beneath everything that came after.
 
+Two more loops frame these three:
+
+- **One session, start to stop.** SessionStart fires the banner (calibration %,
+  unscored debt), materializes nested repos into worktrees, injects the kernel in
+  foreign projects, and re-adopts tree ownership. During work, PreToolUse guards
+  block enforcement-layer writes, cross-worktree reaches, colliding sessions,
+  dirty reverts, stale trunk leases, and red-PR merges; PostToolUse re-stamps the
+  lease and logs skill fires. At Stop, three gates nudge `/retro`, the retro
+  cadence, and promotable skill gaps. SessionEnd writes the session summary,
+  reaps the fleet log, and releases owned trees. Every one of these behaviors is
+  traced in [memory/nudge-provenance.md](memory/nudge-provenance.md).
+- **Delivery.** `/venture` (skill `venture-build`) turns a charter into a product
+  that owns its own repo (ADR 0005), registered as a thin stub in
+  [products/](products/README.md); parallel work coordinates laterally through
+  [fleet/](fleet/README.md) (Agent Mail) and is observed read-only in
+  [mission_control/](mission_control/README.md).
+
 ---
 
 ## What's inside — every layer, every component
@@ -39,11 +56,11 @@ at the top, the kernel sealed at bedrock.
 ![Feature catalog: self-improvement loops, observability, enforcement, selection, the procedure library, and the sealed kernel](brand/applications/feature-catalog.png)
 
 - **Self-improvement loops** — the `predict → act → score` engine, nested three deep.
-- **Observability** — `cartograph` (a self-drawn [ATLAS](cartograph/ATLAS.md) of the repo, 139 nodes / 303 edges, with a drift gate), `mission_control` (read-only control-room TUI), `fleet` (append-only Agent Mail), and the `state/` JSONL ledgers.
-- **Enforcement** — 17 lifecycle hooks across 6 events; the write-lock guard (the layer that measures the agent is human-PR-only); worktree + trunk-lease concurrency guards; the Stop gates that make `/retro` non-optional.
-- **Selection** — the regression corpus + `/run-evals` (in-session, no API key); the self-governance linter; a pytest guard suite; the cartograph connectivity gate. The only evidence that vN+1 beats vN.
-- **Procedure library** — 21 trigger-loaded skills, 14 commands, 4 fresh-context agents (`critic`, `retro-miner`, `harness-auditor`, `followup-synthesizer`), and the `bin/harness` state CLI.
-- **Kernel** (bedrock, sealed) — `CLAUDE.md` (≤60 lines, lint-enforced), 9 ADRs, `autonomy.json`, and versioned `memory/`. The smallest immovable core; everything deposits on it.
+- **Observability** — `cartograph` (the self-drawn [ATLAS](cartograph/ATLAS.md) — the repo's MACHINE-TRUTH map, regenerated from extraction, with a structural-rot gate), `mission_control` (read-only control-room TUI), `fleet` (append-only Agent Mail), and the `state/` JSONL ledgers.
+- **Enforcement** — 21 hook files, 18 wired across 6 lifecycle events (every wiring traced to its origin in [memory/nudge-provenance.md](memory/nudge-provenance.md)); the write-lock guard (the layer that measures the agent is human-PR-only); worktree + trunk-lease concurrency guards; the Stop gates that make `/retro` non-optional.
+- **Selection** — the regression corpus + `/run-evals` (in-session, no API key); the self-governance linter; a stdlib test battery; the cartograph connectivity gate. The only evidence that vN+1 beats vN.
+- **Procedure library** — 23 trigger-loaded skills, 14 commands, 4 fresh-context agents (`critic`, `retro-miner`, `harness-auditor`, `followup-synthesizer`), and the `bin/harness` state CLI.
+- **Kernel** (bedrock, sealed) — `CLAUDE.md` (≤60 lines, lint-enforced), 12 ADRs, `autonomy.json`, and versioned `memory/`. The smallest immovable core; everything deposits on it.
 
 ---
 
@@ -130,20 +147,54 @@ After significant tasks: `/retro` (the Stop gate insists when you forget). Every
 sessions: `/calibrate` then `/gc`. Monthly: `/meta-retro`. After any accepted task that
 recurs or was correction-born: `/capture-eval`.
 
-## Repository map
+## Repository map — every department, one line each
 
-```
-CLAUDE.md          kernel (≤60 lines, lint-enforced)      settings.json   hook registration
-skills/            21 trigger-loaded procedures           agents/         4 fresh-context roles
-commands/          14 named workflows                     hooks/          17 lifecycle enforcers (write-locked)
-bin/harness        state ledger CLI                       lint/           self-lint (budgets, falsifiability)
-memory/            user-model, ADRs, rollups (versioned)  state/          hot JSONL (gitignored)
-evals/             regression corpus + runner             autonomy.json   graduated-autonomy ledger
-cartograph/        the self-drawn ATLAS + drift gate      mission_control/ read-only control-room TUI
-templates/         portable canonical account settings    account-init.sh per-account config-dir generator
-tests/             hook behavior tests                    .github/        CI: pure-Python lint + tests
-brand/             the brand: LANGUAGE.md + tokens + dist  .claude-private/ per-account config dirs (gitignored)
-```
+Machine-truth for all of it: [cartograph/ATLAS.md](cartograph/ATLAS.md). Each
+department below self-describes in its own README.
+
+| Department | Role |
+|---|---|
+| [skills/](skills/) | 23 trigger-loaded procedures — the procedural memory; external imports go through skill `vendoring-skills` ([README staged](proposals/2026-07-02-artifact-dir-readmes-skills-draft.md), loader-surface fix pending) |
+| [commands/](commands/) | 14 named user-invoked workflows (`/retro`, `/gc`, …; doc [pending the loader-surface decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
+| [agents/](agents/) | 4 fresh-context roles: critic, retro-miner, harness-auditor, followup-synthesizer ([same pending decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
+| [hooks/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | mechanical enforcement: 21 files, 18 wired across 6 events (write-locked; README staged) |
+| [lint/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | the self-lint: budgets, falsifiability, the autonomy firewall (write-locked; README staged) |
+| [evals/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | regression corpus + in-session replay — the only proof vN+1 beats vN (write-locked; README staged) |
+| [bin/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | the `harness` state-ledger CLI, 16 subcommands (write-locked; README staged) |
+| [templates/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | portable canonical account settings — the wiring deploy source (write-locked; README staged) |
+| [memory/](memory/README.md) | versioned cold knowledge: user-model, 12 ADRs, calibration rollups, nudge provenance |
+| [proposals/](proposals/README.md) | decisions awaiting a human — designed, never self-decided |
+| [cartograph/](cartograph/README.md) | the extractor, oracle, atlas, and structural-rot gate |
+| [fleet/](fleet/README.md) | Agent Mail: append-only lateral coordination for agent fleets |
+| [mission_control/](mission_control/README.md) | the read-only Phosphor-Console control room |
+| [products/](products/README.md) | the portfolio shelf: registry + thin venture stubs (code lives in its own repo) |
+| [brand/](brand/README.md) | Append-Only Strata: the law (LANGUAGE.md), tokens, dist, book, applications |
+| [plugins/](plugins/README.md) | multi-skill packages — currently two vendored-live nested repos |
+| [tests/](tests/README.md) | harness-level tests + the CI-coverage meta-test |
+| [Distribution](DISTRIBUTION.md) | the six root scripts that install, wire, and sync the harness |
+
+**State & root manifests** (no separate READMEs — this is their documentation):
+
+- `state/` — machine-local hot JSONL (gitignored): predictions, corrections,
+  skill fires, session owners, trunk lease, approvals. Rolled into `memory/`
+  by `/gc`; lint rule S1 keeps every ledger parseable.
+- `settings.json` ✋ — the trunk's hook wiring (22 bindings; per-row provenance
+  in [memory/nudge-provenance.md](memory/nudge-provenance.md)). The DEPLOYED
+  wiring is materialized from `templates/account-settings.json` by
+  `./account-init.sh --sync-settings`.
+- `autonomy.json` ✋ — the graduated-autonomy ledger; `enforcement` can never
+  auto-merge (lint S2 rejects any change to that).
+- `features.json` ✋ — committed feature-flag defaults (ADR 0008); local soft
+  overrides in `state/features.local.json`.
+- `VERSION` — the harness version (currently 0.1.2); bumped by release PRs.
+- `worktree-repos.json` — registry of nested repos to materialize into
+  worktrees (plugins/prospector, plugins/wraithworld, skills/brand-foundry).
+- `.claude/workflows/` — machine-local saved Workflow-tool scripts (not a
+  tracked department; currently one: cartograph-gate-review).
+- `.claude-private/` — per-account config silos (gitignored; ADR 0004).
+
+✋ = enforcement-locked: readable by anyone, writable only through a
+human-granted marker cycle + PR (`/harness-pr`).
 
 ## Honest limits
 

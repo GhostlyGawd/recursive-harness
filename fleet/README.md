@@ -73,3 +73,42 @@ imported only in the adapter, so the core stays stdlib-only.
 ## License
 
 MIT — see `LICENSE`. (Phase-5 default; the originating proposal left MIT vs Apache-2.0 open.)
+
+## Harness department notes (dropped on extraction, like `fleet/pm/`)
+
+Everything below is recursive-harness context; the product sections above are
+the extraction payload.
+
+- **Provenance.** Designed in `proposals/2026-06-21-lateral-coordination-event-log.md`
+  (a /brainstorm run), revised to PLAN v2 after a fresh-context auditor pass in
+  `proposals/2026-06-22-agent-mail-product.md`. Engine landed `b366a02`
+  (Phase 1, 2026-06-22); views + CLI + MCP server landed `4c94d58` (2026-06-30);
+  `bin/harness fleet` became a full delegation to `fleet.cli` in `8b1b8c1`
+  under `proposals/2026-06-30-agent-mail-bin-delegation.md` (explicit human
+  grant recorded there).
+- **Harness wiring (CONTRACT).** `bin/harness fleet <verb>` resolves the one
+  canonical `state/` (main checkout, via git-common-dir) and forwards here;
+  `hooks/session_end.py` runs the event-log reaper at session end (Mission
+  Control P4 — fail-open, space reclamation only, every read is reap-aware);
+  Mission Control's feed pane reads the same log read-only.
+- **Operations.** Build-process state lives in `fleet/pm/` (BOARD, BACKLOG,
+  ROADMAP, BUGS, TOOLING + specs/ incl. TESTPLAN — the SPEC-first discipline;
+  spec numbers mirror roadmap R-numbers, 04 skipped because R4 was the
+  dogfooding gate, not a feature spec). Extend by spec + test: all eight
+  `fleet/test_*.py` are wired-or-excused — seven run in ci.yml; `test_mcp.py`
+  is excused (needs the `mcp` SDK CI lacks — INTENTIONALLY_UNWIRED in
+  tests/test_ci_coverage.py), run it locally when touching the adapter. The
+  stdlib-only import contract and the
+  standalone-extraction test are the two invariants a change must not break.
+- **Failure & learning.** The failure mode the package kills is the hand-rolled
+  cross-session STATE.md (see `hooks/forbid_scratchpad.py`, same Mission
+  Control synthesis). Identity churn is the designed-around constraint
+  (ephemeral `actor`, stable handles) — the same ADR 0007 wall the worktree
+  guards hit. Bugs route to the heal ledger; design changes go through
+  `fleet/pm/` specs, not ad-hoc edits; product-scale direction stays in
+  proposals/ until decided.
+
+<!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 13
+(LOOP-CODIFY.md criterion 1): appended the harness-department section to the
+existing product README (revise-not-rewrite; extraction note kept intact). -->
+

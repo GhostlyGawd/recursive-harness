@@ -120,3 +120,24 @@ Render and load-path robustness, locked by `test_robustness.py`:
   "launch mission-control" line.
 
 The P0–P5 build is complete.
+
+## Department notes (provenance + learning)
+
+- **Born:** design locked with the user in
+  `proposals/2026-06-21-mission-control-tui.md`; P1 skeleton `62661e2`
+  (2026-06-21), P2–P4 lenses `a2f4ca8` (2026-06-23), gated P4/P5 items via the
+  bundle `cdcc611`, hardening `8247ee2` (#212, 2026-07-01).
+- **Extending:** the read-only invariant is the contract — a lens that writes
+  is a different product; anything gated (guards, wiring, bin/ verbs) goes via
+  /harness-pr as the P4/P5 precedent shows. The five test files run in ci.yml;
+  `textual` stays out of the enforcement path (tests import-firewall the data
+  layer).
+- **When it breaks:** render/loader failures belong in test_robustness.py's
+  two contracts (markup firewall, RuntimeError degradation to DATA OFFLINE);
+  bugs route to the heal ledger; eval `mission-control-p2p5` fences the gated
+  bundle.
+
+<!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 14
+(criterion 1): appended department notes (provenance/learning) to the existing
+README; revise-not-rewrite. -->
+
