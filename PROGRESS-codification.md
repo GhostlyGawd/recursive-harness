@@ -318,3 +318,18 @@ VERSION, worktree-repos.json)
 - Protocol lessons: (q) causality claims ("X forced Y") need the ADR's own
   provenance line checked, not inferred from date adjacency.
 - Next target: iteration 17 — brand/README.md.
+
+### Iteration 17 — brand/README.md landed: PASS 4.4
+- Wrote brand/README.md (70 lines) from LANGUAGE.md, 75a2c5e's body,
+  DECISIONS.md, the foundry skill. Critic mean 4.4 PASS (Q2/Q3/Q4=4, rest 5).
+- All three fixes applied: (a) dist/ import claim was ASPIRATIONAL — dist/
+  currently emits invalid declarations and surfaces inline tokens (the
+  dist-gap proposal documents this); (b) dist compiler lives in the external
+  foundry repo, not _build/; (c) DECISIONS.md records approve/keep/graft +
+  a comparison read, not kill/redirect rationales.
+- VERIFY: lint ✅ · gate ✅.
+- Criteria status: 1 partial (8/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (r) a documented CONTRACT can be an intent the repo
+  currently violates — state both the intent and the live deviation, with the
+  filed fix.
+- Next target: iteration 18 — plugins/README.md.
