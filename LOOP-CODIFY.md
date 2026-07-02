@@ -27,7 +27,11 @@ risks registering junk artifacts (commands → /README palette entry, agents →
 bogus agent def); gated on proposals/2026-07-02-artifact-dir-readmes.md,
 discovered live iteration 9):
   ⚠ agents, brand, cartograph ✅(done), ⚠ commands, fleet, memory, mission_control,
-  plugins, products, proposals, ⚠ skills, tests, workflows,
+  plugins, products, proposals, ⚠ skills, tests,
+  [workflows: PHANTOM — no tracked dir; the real artifact is machine-local
+  .claude/workflows/ (saved Workflow-tool scripts) + a stray empty workflows/
+  dir in the main checkout; documented in the front door like state/ —
+  discovered iteration 15],
   ✋ hooks, ✋ lint, ✋ evals, ✋ bin, ✋ templates,
   distribution (install.sh, account-init.sh, project-init.sh, sync-*, statusline-*),
   root manifests (autonomy.json ✋, settings.json ✋, features.json, VERSION,

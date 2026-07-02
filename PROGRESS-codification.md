@@ -275,3 +275,31 @@ VERSION, worktree-repos.json)
   3 ✅ · 4 ✅ · 5 ✗
 - Next target: iteration 15 — workflows/README.md + the iteration-15 mid-loop
   human checkpoint report (5/19 landed < half — checkpoint fires).
+
+### Iteration 15 — workflows PHANTOM discovered; tests/README.md landed 4.8;
+### MID-LOOP CHECKPOINT
+- workflows is NOT a repo department: no tracked dir; reality is machine-local
+  .claude/workflows/ (one saved Workflow script: cartograph-gate-review.js) +
+  a stray EMPTY workflows/ dir in the main checkout. AMENDMENT: work-list
+  entry corrected to front-door-only (like state/); stray-dir cleanup parked
+  in IDEAS.md (deletions are out of scope).
+- Re-targeted the slot: tests/README.md written (71 lines) from
+  test_ci_coverage.py + ci.yml + 359a9b2/447ce88/c72ba4a. Critic mean 4.8
+  PASS (Q3=4, rest 5); all three fixes applied (PASS/FAIL style not "[n]";
+  CI skip reason is Windows semantics, not pwsh absence; "including" three
+  subsystems).
+- VERIFY: lint ✅ · gate ✅ · coverage guard ✅.
+- ── MID-LOOP CHECKPOINT (iteration 15, per BUDGET clause) ──
+  Landed+verified (6): cartograph 4.6 · memory 4.6 · proposals 4.6 ·
+  fleet 4.6 · mission_control 5.0 · tests 4.8.
+  Staged for human (5): hooks 4.8 · lint 4.8 · evals 4.8 · bin 4.4 ·
+  templates 5.0 (PR #220 + marker cycle needed).
+  Gated on human decision (3): skills (draft parked, 4.2) · commands ·
+  agents (loader-surface proposal).
+  Remaining (5): brand, plugins, products, distribution, front door.
+  Criteria: 1 partial (6/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗.
+  DECISIONS NEEDED FROM HUMAN: (a) merge PR #220; (b) marker grant for
+  wave-1b copy-in of 5 staged READMEs + the one-line lint skip (loader
+  proposal Option 1); (c) loader-check verdict for commands/agents.
+- Next target: iteration 16 — products/README.md, then brand, plugins,
+  distribution; front door last (wave 4).
