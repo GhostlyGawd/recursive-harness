@@ -368,3 +368,20 @@ VERSION, worktree-repos.json)
 - Next target: iteration 20 — root README.md front door (criterion 2):
   REVISE the existing brand-built README (75a2c5e), adding department links +
   three-loops narrative + state//manifests/workflows sections.
+
+### Iteration 20 — FRONT DOOR revised: criterion 2 PASSES
+- Surgical revision of the brand-built README: linked department table (all
+  18 + Distribution), session-lifecycle + delivery loop narrations added
+  beside the existing three-loops table, state/ + 5 root manifests +
+  .claude/workflows + .claude-private documented, ATLAS named machine-truth,
+  stale counts fixed (21→23 skills, 17→21/18 hooks, 9→12 ADRs, node/edge
+  hard-counts dropped for stability).
+- VERIFY: script-check ✅ (all dept links, all manifests, ATLAS pointer);
+  critic navigation 5/5 (≥4/5 required), all three loop narrations
+  present+accurate (6 spot-checks), zero stale counts; lint ✅ · gate ✅.
+  Both minor fixes applied (dir links point at dirs; deploy command named
+  beside deploy source).
+- Criteria status: 1 partial (10/19 landed) · 2 ✅ PASS · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 21 — criterion 5 fresh-context usability run
+  (front door + one random README, 5 questions + 3 governing-skill naming),
+  then the two-clean-passes endgame on what is landable without the human.
