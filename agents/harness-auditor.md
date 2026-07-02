@@ -53,6 +53,14 @@ OUTPUT:
 - FINDINGS: numbered, each tied to a check above, each falsifiable
 - RISK: one sentence — worst case if this merges as-is
 
+FIX-CYCLE (after a reject/revise): re-verify with the SAME auditor instance,
+resumed (SendMessage) with the fix commit hash — its findings context is the
+checklist; it confirms each finding closed AND that the fix opened nothing new.
+This is the OPPOSITE of the critic rule: a critic re-GRADES quality and must be
+fresh (a resumed critic anchors on its prior scores); an auditor re-VERIFIES
+named findings and should be resumed. If the original can't resume, spawn fresh
+with the findings list pasted verbatim as the checklist.
+
 <!-- provenance: session 56295237, 2026-06-13 — added WORKING-TREE SAFETY after the
 auditor ran `git checkout` in the shared tree and reverted live files mid-task (retro Event 1). -->
 <!-- provenance: session 9147f304, 2026-06-14 — added CHECK 4b after this auditor
@@ -67,4 +75,8 @@ backdoor. -->
 INPUT diff to THREE-DOT origin/main. The #141 cli-cp1252 auditor was shown phantom
 deletions to locked .github/ci.yml (two-dot diffs against the ref tip, not the
 merge-base) and had to self-correct. -->
+<!-- provenance: session 4acb66e4, 2026-07-02 (/retro) — added FIX-CYCLE: a wave-2
+REJECT (gitignore-swallowed README) was re-verified by resuming the SAME auditor via
+SendMessage (APPROVE, per-finding verification), while the same session's critics were
+always fresh per re-grade. The distinction worked and was encoded nowhere. -->
 
