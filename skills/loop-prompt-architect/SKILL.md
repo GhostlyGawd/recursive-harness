@@ -122,7 +122,7 @@ choices in plain language, and never hand over a loop you wouldn't run yourself.
 ## Arena note for THIS harness (added at vendoring; not upstream)
 
 - The kit's /goal and /loop are PROMPT TEMPLATES you deliver to the user — not
-  this harness's built-in `/loop` skill (an interval/self-paced re-runner). If
+  this harness's built-in `/loop` command (an interval/self-paced re-runner). If
   the loop will execute HERE, `/loop` is the scheduler and your delivered
   prompt is its payload; the PROGRESS.md state mechanism still applies.
 - Do not conflate with skill `build-loop` (the in-session build→review
