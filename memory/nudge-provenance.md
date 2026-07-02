@@ -30,7 +30,7 @@ from memory. Status 2026-07-02: all 22 rows researched, zero TODO cells.
 | PreToolUse | `pre_merge_ci_gate.py` | Bash/PS | `419128e` (2026-06-27) | Blocks merging a red PR: CI-equivalent checks must pass first |
 | PostToolUse | `materialize_worktree_repos.py` | EnterWorktree | `e953e95` (2026-06-20) | Same engine as its SessionStart wiring — fires after EnterWorktree so a freshly-entered worktree gets its nested repos immediately |
 | PostToolUse | `log_skill_use.py` | Skill | `c72ba4a` (v0.1.0) | Skill-usage ledger for /calibrate + /gc |
-| PostToolUse | `heal_autocapture.py` | Bash/Edit/Write | `9de5620` (2026-06-26, Auto-Healer v2) | Auto-captures bug-fix attempts into the heal ledger |
+| PostToolUse | `heal_autocapture.py` | Bash/Edit/Write | `9de5620` (2026-06-26, Auto-Healer v2) | Auto-captures tool-failure candidates into the heal candidates stream (flag-gated, default off; never writes bugs.jsonl directly) |
 | PostToolUse | `post_merge_return_to_trunk.py` | Bash | `a0d7fd4` (2026-06-18) | Return-to-trunk REMINDER after `gh pr merge` (non-blocking) |
 | PostToolUse | `guard_trunk_lease.py` | Edit/Write/Bash/PS | `d295597` (2026-06-19, Guard C) | Lease RE-STAMP: renews this session's lease after each mutating op so its own next op isn't false-blocked |
 | Stop | `stop_retro_gate.py` | session stop | `c72ba4a` (v0.1.0) | Nudges /retro after significant sessions (kernel cadence) |

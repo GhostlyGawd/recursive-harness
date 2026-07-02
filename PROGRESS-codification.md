@@ -76,3 +76,23 @@ VERSION, worktree-repos.json)
   provenance blocks — better justification source than commit subjects.
 - Next target: wave-1 locked-department READMEs (hooks first), staged via
   /harness-pr per skill harness-pr-ops.
+
+### Iteration 4 — hooks/README.md drafted (staged in proposals/)
+- WAVE-1 GATE: `bin/harness approve --status` → marker ABSENT. No human grant
+  exists this session; fabricating one is forbidden (harness-pr.md step 2, kernel
+  directive 5). Per skill harness-pr-ops the human gate is the EXPECTED terminus →
+  wave-1 locked-path writes paused. Drafts staged in
+  proposals/2026-07-02-wave1-locked-dept-readmes.md so the human cycle is:
+  grant marker → copy drafts verbatim → revoke → wave-1 PR.
+- Drafted hooks/README.md (76 lines, five-question format) from iteration-3
+  research + hook docstrings + settings.json.
+- VERIFY: lint ✅ · gate ✅ · critic (fresh context, execution rights) mean 4.8
+  PASS (Q5=4, rest 5). Both prescribed fixes applied same pass: heal_autocapture
+  captures CANDIDATES only, flag-gated default-off (docstring); account-init.sh
+  --sync-settings regenerates the whole account settings.json, not just wiring.
+- The heal overstatement had ALSO been copied into nudge-provenance's row —
+  fixed there in the same pass.
+- Criteria status: 1 partial (1 done + 1 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (i) when the critic corrects a claim, grep sibling docs for
+  the same claim — errors propagate through copy-adjacent rows.
+- Next target: iteration 5 — lint/README.md draft (same staging proposal).
