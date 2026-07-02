@@ -157,6 +157,9 @@ GUARDRAILS:
   settings.json directly — even for docs. Locked-path access rules (learned live):
   Read/Glob/Grep tools always work; `git log`/`git show` in Bash pass the guard;
   `ls`/`cat`-style shell reads get BLOCKED — don't fight it, use the Read tool.
+  Write-side analog: a Bash heredoc whose TEXT names the enforcement marker trips
+  the prose-scan even when the target file is unlocked — use Write/Edit tools for
+  any content that mentions the marker (harness-authoring §marker-prose).
 - Never change code behavior, delete files, or rename anything.
 - A change that breaks lint or the cartograph gate: revert it first, log the
   regression, rethink — never stack fixes on a regression.
