@@ -303,3 +303,18 @@ VERSION, worktree-repos.json)
   proposal Option 1); (c) loader-check verdict for commands/agents.
 - Next target: iteration 16 — products/README.md, then brand, plugins,
   distribution; front door last (wave 4).
+
+### Iteration 16 — products/README.md landed: borderline PASS 4.0, 4 fixes
+- Wrote products/README.md (66 lines) from REGISTRY.md's banner, registry.py,
+  ADR 0005, the two 2026-06-28 proposals. Critic: mean exactly 4.0 PASS
+  (Q2=3, Q5=3) — three factual misattributions, all fixed same pass:
+  (a) untracking was b2e8272 (06-13), ADR 0005's provenance is the cross-Grove
+  retro (06-16) — not "forced by the first product"; (b) KNOWN_ISSUES.md was
+  CARRIED then untracked — past tense; (c) islands/zero-composition finding
+  belongs to the 06-30 synergy audit in registry.py, not the landscape
+  proposal (~40 repos). Plus slug = the one REQUIRED stub field.
+- VERIFY: lint ✅ · gate ✅ · registry --check in-sync ✅.
+- Criteria status: 1 partial (7/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (q) causality claims ("X forced Y") need the ADR's own
+  provenance line checked, not inferred from date adjacency.
+- Next target: iteration 17 — brand/README.md.
