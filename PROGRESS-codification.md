@@ -350,3 +350,21 @@ VERSION, worktree-repos.json)
   account-init.sh, project-init.sh, sync-*, statusline-*) — README placement
   decision needed (no dir exists; likely a front-door section or a
   DISTRIBUTION.md at root — check the DoD wording).
+
+### Iteration 19 — DISTRIBUTION.md landed at root: PASS 4.8
+- The department is virtual (six root scripts, no dir); creating a dir means
+  file moves (out of scope) → doc placed at root DISTRIBUTION.md, deviation
+  flagged for the wave-2 PR description.
+- Critic mean 4.8 PASS (Q4=4, rest 5 — it read all six scripts + five
+  commits). Three fixes applied: (a) statusline WIRING half is
+  enforcement-locked (templates/) — split the instruction so readers aren't
+  guard-blocked mid-edit; (b) broken sentence rewritten; (c) CI-skip
+  mechanism is test discovery scope, Windows-specificity is the rationale.
+- VERIFY: lint ✅ · gate ✅.
+- Criteria status: 1 partial (10/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Unlocked wave-2/3 departments now ALL done except the loader-gated three
+  (skills parked · commands · agents). Remaining: front door (criterion 2) +
+  usability (criterion 5) + the human-gated items.
+- Next target: iteration 20 — root README.md front door (criterion 2):
+  REVISE the existing brand-built README (75a2c5e), adding department links +
+  three-loops narrative + state//manifests/workflows sections.
