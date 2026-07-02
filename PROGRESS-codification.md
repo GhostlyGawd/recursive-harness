@@ -428,3 +428,30 @@ VERSION, worktree-repos.json)
   3 ✅ · 4 ✅ · 5 ✅
 - Next: re-confirm with the auditor, push, open the stacked wave-2 PR, score
   the session prediction, file followups, STOP with the escalation report.
+
+## SESSION CLOSE 2026-07-02 — ESCALATION REPORT (Exit C: blocked on human)
+
+22 of 30 iterations used. Auditor round-2: APPROVE (fix commit 4824975
+verified line-by-line; 22 SHAs independently resolved this session).
+
+DONE: criteria 2 (front door), 3 (nudge provenance), 5 (usability) PASS;
+criterion 4 green throughout (full battery ×2); criterion 1 at 10/19
+landed+critic-verified (cartograph, memory, proposals, fleet, mission_control,
+tests, products, brand, plugins, DISTRIBUTION).
+Session prediction 8952133b scored HIT. Followups filed: 75d270 (wave-1b
+marker cycle), d8ceb3 (loader check), 991393 (stacked-PR retarget).
+
+BLOCKED — every remaining item needs the human:
+- PR #220 (wave 1: provenance + proposals + 5 staged locked READMEs) — merge.
+- PR #221 (waves 2–4, stacked on #220) — merge after #220, retarget to main
+  first (followup 991393).
+- Wave-1b marker cycle: copy the 5 staged READMEs into hooks/ lint/ evals/
+  bin/ templates/ + the one-line lint skip → skills/README lands from its
+  parked draft (followup 75d270).
+- Loader-surface decision for commands/ + agents/
+  (proposals/2026-07-02-artifact-dir-readmes.md; followup d8ceb3).
+
+DIAGNOSIS: not stuck — the loop reached the designed human gates. When the
+four decisions above land, criterion 1 completes to 18/19 + the commands/
+agents resolution, and one final session runs the two-clean-passes check for
+✅ LOOP COMPLETE.
