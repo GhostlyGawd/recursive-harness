@@ -16,17 +16,18 @@ harness-portability) and the shape stuck because it resolves a structural
 tension: the enforcement layer is write-locked to agents, yet most improvement
 ideas TARGET that layer. Proposals are the pressure valve — the agent banks
 the full design (research, options, acceptance) without touching the lock;
-the guard-tuning proposals from 2026-06-21 onward cite the standing
-meta-principle they inherit: tune existing hooks, NEVER add enforcement
-(correction `2026-06-19T17:10:46`; first citer
-2026-06-21-guard-cluster-consolidation).
+the guard-tuning proposals beginning with
+2026-06-21-guard-cluster-consolidation (and all four 2026-07-02 filings) cite
+the standing meta-principle they inherit: tune existing hooks, NEVER add
+enforcement (correction `2026-06-19T17:10:46`).
 
 ## Contract
 
 - **Canonical header bullets**: `Date`, `Status`, `Origin` (the session/event
   that surfaced it, with ledger citations). Older files and roadmap-style docs
   deviate (some use Prediction/Source-session; a few carry none) — the
-  convention binds NEW proposals, not retroactively.
+  convention binds NEW standalone proposals, not retroactively (parked draft
+  companions of another proposal are excepted).
 - **Status is a lifecycle**, free-form but recognizable: `PROPOSAL`/`DRAFT`
   (nothing built) → `REVISED`/`REJECTED` (auditor verdicts recorded verbatim,
   e.g. 2026-06-22-auto-healer-cross-session-recall) → `Built non-locked on
@@ -69,7 +70,8 @@ meta-principle they inherit: tune existing hooks, NEVER add enforcement
   ledger's wontfix records).
 - Follow-ups smaller than a proposal go to `bin/harness followup add`, not
   here; project-scale roadmaps live with their product (products/, fleet/),
-  not in proposals/.
+  not in proposals/ (two pre-norm roadmaps from 2026-06-27 remain
+  grandfathered here).
 
 <!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 11
 (LOOP-CODIFY.md criterion 1): department README for proposals/, researched from

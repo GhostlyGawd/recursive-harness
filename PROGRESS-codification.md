@@ -234,3 +234,16 @@ VERSION, worktree-repos.json)
   author of the history is not a source; grep anyway.
 - Next target: iteration 12 — re-verify proposals/README.md (fresh critic),
   then continue wave 2.
+
+### Iteration 12 — proposals/README.md re-verified: PASS 4.6
+- Fresh critic (different agent from iteration 11's): mean 4.6 PASS (Q2=4,
+  Q3=4, rest 5). Three further precision fixes applied same pass (named the
+  actual meta-principle citers instead of a date range — 06-22-space-split is
+  a non-citing counterexample; excepted parked-draft companions from the
+  header convention; grandfathered the two 2026-06-27 roadmaps).
+- proposals/ department: DONE (landed + verified).
+- VERIFY: lint ✅ · gate ✅ · criteria: 1 partial (3 done + 5 drafted +
+  1 parked / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 13 — wave-3 unlocked departments begin: fleet/ (or
+  workflows/); commands/agents/skills stay gated on the loader-surface
+  proposal.
