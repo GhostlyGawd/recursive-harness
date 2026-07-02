@@ -88,9 +88,11 @@ Improvement ideas → IDEAS.md parking lot only.
 
 VERIFICATION METHOD (every iteration): run
 `python3 lint/lint_harness.py && python3 cartograph/extract.py --check`,
-run the critic agent on any doc produced this pass, then re-scan the full
-Definition-of-Done checklist in PROGRESS-codification.md and record pass/fail
-per criterion.
+confirm every file produced this pass is TRACKED (`git ls-files <path>` —
+gitignore whitelists silently swallow a Write; disk existence is NOT landing,
+learned iteration 22), run the critic agent on any doc produced this pass,
+then re-scan the full Definition-of-Done checklist in
+PROGRESS-codification.md and record pass/fail per criterion.
 
 ---
 

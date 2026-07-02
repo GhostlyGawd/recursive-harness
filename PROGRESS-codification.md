@@ -404,3 +404,27 @@ VERSION, worktree-repos.json)
   departments remain → wave-2/3/4 checkpoint: battery + auditor + PR, then
   STOP with the escalation report (Exit C shape — blocked on human, not
   stuck).
+
+### Iteration 22 — wave-2 checkpoint: auditor REJECT → mechanical fix cycle
+- Full ci.yml battery: ALL GREEN. harness-auditor on the wave-2 increment:
+  REJECT with ONE mechanical finding (everything else passed a deep audit —
+  all 19 SHAs verified, loader-surface claim REPRODUCED in a throwaway
+  worktree, front-door counts all confirmed).
+- THE FINDING (HIGH): products/README.md never landed — swallowed silently by
+  .gitignore's `products/*` rule; it existed on disk, passed every disk-based
+  verify, and commit d08c6ff carried only the PROGRESS entry. Iterations
+  16–21's "landed" counts were inflated by one (tracked reality was 9/19,
+  not 10/19). CORRECTION, append-only: this entry supersedes those counts;
+  the critic-4.0 content verdict was never in dispute.
+- Fixes: `!products/README.md` whitelisted in .gitignore; file tracked;
+  brand/README self-count 44→45 (auditor nit b — same class as the templates
+  fix in iteration 8, missed on brand); iteration-20 phrasing nit noted here
+  ("all 18 + Distribution" = 18 rows INCLUDING Distribution).
+- AMENDMENT: VERIFICATION METHOD now requires `git ls-files` tracked-ness for
+  every file produced (disk existence is NOT landing) — tighten-only.
+- Auditor LOW note on criterion 5's B-subscore (2/3) acknowledged: recorded
+  for the PR body, criterion text never edited mid-run.
+- Criteria status: 1 partial (10/19 landed — NOW true in the index) · 2 ✅ ·
+  3 ✅ · 4 ✅ · 5 ✅
+- Next: re-confirm with the auditor, push, open the stacked wave-2 PR, score
+  the session prediction, file followups, STOP with the escalation report.

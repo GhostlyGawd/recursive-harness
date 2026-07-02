@@ -2,8 +2,8 @@
 
 ## Identity
 
-The Recursive Harness brand ("Append-Only Strata") as versioned artifacts, 44
-tracked files: `LANGUAGE.md` (the locked law — soul, logomark construction,
+The Recursive Harness brand ("Append-Only Strata") as versioned artifacts, 45
+tracked files (44 payload + this README): `LANGUAGE.md` (the locked law — soul, logomark construction,
 type, palette, geometry), `tokens.json` (the 65-token set) compiled into
 `dist/` (tokens.css · tokens.ts · brand.css), `identity/` (logomark SVGs,
 favicon, identity sheet), `book/` (the rendered brand book), `applications/`
