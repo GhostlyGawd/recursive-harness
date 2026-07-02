@@ -247,3 +247,20 @@ VERSION, worktree-repos.json)
 - Next target: iteration 13 — wave-3 unlocked departments begin: fleet/ (or
   workflows/); commands/agents/skills stay gated on the loader-surface
   proposal.
+
+### Iteration 13 — fleet/README.md: existing product README AUGMENTED, PASS 4.6
+- fleet/ already had a product-grade README (Agent Mail, extraction-ready).
+  Revise-not-rewrite: appended a "Harness department notes" section (dropped
+  on extraction like pm/) covering provenance chain, harness wiring,
+  operations, failure & learning.
+- VERIFY: lint ✅ · gate ✅ · critic mean 4.6 PASS (Q4=3, rest 5 — it ran the
+  README's own CLI examples and the test suites). All three fixes applied:
+  (a) "all eight tests run in ci.yml" → seven run, test_mcp excused;
+  (b) "SPEC-04 folded" was a FABRICATED inference — R4 was the dogfooding
+  gate, no spec existed (critic proved via git log -S); (c) pm/ inventory
+  completed.
+- Criteria status: 1 partial (4 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Protocol lessons: (p) explaining an ABSENCE (missing spec number) invites
+  fabrication — verify the explanation for a gap as hard as a positive claim.
+- Next target: iteration 14 — mission_control/README.md.
