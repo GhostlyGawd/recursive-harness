@@ -130,6 +130,12 @@ def check_skills_dir(sdir: str, rel_prefix: str) -> None:
     top-level skills/ tree (rel_prefix='skills') and for each plugins/*/skills/ tree
     (rel_prefix='plugins/<plugin>/skills'), so both go through one code path."""
     for name in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
+        if not os.path.isdir(os.path.join(sdir, name)):
+            # A plain FILE here (e.g. README.md) is not a skill dir — skip, don't
+            # flag "missing SKILL.md". Budgets still bind every real skill dir.
+            # provenance: 2026-07-02, proposals/2026-07-02-artifact-dir-readmes.md
+            # (a department README turned lint red live, codification iteration 9).
+            continue
         skill_md = os.path.join(sdir, name, "SKILL.md")
         rel = f"{rel_prefix}/{name}"
         # A gitignored skill dir is not a trunk artifact — it's an external / vendored-live

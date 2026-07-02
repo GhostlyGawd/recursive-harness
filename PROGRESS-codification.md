@@ -455,3 +455,28 @@ DIAGNOSIS: not stuck — the loop reached the designed human gates. When the
 four decisions above land, criterion 1 completes to 18/19 + the commands/
 agents resolution, and one final session runs the two-clean-passes check for
 ✅ LOOP COMPLETE.
+
+## WAVE-1B 2026-07-02 (same session, resumed) — human gates cleared
+
+- Human merged #220 + #221 ("Merge all"): waves 1–4 docs on main; stacked-PR
+  retarget done per harness-pr-ops (followup 991393 closed). Squash-vs-stack
+  conflict on the two loop-state files resolved to branch state, verified
+  byte-identical, CI re-ran green pre-merge.
+- Human granted the marker cycle verbatim: "Do that please" → logged via
+  `bin/harness approve` (state/approvals.jsonl), marker placed, THEN:
+  five staged READMEs extracted from the proposal fences BYTE-IDENTICAL into
+  hooks/ lint/ evals/ bin/ templates/; the one-line non-dir skip added to
+  check_skills_dir (with provenance comment); skills/README.md landed from
+  the parked draft; marker revoked immediately.
+- VERIFY: lint clean WITH all six new READMEs ✅ · negative direction still
+  errors (probe skills/__lint_probe__ → B3 missing SKILL.md caught) ✅ ·
+  gate ✅ · full ci.yml battery ALL GREEN ✅ · byte-identity asserted at
+  write time for all six files ✅ · tracked-ness: all six in git ls-files
+  (per the iteration-22 amendment) — checked at commit below.
+- Front-door table updated: 6 rows now link real READMEs; commands/agents
+  keep the pending-decision links. Both proposals' Status updated append-
+  style (APPLIED / PARTIALLY RESOLVED, originals preserved).
+- Criterion 1: 16/19 landed (all but commands, agents — loader check open —
+  and the workflows phantom, documented front-door). Criteria 2/3/4/5 hold.
+- Next: harness-auditor on the wave-1b diff (enforcement touched — mandatory),
+  PR with the verbatim grant quoted in ## Approval, human merge.

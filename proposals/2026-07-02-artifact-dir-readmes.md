@@ -1,7 +1,13 @@
 # Proposal: READMEs in loader-surface directories (skills/ commands/ agents/)
 
 - **Date:** 2026-07-02
-- **Status:** PROPOSAL — for human decision. The recommended remedy touches
+- **Status:** PARTIALLY RESOLVED 2026-07-02 — Option 1's lint skip applied for
+  skills/ (non-dir entries skipped in check_skills_dir; both directions
+  verified: README passes, a skill dir missing SKILL.md still errors) and the
+  parked skills/README.md landed, under the same wave-1b human grant. STILL
+  OPEN: the commands/ + agents/ empirical loader check (followup d8ceb3) —
+  their READMEs remain ungated-on-that-decision. Original status follows.
+- **Status (original):** PROPOSAL — for human decision. The recommended remedy touches
   `lint/lint_harness.py` (enforcement-locked) → /harness-pr + marker cycle +
   /run-evals + human merge. Batch it into the wave-1b approve cycle alongside
   proposals/2026-07-02-wave1-locked-dept-readmes.md to avoid a second round-trip.
