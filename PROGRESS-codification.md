@@ -264,3 +264,14 @@ VERSION, worktree-repos.json)
 - Protocol lessons: (p) explaining an ABSENCE (missing spec number) invites
   fabrication — verify the explanation for a gap as hard as a positive claim.
 - Next target: iteration 14 — mission_control/README.md.
+
+### Iteration 14 — mission_control/README.md augmented: PASS 5.0
+- Existing README was already strong; appended a compact "Department notes"
+  section (provenance commits, extension invariant, failure routing). 143
+  lines total, under budget.
+- VERIFY: lint ✅ · gate ✅ · critic mean 5.0 PASS, zero material defects (it
+  ran all five test suites + the P5 guard test itself: 175 tests green).
+- Criteria status: 1 partial (5 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 15 — workflows/README.md + the iteration-15 mid-loop
+  human checkpoint report (5/19 landed < half — checkpoint fires).
