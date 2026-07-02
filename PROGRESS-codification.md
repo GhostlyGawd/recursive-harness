@@ -333,3 +333,20 @@ VERSION, worktree-repos.json)
   currently violates — state both the intent and the live deviation, with the
   filed fix.
 - Next target: iteration 18 — plugins/README.md.
+
+### Iteration 18 — plugins/README.md landed: PASS 4.6
+- Zero tracked content in plugins/ — both residents vendored-live nested
+  repos. README (67 lines) written from the .gitignore rationale comments,
+  check_plugins, worktree-repos.json, the materialization hook. Confirmed
+  safe: check_plugins skips non-dir entries (no skills/-style lint landmine).
+- Critic mean 4.6 PASS (Q3/Q4=4, rest 5); three fixes applied: (a) local
+  exclude CAN hide locally — CI is the boundary, not local runs; (b)
+  vendored-live single-skill = nested-repos leaf 3, vendoring-skills is the
+  vendor-and-COMMIT path (misrouted pointer); (c) "first tracked file" tensed
+  correctly.
+- VERIFY: lint ✅ · gate ✅ · materialization test all-green ✅.
+- Criteria status: 1 partial (9/19 landed) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 19 — distribution (virtual department: install.sh,
+  account-init.sh, project-init.sh, sync-*, statusline-*) — README placement
+  decision needed (no dir exists; likely a front-door section or a
+  DISTRIBUTION.md at root — check the DoD wording).
