@@ -54,8 +54,10 @@ OUTPUT:
 - RISK: one sentence — worst case if this merges as-is
 
 FIX-CYCLE (after a reject/revise): re-verify with the SAME auditor instance,
-resumed (SendMessage) with the fix commit hash — its findings context is the
-checklist; it confirms each finding closed AND that the fix opened nothing new.
+resumed (SendMessage) with the fix commit hash. The findings checklist is IN
+ADDITION TO the CHECKS above, never instead of them: the resumed auditor MUST
+re-run CHECK 5 (lint) and a fresh three-dot diff of the fix commit — closing
+the named findings while smuggling in a regression is the failure mode.
 This is the OPPOSITE of the critic rule: a critic re-GRADES quality and must be
 fresh (a resumed critic anchors on its prior scores); an auditor re-VERIFIES
 named findings and should be resumed. If the original can't resume, spawn fresh
