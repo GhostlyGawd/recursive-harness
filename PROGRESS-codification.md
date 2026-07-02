@@ -203,3 +203,14 @@ VERSION, worktree-repos.json)
   file type there; (n) the per-iteration lint run catches what reading never
   would — criterion 4's every-iteration cadence just paid for itself.
 - Next target: iteration 10 — memory/README.md (no loader surface, unlocked).
+
+### Iteration 10 — memory/README.md LANDED (first wave-2 department done)
+- Wrote memory/README.md (73 lines) from ADR 0001, commands/gc.md, lint F1,
+  bin/harness gc, heal.py rollup, kernel "Where things live".
+- VERIFY: lint ✅ · gate ✅ · critic mean 4.6 PASS (Q3=4, Q4=4, rest 5). All
+  three prescribed fixes applied same pass: Guard C example is a HOOK (category
+  fix); "three live amendments (corrected twice, extended once)" not "three
+  corrections"; calibration/ holds no rollup JSON yet (mechanism vs contents).
+- Criteria status: 1 partial (2 done + 5 drafted + 1 parked / 19) · 2 ✗ ·
+  3 ✅ · 4 ✅ · 5 ✗
+- Next target: iteration 11 — proposals/README.md.
