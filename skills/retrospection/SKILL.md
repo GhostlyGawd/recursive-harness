@@ -14,6 +14,12 @@ A retro that produces prose produced nothing. The output unit is a DIFF.
    - prediction misses (`harness stats`, this session's ids)
    - strike-2/3 events from stuck-detection
    - anything the user re-explained twice (you made them pay twice)
+   Then backfill skill VALUE tags for skills that visibly fired this session:
+   `harness skill-fired <name> --outcome helped|neutral|hurt` — evidence-based
+   only (the skill changed/failed to change the outcome; unsure ⇒ don't tag).
+   Fire counts alone can't catch a high-fire/low-value skill; /meta-retro
+   prunes on hurt>helped, so untagged noise directly corrupts pruning.
+   (provenance: roadmap item 9, session 975732da, 2026-07-05)
 
 2. **Select <= 3.** The highest-signal events only. A retro that proposes ten
    changes is noise wearing a process costume; three reviewed diffs beat ten

@@ -1,0 +1,21 @@
+{
+  "cases": {
+    "cartograph-audit": "pass",
+    "cartograph-extractor": "pass",
+    "cartograph-gate": "pass",
+    "cartograph-oracle": "pass",
+    "cli-cp1252-output": "pass",
+    "commit-message": "pass",
+    "guard-a-separator-normalization": "pass",
+    "guard-b-concurrent-session": "pass",
+    "heal-recall-surface": "pass",
+    "jsonl-rotate": "pass",
+    "mission-control-p2p5": "pass",
+    "spec-binding": "pass"
+  },
+  "corpus_hash": "1ea176133d3e443c",
+  "date": "2026-07-05T18:27:07",
+  "passed": 12,
+  "session": "975732da",
+  "total": 12
+}

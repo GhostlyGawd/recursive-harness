@@ -4,7 +4,7 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-07-01` from extract.py @ `673b4f3`.
+**Build stamp** - generated `2026-07-05` from extract.py @ `2b9b692`.
 
 ---
 
@@ -12,24 +12,24 @@
 
 One pure-graph vital sign (0-100) distilled from the extracted graph - structural integrity in a single number, comparable across git history. Advisory: it INFORMS /meta-retro, never blocks or prunes. The **trend** matters more than the absolute - run `python cartograph/health.py --trend` for the trajectory /meta-retro reads.
 
-**Score: 76.0/100**
+**Score: 76.1/100**
 
 | Sub-score | Value | Weight | Measures |
 |---|---:|---:|---|
 | rot_free | 1.000 | 0.4 | structural-rot warnings (all build() reports, pre-baseline) - 0 is ideal |
-| connectedness | 0.744 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
-| provenance | 0.474 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
+| connectedness | 0.721 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
+| provenance | 0.500 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
 | adr_load_bearing | 0.583 | 0.2 | ADRs something actually cites (in-degree > 0) |
 
-Counts: 0 rot · 11/43 orphan artifacts · 37/78 provenanced · 7/12 ADRs referenced.
+Counts: 0 rot · 12/43 orphan artifacts · 39/78 provenanced · 7/12 ADRs referenced.
 
-Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:fleet`, `cli:health`, `cli:skill-fired`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:language-selection`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
+Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:fleet`, `cli:health`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:huashu-design`, `skill:language-selection`, `skill:loop-prompt-architect`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
 
 ---
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **79%** hit-rate (148 hit / 40 miss / 2 open over 190). Open follow-ups: **22**. The breakdowns below localize the friction.
+Overall prediction calibration: **50%** hit-rate (1 hit / 1 miss / 0 open over 2). Open follow-ups: **0**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -37,48 +37,20 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 | Category | Hit | Miss | Hit-rate | Signal |
 |---|---:|---:|---:|---|
-| enforcement-hooks | 0 | 3 | 0% | ⚠ friction |
-| hooks | 0 | 1 | 0% |  |
-| design | 1 | 2 | 33% | ⚠ friction |
-| harness-authoring | 1 | 2 | 33% | ⚠ friction |
-| harness | 1 | 1 | 50% | ⚠ friction |
-| implementation | 3 | 2 | 60% |  |
-| general | 123 | 27 | 82% |  |
-| build | 12 | 2 | 86% |  |
-| debugging | 1 | 0 | 100% |  |
-| coding | 1 | 0 | 100% |  |
-| brand-foundry-dogfood | 3 | 0 | 100% | ✅ strong |
-| feature-build | 2 | 0 | 100% | ✅ strong |
+| general | 1 | 1 | 50% | ⚠ friction |
 
 ### Load - most-fired skills (this window)
 
-| Skill | Fires |
-|---|---:|
-| `retro` | 25 |
-| `run-evals` | 14 |
-| `calibration` | 12 |
-| `standup` | 10 |
-| `worktree` | 10 |
-| `harness-authoring` | 9 |
-| `build-loop` | 8 |
-| `brainstorm` | 5 |
-| `harness-pr` | 4 |
-| `routing-learnings` | 3 |
+_No skill-usage logged in the canonical ledger this window._
 
 ### Backlog & friction
 
-- Open follow-ups: **22**
-- Corrections logged (all-time ledger): **94**
+- Open follow-ups: **0**
+- Corrections logged (all-time ledger): **0**
 
 ### Where bugs cluster - the heal ledger
 
-Aggregate vital sign (this repo): **3 bugs** (2 live / 1 healed), recurrence_rate **0.0**, stuck **0**, escalate **0**. A *rising* recurrence rate month-over-month is the harness healing worse - mine via `/retro`.
-
-Bug clusters by tag (the heal ledger tags each bug `file:` / `class:` / `area:` / `host:` / `lang:` - so the tag histogram *is* the clustering):
-
-- **`recursive-harness-481a64`** - 3 bugs (2 live, 0 recurring): `lang:powershell`×2, `file:bin/harness`, `class:encoding`, `area:cli`, `host:windows`, `encoding:utf8-no-bom`, `op:dir-move`, `atomicity`
-- **`retro-synth-session-a43e3c`** - 1 bug (1 live, 0 recurring): `facet:worktree`, `facet:hook`, `facet:return-to-trunk`
-- **`wraithworld`** - 1 bug (1 live, 0 recurring): `domain:css`, `facet:layout`, `facet:aspect-ratio`, `surface:wraithworld-site`
+_No heal ledger for this repo yet (clean slate or unused)._
 
 ---
 
