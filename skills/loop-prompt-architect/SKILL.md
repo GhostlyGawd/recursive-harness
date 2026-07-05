@@ -131,3 +131,13 @@ choices in plain language, and never hand over a loop you wouldn't run yourself.
 - The doctrine overlaps deliberately with kernel directives (stuck-detection,
   calibration): when a delivered loop will run inside this harness, wire its
   stuck protocol to skill `stuck-detection` instead of re-specifying one.
+- Human-checkpoint gates must be ANSWER-COMPLETE: design every gate option so a
+  bare label click — with no free-text notes — still carries enough signal to
+  act on. Never ship a catch-all "Redirect / needs work — tell me why in notes"
+  option; decompose it into concrete labeled diagnoses ("Redo — repetitive/
+  template-y", "Redo — wrong voice", "Redo — too long"). If a bare-label redo
+  arrives anyway, state your inferred diagnosis IN the v2 gate so the operator
+  confirms the diagnosis alongside the artifact — a silent wrong guess costs a
+  second full round-trip. (Harness addition 2026-07-03, session 2aa1df9f:
+  living-world GATE-3 "Redirect" arrived without notes and the chronicle was
+  rebuilt on an unvalidated self-diagnosis; not upstream kit doctrine.)
