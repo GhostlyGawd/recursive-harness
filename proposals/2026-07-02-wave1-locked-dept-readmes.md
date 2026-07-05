@@ -1,7 +1,11 @@
 # Proposal: Wave-1 locked-department READMEs (staged drafts)
 
 - **Date:** 2026-07-02
-- **Status:** STAGED DRAFTS — awaiting the HUMAN_APPROVED marker cycle. The five
+- **Status:** APPLIED 2026-07-02 — human grant "Do that please" (logged
+  state/approvals.jsonl), marker placed → all five drafts copied byte-identical
+  to their department roots → marker revoked, on branch codify/wave1b. This
+  file stays as the drafting record. Original status follows.
+- **Status (original):** STAGED DRAFTS — awaiting the HUMAN_APPROVED marker cycle. The five
   enforcement-locked departments (hooks/ lint/ evals/ bin/ templates/) need
   README.md files per the codification loop's criterion 1, but the enforcement
   guard blocks writing them directly (correctly — docs-only or not, the paths are

@@ -154,14 +154,14 @@ department below self-describes in its own README.
 
 | Department | Role |
 |---|---|
-| [skills/](skills/) | 23 trigger-loaded procedures — the procedural memory; external imports go through skill `vendoring-skills` ([README staged](proposals/2026-07-02-artifact-dir-readmes-skills-draft.md), loader-surface fix pending) |
+| [skills/](skills/README.md) | 23 trigger-loaded procedures — the procedural memory; external imports go through skill `vendoring-skills` |
 | [commands/](commands/) | 14 named user-invoked workflows (`/retro`, `/gc`, …; doc [pending the loader-surface decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
 | [agents/](agents/) | 4 fresh-context roles: critic, retro-miner, harness-auditor, followup-synthesizer ([same pending decision](proposals/2026-07-02-artifact-dir-readmes.md)) |
-| [hooks/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | mechanical enforcement: 21 files, 18 wired across 6 events (write-locked; README staged) |
-| [lint/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | the self-lint: budgets, falsifiability, the autonomy firewall (write-locked; README staged) |
-| [evals/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | regression corpus + in-session replay — the only proof vN+1 beats vN (write-locked; README staged) |
-| [bin/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | the `harness` state-ledger CLI, 16 subcommands (write-locked; README staged) |
-| [templates/ ✋](proposals/2026-07-02-wave1-locked-dept-readmes.md) | portable canonical account settings — the wiring deploy source (write-locked; README staged) |
+| [hooks/ ✋](hooks/README.md) | mechanical enforcement: 21 files, 18 wired across 6 events (write-locked) |
+| [lint/ ✋](lint/README.md) | the self-lint: budgets, falsifiability, the autonomy firewall (write-locked) |
+| [evals/ ✋](evals/README.md) | regression corpus + in-session replay — the only proof vN+1 beats vN (write-locked) |
+| [bin/ ✋](bin/README.md) | the `harness` state-ledger CLI, 16 subcommands (write-locked) |
+| [templates/ ✋](templates/README.md) | portable canonical account settings — the wiring deploy source (write-locked) |
 | [memory/](memory/README.md) | versioned cold knowledge: user-model, 12 ADRs, calibration rollups, nudge provenance |
 | [proposals/](proposals/README.md) | decisions awaiting a human — designed, never self-decided |
 | [cartograph/](cartograph/README.md) | the extractor, oracle, atlas, and structural-rot gate |
