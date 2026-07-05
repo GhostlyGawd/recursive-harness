@@ -43,9 +43,13 @@ For each case in evals/corpus/ (or only those named in $ARGUMENTS):
    - rubric: spawn the **critic** agent with task.md + rubric.md + `"$SANDBOX"`;
      then `python3 evals/run_evals.py --record <slug>
      pass|fail "<critic's top defect or 'clean'>"`.
-5. After all cases: `python3 evals/run_evals.py --report`. For any failure,
-   decide explicitly: regression (file it — that's a finding) or stale
-   rubric (fix the case via /harness-pr). Never shrug.
+5. After all cases: `python3 evals/run_evals.py --report --session <session-id>`.
+   On a COMPLETE run this also refreshes `evals/results/last-replay.json` — the
+   committed receipt (date, corpus hash, per-case verdicts); COMMIT it on the
+   branch the replay certifies (the ledger itself is gitignored, so the receipt
+   is the only in-repo evidence a replay happened). For any failure, decide
+   explicitly: regression (file it — that's a finding) or stale rubric (fix the
+   case via /harness-pr). Never shrug.
 6. Enforcement-layer PRs must paste this report into the PR body
    (commands/harness-pr.md) — the gate is procedural now, so the procedure
    is not optional.

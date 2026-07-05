@@ -2,6 +2,9 @@ state/*
 !state/.gitkeep
 evals/results/*
 !evals/results/.gitkeep
+# The replay receipt IS committed — the only in-repo evidence a full corpus
+# replay ran (written by run_evals.py --report on a complete run).
+!evals/results/last-replay.json
 __pycache__/
 *.pyc
 HUMAN_APPROVED
