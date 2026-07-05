@@ -210,6 +210,19 @@ def main() -> int:
             esc, stuck = _heal_counts(cwd)
             if esc or stuck:
                 print(f"[harness] heal: {esc} escalate / {stuck} stuck (/heal)")
+        # Autonomy graduation progress (roadmap item 10, session 975732da): the
+        # 20-proposal bar only motivates if it is visible between /meta-retros.
+        # Full banner only; fail-open — a bad autonomy.json must not cost the session.
+        if banner == "full":
+            try:
+                with open(os.path.join(HARNESS_ROOT, "autonomy.json"), encoding="utf-8") as f:
+                    cats = json.load(f).get("categories", {})
+                parts = [f"{k} {v.get('proposed', 0)}/20" for k, v in cats.items()
+                         if v.get("graduable") and not v.get("auto_merge")]
+                if parts:
+                    print(f"[harness] autonomy: {' - '.join(parts)} (graduation at /meta-retro)")
+            except (OSError, ValueError, AttributeError):
+                pass
     warn = _branch_warning(cwd)
     if warn:
         print(warn)

@@ -6,8 +6,11 @@ Subcommands:
   outcome      Score a prediction after the fact.
   stats        Calibration report (hit rate + Brier score by confidence bucket).
   corrections  add | count | list  — user-correction ledger.
-  skill-fired  Record that a skill triggered (called by PostToolUse hook).
-  skill-stats  Fire counts per skill over a window (feeds /meta-retro).
+  skill-fired  Record that a skill triggered (the PostToolUse hook writes the
+               ledger directly; this is the manual/backfill entry — optional
+               --outcome helped|neutral|hurt tags the fire's value for /retro).
+  skill-stats  Fire counts + outcome tallies per skill over a window (feeds
+               /meta-retro: zero-fire AND hurt>helped are both prune signals).
   followup     add | list | done | count — deferred-task ledger (TTL-decayed,
                so it can't rot into a guilt pile). Captured silently; pulled via /followups.
   approve      Record a human's enforcement-layer approval (verbal/remote OK) and
@@ -291,14 +294,18 @@ def cmd_corrections(args) -> int:
 
 # ------------------------------------------------------------ skill usage
 def cmd_skill_fired(args) -> int:
-    _append(SKILL_USAGE, {"ts": _now(), "skill": args.name,
-                          "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "?")})
+    rec = {"ts": _now(), "skill": args.name,
+           "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "?")}
+    if args.outcome:  # value tag: lets /meta-retro prune high-fire/low-value skills
+        rec["outcome"] = args.outcome
+    _append(SKILL_USAGE, rec)
     return 0
 
 
 def cmd_skill_stats(args) -> int:
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=args.days)
     counts: dict = {}
+    outcomes: dict = {}
     for r in _read(SKILL_USAGE):
         try:
             ts = dt.datetime.fromisoformat(r["ts"])
@@ -306,15 +313,28 @@ def cmd_skill_stats(args) -> int:
             continue
         if ts >= cutoff:
             counts[r["skill"]] = counts.get(r["skill"], 0) + 1
+            if r.get("outcome") in ("helped", "neutral", "hurt"):
+                o = outcomes.setdefault(r["skill"], {"helped": 0, "neutral": 0, "hurt": 0})
+                o[r["outcome"]] += 1
+
+    def _value(s: str) -> str:
+        o = outcomes.get(s)
+        if not o:
+            return ""
+        col = f" · helped {o['helped']} neutral {o['neutral']} hurt {o['hurt']}"
+        if o["hurt"] > o["helped"]:  # only flag on tagged evidence, never on absence
+            col += "  <-- HURT>HELPED, review at /meta-retro"
+        return col
+
     skills_dir = os.path.join(ROOT, "skills")
     installed = sorted(os.listdir(skills_dir)) if os.path.isdir(skills_dir) else []
     for s in installed:
         n = counts.get(s, 0)
         flag = "  <-- ZERO FIRES, prune candidate" if n == 0 else ""
-        print(f"{s:24s} fired {n:4d}x in {args.days}d{flag}")
+        print(f"{s:24s} fired {n:4d}x in {args.days}d{flag}{_value(s)}")
     for s, n in sorted(counts.items()):
         if s not in installed:
-            print(f"{s:24s} fired {n:4d}x  (not in skills/ — project skill? promote or ignore)")
+            print(f"{s:24s} fired {n:4d}x  (not in skills/ — project skill? promote or ignore){_value(s)}")
     return 0
 
 
@@ -741,6 +761,8 @@ def main() -> int:
     sp = sub.add_parser("skill-fired")
     sp.add_argument("name")
     sp.add_argument("--session", default="")
+    sp.add_argument("--outcome", choices=["helped", "neutral", "hurt"], default=None,
+                    help="value tag (optional; /retro backfills these)")
     sp.set_defaults(fn=cmd_skill_fired)
 
     sp = sub.add_parser("skill-stats")

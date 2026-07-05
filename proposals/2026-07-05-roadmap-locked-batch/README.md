@@ -1,7 +1,16 @@
 # Roadmap items 2–10 — locked-path batch (STAGED, awaiting the marker cycle)
 
 - **Date:** 2026-07-05
-- **Status:** STAGED — every locked edit sits under `staged/` as the byte-identical
+- **Status:** APPLIED 2026-07-05 (same session) — the human answered the explicit
+  scoped AskUserQuestion with "Grant it now" + "Keep the committed flip"; grant
+  logged via `bin/harness approve` (state/approvals.jsonl), marker placed, all
+  staged files applied BYTE-IDENTICAL (cmp/diff asserted at apply time), the two
+  tests graduated to tests/ via `git mv`, then marker revoked immediately.
+  Verified post-apply: lint clean · gate 0 warnings · dry-run 12 cases valid ·
+  both new graders PASS against the live tree · full ci.yml battery green
+  (test_hooks re-run after revoke — it can only pass with the guard re-locked).
+  Original status follows.
+- **Status (original):** STAGED — every locked edit sits under `staged/` as the byte-identical
   apply source; the two new tests sit under `tests/` here (the `proposals/` staging
   scope of tests/test_ci_coverage.py) and graduate to `tests/` when applied. The
   session attempted the wave-1b-style verbal-grant marker cycle and the auto-mode

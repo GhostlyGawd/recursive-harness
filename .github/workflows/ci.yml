@@ -49,7 +49,9 @@ jobs:
         run: python3 tests/test_materialize_worktree_repos.py
       - name: Feature-flag layer tests (ADR 0008)
         if: ${{ !cancelled() }}
-        run: python3 tests/test_features.py
+        run: |
+          python3 tests/test_features.py
+          python3 tests/test_feature_flag_drift.py
       - name: Retro-completion ledger tests
         if: ${{ !cancelled() }}
         run: python3 tests/test_retro_done.py
@@ -61,6 +63,7 @@ jobs:
           python3 tests/test_settings_parity.py
           python3 tests/test_ci_coverage.py
           python3 tests/test_followup.py
+          python3 tests/test_gc_rollup.py
       - name: Subsystem tests (fleet event-log, mission-control, auto-healer, specialization)
         if: ${{ !cancelled() }}
         run: |

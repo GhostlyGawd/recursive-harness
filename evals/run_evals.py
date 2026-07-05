@@ -3,18 +3,22 @@
 
 NO HEADLESS EXECUTION (ADR 0003). This script never invokes Claude. The
 replay itself happens inside an interactive Claude Code session via the
-/run-evals command: live Claude spawns one FRESH subagent per case (same
-isolation `claude -p` would have provided, on the same subscription auth),
-then calls back into this script to grade and record.
+/run-evals command: mechanism-check cases are graded directly against the
+live harness (no subagent); agent-deliverable cases get one FRESH subagent
+to produce the artifact (same isolation `claude -p` would have provided, on
+the same subscription auth) — see commands/run-evals.md step 3. Either way
+the session calls back into this script to grade and record.
 
 Modes:
   --dry-run                       validate corpus structure (pure Python, CI-safe)
   --grade SLUG WORKDIR            run the case's check.py on WORKDIR; records result
   --record SLUG pass|fail DETAIL  record a critic-subagent verdict (rubric cases)
-  --report                        summarize the current results ledger
+  --report [--session ID]         summarize the ledger; on a COMPLETE run also
+                                  write the committed receipt (last-replay.json)
   --reset                         start a fresh results ledger (new replay run)
 """
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -25,6 +29,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORPUS = os.path.join(ROOT, "evals", "corpus")
 RESULTS = os.path.join(ROOT, "evals", "results")
 LEDGER = os.path.join(RESULTS, "current.jsonl")
+RECEIPT = os.path.join(RESULTS, "last-replay.json")
 
 
 def discover() -> list[str]:
@@ -57,6 +62,22 @@ def validate(slug: str) -> list[str]:
     return problems
 
 
+def corpus_hash() -> str:
+    """Stable digest of every corpus file (path + bytes), so a receipt names
+    exactly which corpus it certified."""
+    h = hashlib.sha256()
+    for dirpath, dirnames, filenames in os.walk(CORPUS):
+        dirnames.sort()
+        for fn in sorted(filenames):
+            p = os.path.join(dirpath, fn)
+            h.update(os.path.relpath(p, CORPUS).replace(os.sep, "/").encode())
+            h.update(b"\0")
+            with open(p, "rb") as fh:
+                h.update(fh.read())
+            h.update(b"\0")
+    return h.hexdigest()[:16]
+
+
 def record(slug: str, status: str, detail: str) -> None:
     os.makedirs(RESULTS, exist_ok=True)
     with open(LEDGER, "a", encoding="utf-8") as f:
@@ -72,6 +93,8 @@ def main() -> int:
     ap.add_argument("--grade", nargs=2, metavar=("SLUG", "WORKDIR"))
     ap.add_argument("--record", nargs=3, metavar=("SLUG", "STATUS", "DETAIL"))
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--session", default=None,
+                    help="session id stamped into the receipt (with --report)")
     ap.add_argument("--reset", action="store_true")
     args = ap.parse_args()
 
@@ -136,6 +159,23 @@ def main() -> int:
             print(f"NOT RUN: {', '.join(missing)}")
         print(f"\n{len(latest) - len(failed)}/{len(latest)} passed"
               + (f", {len(missing)} not run" if missing else ""))
+        if latest and not missing:
+            # COMPLETE run -> refresh the committed receipt. This is the only
+            # durable, reviewable evidence a replay happened (evals/results/
+            # current.jsonl is gitignored); commit it with the PR it certifies.
+            receipt = {
+                "date": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "corpus_hash": corpus_hash(),
+                "session": args.session,
+                "passed": len(latest) - len(failed),
+                "total": len(latest),
+                "cases": {s: latest[s]["status"] for s in sorted(latest)},
+            }
+            with open(RECEIPT, "w", encoding="utf-8") as f:
+                json.dump(receipt, f, indent=2, sort_keys=True)
+                f.write("\n")
+            print(f"receipt written: {os.path.relpath(RECEIPT, ROOT)}"
+                  " — commit it with the change it certifies")
         return 1 if failed or missing else 0
 
     ap.print_help()
