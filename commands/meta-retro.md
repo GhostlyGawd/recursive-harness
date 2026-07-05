@@ -65,6 +65,9 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    proposed >= 20 and accepted/proposed >= 0.95, propose flipping
    `auto_merge: true` — via PR, since autonomy.json is enforcement-layer.
    NEVER propose this for `enforcement`; the lint will reject it anyway.
+   Report progress even when nothing graduates — one line, all categories:
+   `autonomy: skills 14/20 · commands 8/20 · …` (the SessionStart banner
+   shows the same; a progress bar nobody sees never earns trust).
 6. **Kernel pressure**: is CLAUDE.md near its 60-line budget? Demote anything
    that could be a skill. The kernel earns its always-loaded cost or shrinks.
 7. **Decision-record drift**: for each `memory/decisions/*.md` ADR, re-verify its
