@@ -15,6 +15,8 @@ Subcommands:
                so it can't rot into a guilt pile). Captured silently; pulled via /followups.
   approve      Record a human's enforcement-layer approval (verbal/remote OK) and
                place the HUMAN_APPROVED marker; --revoke removes it; --status shows it.
+               --standing records a durable scope approval (NO marker) so settled
+               points aren't re-asked; --list shows active standing grants.
   retro-done   add | list | has — DURABLE ledger of retro'd sessions (persists past
                session end, unlike the ephemeral retro_gate_* flag); feeds /retro-backlog.
   gc           Roll hot state older than N days into versioned monthly summaries.
@@ -27,6 +29,11 @@ Subcommands:
   health       Harness health score (0-100) from the cartograph graph; --trend for history.
   ask          Query the cartograph oracle (extract.py --query/--context): read-only
                structural Q&A (what enforces X / path A→B / dependents). See skill structural-qa.
+  explain      Plain-words definition of any term the harness prints (glossary).
+  scorecard    The whole proof on one screen: predictions, regression tests,
+               autonomy progress, skill value, bug memory. Pull-only.
+  doctor       Install sanity: which brain this session loaded + what's broken,
+               each problem paired with the one command that fixes it.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -90,6 +97,7 @@ CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
 SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
 FOLLOWUPS = os.path.join(STATE, "followups.jsonl")
 FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active view (decay)
+STANDING_TTL_DAYS = 30  # standing approvals older than this stop covering re-asks (decay)
 APPROVALS = os.path.join(STATE, "approvals.jsonl")
 # Durable retro-completion ledger: which sessions have been retro'd. PERSISTS (it is
 # NOT a retro_gate_* name, so hooks/session_end.py's per-session cleanup never deletes
@@ -522,6 +530,46 @@ def cmd_approve(args) -> int:
         print(f"note: HUMAN_APPROVED marker resolves to the main checkout root "
               f"({MAIN_ROOT}), not this worktree ({ROOT}) — that is where the guard checks it.",
               file=sys.stderr)
+    # Standing grants (2026-07-05, session 975732da — the user-model's standing-grant
+    # test made mechanical, folded into THIS existing surface per the enforcement-
+    # friction rule): a durable "yes, this kind of thing is approved" that expires,
+    # so the agent checks --list before re-asking a settled point. A standing grant
+    # NEVER covers guard-weakening or destructive/irreversible actions (those floors
+    # outrank any grant) and never places the marker.
+    if getattr(args, "list", False):
+        cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=STANDING_TTL_DAYS)
+        active = []
+        for r in _read(APPROVALS):
+            if r.get("action") != "standing":
+                continue
+            try:
+                if dt.datetime.fromisoformat(r["ts"]) >= cutoff:
+                    active.append(r)
+            except (KeyError, ValueError):
+                continue
+        if not active:
+            print(f"no active standing grants (they expire after {STANDING_TTL_DAYS} days).")
+            print("record one the user just gave: harness approve --standing "
+                  "--scope '<what kind of work>' --grant '<their verbatim words>'")
+            return 0
+        print(f"active standing grants (expire {STANDING_TTL_DAYS}d after recording; "
+              "never cover guard-weakening or destructive actions):")
+        for r in active:
+            print(f"  {r.get('ts', '')[:10]}  {r.get('scope', '')}  — \"{r.get('grant', '')}\"")
+        print("before asking the user to re-approve work inside one of these scopes: don't — proceed.")
+        return 0
+    if getattr(args, "standing", False):
+        if not (args.scope or "").strip() or not (args.grant or "").strip():
+            print("a standing grant needs BOTH --scope and --grant (the human's verbatim words).",
+                  file=sys.stderr)
+            return 1
+        _append(APPROVALS, {"ts": _now(), "action": "standing", "scope": args.scope.strip(),
+                            "grant": args.grant.strip(),
+                            "session": args.session or os.environ.get("CLAUDE_SESSION_ID", "remote")})
+        print(f"standing grant recorded for {args.scope.strip()!r} — expires in {STANDING_TTL_DAYS} days.")
+        print("Check `harness approve --list` before re-asking anything inside this scope; "
+              "guard-weakening and destructive actions still require a fresh explicit grant.")
+        return 0
     if args.status:
         present = os.path.exists(MARKER)
         recs = _read(APPROVALS)
@@ -530,6 +578,9 @@ def cmd_approve(args) -> int:
             last = recs[-1]
             print(f"last log: {last.get('ts')} [{last.get('action')}] scope={last.get('scope')!r} "
                   f"grant={last.get('grant')!r}")
+        standing = [r for r in recs if r.get("action") == "standing"]
+        if standing:
+            print(f"standing grants on record: {len(standing)} (active ones: harness approve --list)")
         return 0
     if args.revoke:
         existed = os.path.exists(MARKER)
@@ -551,6 +602,229 @@ def cmd_approve(args) -> int:
         f.write(f"approved: {args.scope.strip()}\ngrant: {args.grant.strip()}\nlogged: {_now()}\n")
     print(f"HUMAN_APPROVED placed for scope {args.scope.strip()!r} (grant logged to state/approvals.jsonl).")
     print("Make ONLY the approved edit, then run: harness approve --revoke")
+    return 0
+
+
+# ------------------------------------------------------------- explain
+# provenance: 2026-07-05, session 975732da — product-UX roadmap item 1 (the user-model
+# "explain it like a video game explains each setting" rule, evidence: 5). Every term
+# in outcome words: what it is, what changes for you. Never internal mechanics.
+GLOSSARY = {
+    "prediction": "A claim written down BEFORE doing a task so it can be checked after, and scored hit or miss. The point is discovering when the agent's confidence is wrong.",
+    "unscored": "A prediction that was never checked against what actually happened. It counts as debt until scored with `harness outcome <id> --result hit|miss`.",
+    "calibration": "How often the agent turns out to be right, compared to how sure it claimed to be. 'right 79% of 63' means 63 predictions were checked and 79% came true.",
+    "brier": "A 0-to-1 quality score for predictions where LOWER is better. Being confidently wrong costs much more than admitting uncertainty.",
+    "correction": "A moment you corrected, overrode, or re-explained something. Logged automatically because corrections are the strongest signal of what to fix next.",
+    "retro": "A short review after significant work: each lesson becomes a permanent, reviewed repo change (a PR) — never a private memory.",
+    "meta-retro": "The monthly review OF the harness itself: prune unused skills, check for drift in prediction accuracy, replay the regression tests, report trust progress.",
+    "skill": "A saved procedure loaded only when a matching task appears — a recipe card, not always-on behavior.",
+    "hook": "A small script that runs automatically at fixed moments (session start, before a tool runs, at stop) so rules are enforced mechanically, not by remembering.",
+    "guard": "A hook that BLOCKS an action instead of just watching — e.g. stopping two sessions from editing the same folder. A block message always names the one-line override.",
+    "marker": "The HUMAN_APPROVED file. While it exists the agent may edit the protected rule files; it is placed only on your explicit say-so and removed right after the edit.",
+    "worktree": "A separate working copy of the repo (under .claude/worktrees/) so parallel sessions cannot overwrite each other's files.",
+    "trunk": "The main copy of this repo (the `main` branch) — the single source of truth every learning merges into.",
+    "lease": "A freshness check: if someone else changed the trunk since this session last looked, changing commands pause until you refresh.",
+    "followup": "A deferred to-do captured silently during work. Nothing is pushed at you — see them only when you ask (/followups). They fade out after 30 days.",
+    "fold": "Several follow-ups that are really ONE underlying problem, merged so fixing the cause clears them all at once.",
+    "heal": "The bug memory: failed and successful fixes are recorded per repo, so meeting an old bug again surfaces what worked — and what provably did not — last time.",
+    "candidate": "A tool failure captured automatically as a POSSIBLE bug. It becomes a real record only if reviewed and promoted, so noise can never inflate the bug memory.",
+    "eval": "A saved regression test for the harness itself: a past task with an automatic pass/fail check, replayed to prove a change didn't break what used to work.",
+    "corpus": "The full set of regression tests. 'Replaying the corpus' means running every one.",
+    "receipt": "evals/results/last-replay.json — committed proof of the last full regression replay: when it ran, on which version of the tests, and each case's verdict.",
+    "autonomy": "Earned trust, per category of change. After 20 accepted proposals at 95%+ acceptance a category MAY start merging without review — always flipped by a human.",
+    "graduation": "The moment a change category crosses the trust bar (20 proposed, 95% accepted) and a human flips it to auto-merge.",
+    "standing grant": "A recorded 'yes, this kind of thing is approved'. The agent checks these (harness approve --list) before re-asking permission it already has. Expires after 30 days.",
+    "rollup": "Old day-to-day records compressed into a monthly summary (memory/calibration/<month>.json) so history ships with the repo without dragging raw logs along.",
+    "provenance": "The line on every rule and skill naming the session or event that earned it. Rules without receipts get pruned.",
+    "kernel": "CLAUDE.md — the short always-loaded contract: predict before acting, file every lesson as a repo change, never touch the rule-enforcement files unilaterally.",
+    "banner": "The status lines at session start: recent prediction accuracy, what is awaiting a score, and progress toward earned auto-merge.",
+    "scorecard": "One screen showing the whole proof: prediction accuracy and history, last regression replay and its age, trust progress, which skills helped or hurt, open bug-memory items.",
+    "doctor": "One command that checks the install: which brain this session loaded, whether settings and hooks are wired right, and the exact command that fixes anything broken.",
+}
+
+
+def cmd_explain(args) -> int:
+    q = " ".join(args.term).strip().lower().lstrip("/-")
+    if not q:
+        print("what should I explain? terms:")
+        print("  " + ", ".join(sorted(GLOSSARY)))
+        return 0
+    hits = {k: v for k, v in GLOSSARY.items() if q == k}
+    if not hits:
+        hits = {k: v for k, v in GLOSSARY.items() if q in k or k in q}
+    if not hits:
+        print(f"no entry for {q!r}. Terms I can explain:")
+        print("  " + ", ".join(sorted(GLOSSARY)))
+        return 1
+    for k, v in sorted(hits.items()):
+        print(f"{k}: {v}")
+    return 0
+
+
+# ------------------------------------------------------------- scorecard
+# provenance: 2026-07-05, session 975732da — product-UX roadmap item 3: the README's
+# "can prove it" promise on one pull-only screen. Never pushed into the banner.
+def cmd_scorecard(args) -> int:
+    print("== Scorecard — the proof, in plain words ==")
+    preds = _read(PREDICTIONS)
+    scored = [p for p in preds if p.get("result") in ("hit", "miss")]
+    pending = len(preds) - len(scored)
+    if scored:
+        hr = sum(1 for p in scored if p["result"] == "hit") / len(scored)
+        print(f"predictions: right {hr:.0%} of the last {len(scored)} checked; "
+              f"{pending} still awaiting a score")
+    else:
+        print(f"predictions: none scored on this machine yet; {pending} awaiting a score")
+    cal_dir = os.path.join(MEMORY, "calibration")
+    months = sorted(f for f in (os.listdir(cal_dir) if os.path.isdir(cal_dir) else [])
+                    if f.endswith(".json"))
+    trend = []
+    for m in months[-6:]:
+        try:
+            pr = json.load(open(os.path.join(cal_dir, m), encoding="utf-8")).get("predictions", {})
+            if pr.get("scored"):
+                trend.append(f"{m[:-5]}: right {round(pr.get('hit_rate', 0) * 100)}% of {pr['scored']}")
+        except (OSError, ValueError):
+            continue
+    print("history: " + (" | ".join(trend) if trend
+                         else "no monthly summaries yet (a /gc run creates them)"))
+    receipt = os.path.join(ROOT, "evals", "results", "last-replay.json")
+    try:
+        r = json.load(open(receipt, encoding="utf-8"))
+        age = (dt.datetime.now() - dt.datetime.fromisoformat(r["date"])).days
+        line = f"regression tests: {r['passed']}/{r['total']} passed on the last full run, {age}d ago"
+        if age > 30:
+            line += "  <-- stale: replay with /run-evals"
+        print(line)
+    except (OSError, ValueError, KeyError):
+        print("regression tests: no replay receipt yet (a /run-evals run writes one)")
+    try:
+        cats = json.load(open(os.path.join(ROOT, "autonomy.json"),
+                              encoding="utf-8")).get("categories", {})
+        parts = [f"{k} {v.get('proposed', 0)}/20" for k, v in cats.items()
+                 if v.get("graduable") and not v.get("auto_merge")]
+        if parts:
+            print("trust toward auto-merge: " + " - ".join(parts))
+    except (OSError, ValueError):
+        pass
+    helped = hurt = tagged = 0
+    for r in _read(SKILL_USAGE):
+        o = r.get("outcome")
+        if o in ("helped", "neutral", "hurt"):
+            tagged += 1
+            helped += o == "helped"
+            hurt += o == "hurt"
+    if tagged:
+        print(f"skills: {tagged} tagged uses — {helped} helped / {hurt} hurt "
+              "(per-skill detail: harness skill-stats)")
+    else:
+        print("skills: no value tags yet (tag a use: harness skill-fired <name> --outcome helped|hurt)")
+    heal_dir = os.path.join(STATE, "heal")
+    n_cand = 0
+    if os.path.isdir(heal_dir):
+        for key in os.listdir(heal_dir):
+            cand = os.path.join(heal_dir, key, "candidates.jsonl")
+            if os.path.exists(cand):
+                with open(cand, encoding="utf-8") as f:
+                    n_cand += sum(1 for ln in f if ln.strip())
+    print(f"bug memory: {n_cand} auto-captured failure candidate(s) awaiting review (/heal)"
+          if n_cand else "bug memory: nothing awaiting review (/heal)")
+    return 0
+
+
+# ------------------------------------------------------------- doctor
+# provenance: 2026-07-05, session 975732da — product-UX roadmap item 4: turn the
+# README's sibling-launcher warning into a detector. Read-only; every failing line
+# names the one command that fixes it.
+def cmd_doctor(args) -> int:
+    problems = []
+
+    def good(msg):
+        print(f"  ok      {msg}")
+
+    def bad(msg, fix):
+        problems.append(msg)
+        print(f"  PROBLEM {msg}")
+        print(f"          fix: {fix}")
+
+    print("== Doctor — is this install sane? ==")
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR", "")
+    silo = os.path.join(ROOT, ".claude-private")
+    if not cfg:
+        bad("no brain is pinned: sessions in this shell load the OS-global ~/.claude, NOT this harness",
+            f"launch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
+    elif os.path.realpath(cfg).startswith(os.path.realpath(silo)):
+        acct = os.path.basename(cfg.rstrip("/\\"))
+        good(f"this shell's brain: account '{acct}' in this harness")
+    else:
+        bad(f"a DIFFERENT brain is pinned ({cfg}) — behavior here comes from that config, not this repo",
+            f"relaunch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
+    import re as _re
+    tpl = os.path.join(ROOT, "templates", "account-settings.json")
+    live = os.path.join(cfg, "settings.json") if cfg else os.path.join(ROOT, "settings.json")
+    try:
+        want = sorted(set(_re.findall(r"[\w_]+\.py", open(tpl, encoding="utf-8").read())))
+        have = sorted(set(_re.findall(r"[\w_]+\.py", open(live, encoding="utf-8").read())))
+        if want == have:
+            good(f"hook wiring matches the canonical template ({len(have)} hook files)")
+        else:
+            missing = [h for h in want if h not in have]
+            extra = [h for h in have if h not in want]
+            bad("deployed hook wiring differs from the canonical template"
+                + (f" (missing: {', '.join(missing)})" if missing else "")
+                + (f" (extra: {', '.join(extra)})" if extra else ""),
+                "./account-init.sh --sync-settings")
+    except OSError as e:
+        bad(f"could not compare settings ({e})", "check templates/account-settings.json + your settings.json exist")
+    hooks_dir = os.path.join(ROOT, "hooks")
+    broken = []
+    for fn in sorted(os.listdir(hooks_dir)) if os.path.isdir(hooks_dir) else []:
+        if fn.endswith(".py"):
+            try:
+                compile(open(os.path.join(hooks_dir, fn), encoding="utf-8").read(), fn, "exec")
+            except SyntaxError:
+                broken.append(fn)
+    if broken:
+        bad(f"hook(s) with syntax errors would silently stop enforcing: {', '.join(broken)}",
+            "python3 lint/lint_harness.py for details; restore from git")
+    else:
+        good("all hooks compile")
+    probe = os.path.join(STATE, ".doctor-probe")
+    try:
+        os.makedirs(STATE, exist_ok=True)
+        open(probe, "w").close()
+        os.remove(probe)
+        good("state/ ledgers are writable")
+    except OSError:
+        bad("state/ is not writable — predictions/corrections cannot be recorded",
+            f"check permissions on {STATE}")
+    try:
+        r = subprocess.run(["git", "-C", MAIN_ROOT, "rev-parse", "--abbrev-ref", "HEAD"],
+                           capture_output=True, text=True, timeout=5)
+        branch = r.stdout.strip()
+        if r.returncode == 0 and branch and branch != "main":
+            bad(f"the main checkout is parked on branch '{branch}' — new sessions there start on it",
+                f"git -C {MAIN_ROOT} checkout main && git -C {MAIN_ROOT} pull")
+        elif r.returncode == 0:
+            good("main checkout is on trunk (main)")
+    except Exception:
+        pass
+    receipt = os.path.join(ROOT, "evals", "results", "last-replay.json")
+    try:
+        r = json.load(open(receipt, encoding="utf-8"))
+        age = (dt.datetime.now() - dt.datetime.fromisoformat(r["date"])).days
+        if age > 30:
+            bad(f"the regression tests haven't had a full replay in {age} days — 'still works' is unproven",
+                "run /run-evals in a session, commit the refreshed receipt")
+        else:
+            good(f"regression tests last replayed {age}d ago ({r.get('passed')}/{r.get('total')} passed)")
+    except (OSError, ValueError, KeyError):
+        bad("no regression replay receipt exists — there is no committed proof the corpus passes",
+            "run /run-evals in a session, commit evals/results/last-replay.json")
+    if problems:
+        print(f"{len(problems)} problem(s) found — each fix above is copy-pasteable.")
+        return 1
+    print("everything looks healthy.")
     return 0
 
 
@@ -787,12 +1061,29 @@ def main() -> int:
     sp.add_argument("--slug", default="", help="the retro slug, for context")
     sp.set_defaults(fn=cmd_retro_done)
 
+    sp = sub.add_parser("explain",
+                        help="plain-words definition of any term the harness prints")
+    sp.add_argument("term", nargs="*")
+    sp.set_defaults(fn=cmd_explain)
+
+    sp = sub.add_parser("scorecard",
+                        help="the whole proof on one screen, in plain words (pull-only)")
+    sp.set_defaults(fn=cmd_scorecard)
+
+    sp = sub.add_parser("doctor",
+                        help="install sanity: which brain is loaded + copy-pasteable fixes")
+    sp.set_defaults(fn=cmd_doctor)
+
     sp = sub.add_parser("approve")
     sp.add_argument("--scope", default="", help="what the edit is (e.g. 'autonomy ledger reconciliation')")
     sp.add_argument("--grant", default="", help="the human's verbatim approving words")
     sp.add_argument("--session", default="")
     sp.add_argument("--revoke", action="store_true", help="remove the marker, re-lock the guard")
     sp.add_argument("--status", action="store_true", help="show marker state + last grant")
+    sp.add_argument("--standing", action="store_true",
+                    help="record a durable scope approval (NO marker) so settled points aren't re-asked")
+    sp.add_argument("--list", action="store_true",
+                    help="show active standing grants (check before re-asking a settled point)")
     sp.set_defaults(fn=cmd_approve)
 
     sp = sub.add_parser("gc")

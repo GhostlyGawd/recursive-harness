@@ -9,6 +9,19 @@ The PR *content* rules live in `harness-pr` + `harness-authoring`. This is the
 *mechanics* of getting the change to land without fighting the guards or GitHub —
 the footguns that cost re-work the first time you hit them. Each rule has a receipt.
 
+## Standing grants — check BEFORE re-asking a settled point
+Before ANY AskUserQuestion / "over to you" hand-back about approval mid-flow, run
+`"$HARNESS/bin/harness" approve --list`. An active standing grant covering the scope
+means the point is SETTLED: proceed (record marker grants against it verbatim), do
+not re-ask. When the user gives blanket words ("full approval for everything",
+"you're approved on X"), record them immediately: `approve --standing --scope
+"<what kind of work>" --grant "<their verbatim words>"` — that is what makes the
+user-model's standing-grant test (evidence 4) mechanical instead of remembered.
+FLOORS ALWAYS OUTRANK: guard-weakening and destructive/irreversible actions need
+fresh explicit words no matter what --list shows.
+> receipt: roadmap item 2 (proposals/2026-07-05-product-ux-roadmap.md); the
+> re-ask friction fired 3x on 2026-06-27 and again 2026-07-05.
+
 ## Stacked PRs — retarget the child BEFORE deleting the base
 When PR-B is stacked on PR-A's branch (B's base = A's branch), merging A with
 `gh pr merge A --delete-branch` deletes the branch B targets. GitHub does NOT

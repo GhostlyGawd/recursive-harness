@@ -7,6 +7,9 @@ Follow skill: eval-capture. Concretely, for the task just finished
 
 1. Confirm it qualifies: user accepted the result, AND (recurring shape OR
    correction-born OR articulated taste). If not, say why and stop.
+   Standing qualifier (roadmap item 8, 2026-07-05): ANY Windows papercut that cost
+   a session (cp1252/console encoding, path-separator or drive-letter splits)
+   qualifies as recurring-shape by default — the class recurs; fence each instance.
 2. Create `evals/corpus/<slug>/` in the harness repo:
    - `task.md`: the request, sanitized of secrets, plus minimal fixtures;
    - `check.py` (objective, preferred) or `rubric.md` (3-6 falsifiable

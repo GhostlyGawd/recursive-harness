@@ -59,3 +59,6 @@ For $ARGUMENTS (default: show open):
 7. To capture a new one on request: `python3 bin/harness followup add "<text>"`.
 8. Report only the delta: "N open · closed X · folded Y->Z · acted on W". Do NOT
    recite the whole list back unless asked — surfacing-on-demand is the whole point.
+   ALL user-facing status during this command speaks plain outcomes ("what I did /
+   what I found / why I'm stuck") — never ids, hashes, ADR numbers, or internal
+   tier/guard jargon (user-model plain-language rule, evidence 5, 2026-06-28 run).

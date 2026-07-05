@@ -11,6 +11,8 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    foreign cwd — Gap D, proposals/2026-06-18-harness-portability.md).
    Zero-fire skills → propose pruning or a description rewrite (per
    skill-creator wisdom: skills under-trigger when descriptions aren't pushy).
+   Also prune-review any skill flagged HURT>HELPED in skill-stats — tagged
+   evidence a skill fires often but makes work worse (roadmap item 9, 2026-07-05).
    Confirm with the user before deleting anything with provenance < 90d old.
    **Machine-fed candidate list** (the autophagic loop — feeds this step AND step 7):
    `python3 "$HARNESS/cartograph/extract.py" --audit`. It surfaces `structural_rot`

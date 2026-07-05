@@ -5,6 +5,10 @@ provenance: 2026-06-21, session 04fb5c5c — user pitched "Auto-Healer"; the pul
 
 For $ARGUMENTS (default: review the current repo):
 
+0. Everything shown to the user speaks plain outcomes ("this bug came back 3
+   times; the utf-8 fix worked, the regex one provably didn't") — never signatures,
+   hashes, or tier labels (plain-language rule, evidence 5; roadmap item 6). Digest
+   tuning on real autocapture data is deferred until candidates accumulate.
 1. `python3 skills/auto-healer/heal.py review` — the current repo's web. Add
    `--all-repos` to survey every tracked repo, or `--repo <key>` to target one by
    its ledger key. `--json` emits the same predicates for a machine consumer;
