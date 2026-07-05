@@ -1,0 +1,44 @@
+{
+  "_doc": "Harness feature flags. SOFT keys: override per-machine in state/features.local.json (gitignored) or via `harness features set <key> <value>`. LOCKED keys (the safety ones: guards.*.block, guards.worktree_isolation.bash_scanner, guards.worktree_session.ttl_seconds) are read ONLY from THIS committed file -- the enforcement guard protects it from agent edits, so a human flips them here (tracked in git) or uses the env hatch. An agent CANNOT self-weaken a guard via the local file. See memory/decisions/0008-feature-flags-config.md.",
+  "_env_hatches": "Independent of this file and unchanged: HARNESS_ALLOW_CROSS_WORKTREE=1 (one-off disable Guard A) and HARNESS_ALLOW_MULTI_SESSION=1 (one-off disable Guard B).",
+
+  "guards": {
+    "worktree_isolation": {
+      "block": true,
+      "bash_scanner": "strict"
+    },
+    "worktree_session": {
+      "block": true,
+      "warn_main_checkout": true,
+      "warn_cooldown_seconds": 180,
+      "ttl_seconds": 900
+    },
+    "trunk_lease": {
+      "block": true
+    },
+    "branch_first": {
+      "warn": true
+    }
+  },
+
+  "nudges": {
+    "retro_gate": true,
+    "cadence_gate": true,
+    "retro_cadence_sessions": 5,
+    "skill_gap_gate": true,
+    "skill_gap_recurrence": 3
+  },
+
+  "observability": {
+    "session_banner": "full",
+    "log_corrections": true,
+    "log_skill_use": true,
+    "heal_autocapture": true,
+    "heal_banner": false
+  },
+
+  "workflow": {
+    "post_merge_return_to_trunk": true,
+    "followup_ttl_days": 30
+  }
+}
