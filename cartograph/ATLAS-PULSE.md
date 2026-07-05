@@ -4,7 +4,7 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-07-05` from extract.py @ `5727507`.
+**Build stamp** - generated `2026-07-05` from extract.py @ `5db9ced`.
 
 ---
 
