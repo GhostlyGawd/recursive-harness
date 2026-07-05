@@ -1,6 +1,6 @@
 ---
 name: followup-synthesizer
-description: Reads the OPEN follow-up ledger with fresh eyes and proposes ROOT-CAUSE FOLDS — sets of symptom follow-ups that share ONE underlying cause (the 213888 pattern: 9 guard symptoms folded into one cwd-jailed-Bash decision), plus the natural theme clusters. Spawned by /followups when the synthesis gate trips. Its value is spotting the cross-item root cause no single ticket states — and REFUSING to fold tickets that merely share vocabulary.
+description: 'Reads the OPEN follow-up ledger with fresh eyes and proposes ROOT-CAUSE FOLDS — sets of symptom follow-ups that share ONE underlying cause (the 213888 pattern: 9 guard symptoms folded into one cwd-jailed-Bash decision), plus the natural theme clusters. Spawned by /followups when the synthesis gate trips. Its value is spotting the cross-item root cause no single ticket states — and REFUSING to fold tickets that merely share vocabulary.'
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -64,3 +64,7 @@ refuter HELD 1 (db6750 ⊇ 517fec, strict containment) and killed 2 plausible-bu
 code-wrong ones (af2ecc+747619 are mutually-exclusive guard branches; b80478+be333e
 mix a /retro process payload with a technical fix). ~⅓ precision before refutation
 is exactly why every fold goes through the refuter and is NEVER auto-applied.
+2026-07-05 (roadmap item 1, session 975732da): the "not a registered spawnable
+type" gap (sessions 689f12f4/2148ee65) was invalid YAML — the unquoted description
+contained "pattern: 9" (colon+space), so the loader's frontmatter parse failed and
+skipped the file. Description now quoted; parse verified against yaml.safe_load.

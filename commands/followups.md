@@ -18,15 +18,15 @@ For $ARGUMENTS (default: show open):
 3. **Synthesize — run this yourself, do not wait to be asked.** If the open list is
    large OR any theme has >=3 items, synthesize the open ledger + recent retro titles
    + corrections into theme CLUSTERS and candidate ROOT-CAUSE FOLDS (symptom sets one
-   fix dissolves — the 213888 pattern). The dedicated `followup-synthesizer` agent
-   (agents/followup-synthesizer.md holds the contract) is NOT a registered spawnable
-   type — the Agent/Task tool errors "Agent type 'followup-synthesizer' not found"
-   (confirmed: sessions 689f12f4 + 2148ee65, 2026-06-26; re-probed live and STILL not
-   found 2026-06-28, so this is a standing registration gap, not session-start
-   staleness). Until it is registered as a spawnable type, the synthesis gate must NOT
-   depend on it: spawn a **general-purpose** agent whose prompt is the VERBATIM
-   contract from agents/followup-synthesizer.md (plus any prior refuter-killed folds to
-   carry forward) — the fallback both sessions used. SKIP synthesis when the list is
+   fix dissolves — the 213888 pattern). Spawn the dedicated `followup-synthesizer`
+   agent (agents/followup-synthesizer.md). Its earlier "not a registered spawnable
+   type" failure (sessions 689f12f4 + 2148ee65) was invalid YAML frontmatter — an
+   unquoted colon in the description broke the parse, fixed 2026-07-05 (roadmap
+   item 1). If the spawn STILL errors "type not found" (e.g. a pre-fix session
+   cache), fall back to a **general-purpose** agent whose prompt is the VERBATIM
+   contract from agents/followup-synthesizer.md (plus any prior refuter-killed folds
+   to carry forward) — the fallback both 2026-06-26 sessions used, and note the
+   failure in the session retro. SKIP synthesis when the list is
    small/clear: forcing folds on it manufactures noise, the exact failure this must
    avoid. For EACH candidate fold spawn an INDEPENDENT fresh-context **critic**,
    prompted to DEFAULT-REFUTE ("one cause, or just shared vocabulary? which distinct
