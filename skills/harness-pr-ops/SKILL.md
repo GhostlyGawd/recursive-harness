@@ -23,6 +23,18 @@ PRs touch different files (branch each off `origin/main` independently).
 > receipt: session edd67875, 2026-06-28 — merged #200 with `--delete-branch`; its
 > stacked child #201 auto-closed un-reopenably and had to be re-created as #203.
 
+After retargeting the child to main post-SQUASH-merge, expect `gh pr update-branch`
+to FAIL ("Cannot update PR branch due to conflicts"): the squash rewrote the base's
+history, so files both branches touched become add/add conflicts. Recover locally:
+`git fetch origin && git merge origin/main`; for files where the child is strictly
+newer (progress logs, loop state) take the branch tip via `git show HEAD:<file> >
+<file>` (NOT `git checkout --ours` — the dirty-revert guard blocks checkout/restore
+path forms), confirm zero `<<<<<<<` markers, commit the merge; then PROVE no content
+drift — `git diff <pre-merge-tip> HEAD --stat` must be empty — and push; CI re-runs.
+> receipt: session 4acb66e4, 2026-07-02 — #220 squash-merged; stacked #221's
+> update-branch conflicted add/add on two loop-state files; resolved locally to the
+> branch tip, `git diff da71709 HEAD --stat` clean, CI green, merged.
+
 ## Run locked-path commands on their OWN Bash call
 The enforcement-layer guard blocks a Bash command when a **working-tree-mutating /
 file-write token** co-occurs with a locked absolute-root path substring (`…/bin/harness`,
