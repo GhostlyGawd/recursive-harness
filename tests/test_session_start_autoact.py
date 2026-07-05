@@ -157,8 +157,10 @@ _today = dt.date.today().isoformat()
 _open_fus = [{"id": f"b{i}", "ts": f"{_today}T00:00:00+00:00", "text": "x", "status": "open"}
              for i in range(3)]
 _out = run_banner(_open_fus)
-check("banner still prints its status line (calibration present)",
-      "calibration" in _out.lower(), f"out={_out!r}")
+check("banner still prints its prediction-status line",
+      # wording changed to plain outcome language 2026-07-05 (product-UX item 1):
+      # "right N% of the last M predictions" / "no predictions checked yet"
+      "predictions" in _out.lower(), f"out={_out!r}")
 check("banner does NOT push the open-follow-up count (pull-only via /followups)",
       "follow-up" not in _out.lower() and "/followups" not in _out, f"out={_out!r}")
 

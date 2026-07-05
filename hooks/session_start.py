@@ -161,11 +161,13 @@ def main() -> int:
     preds = _jsonl("predictions.jsonl")
     scored = [p for p in preds if p.get("result") in ("hit", "miss")]
     pending = len(preds) - len(scored)
+    # Plain outcome language (2026-07-05, session 975732da, product-UX roadmap item 1:
+    # the user-model "explain it like a video game" rule, evidence 5).
     if scored:
         hr = sum(1 for p in scored if p["result"] == "hit") / len(scored)
-        calib = f"calibration {hr:.0%} on n={len(scored)}"
+        calib = f"right {hr:.0%} of the last {len(scored)} predictions"
     else:
-        calib = "calibration UNKNOWN (no scored predictions)"
+        calib = "no predictions checked yet"
     sessions = _jsonl("sessions.jsonl")
     since_meta = len(sessions)
     marker = os.path.join(STATE, "last_meta_retro")
@@ -189,11 +191,12 @@ def main() -> int:
     # the stranded-branch safety warning below is independent and always prints.
     banner = flag("observability.session_banner", "full")
     if banner == "minimal":
-        print(f"[harness] {calib} | {pending} unscored predictions")
+        print(f"[harness] {calib} | {pending} awaiting a score")
     elif banner != "off":
-        print(f"[harness] {calib} | {pending} unscored predictions"
-              f" | {since_meta} sessions since last /meta-retro"
-              f" | learnings route to artifacts, not memory (routing-learnings skill)")
+        print(f"[harness] {calib} | {pending} awaiting a score"
+              f" | {since_meta} sessions since the last monthly self-review (/meta-retro)"
+              f" | lessons become repo changes, not memory"
+              f" | `harness explain <term>` defines anything here")
     if banner != "off":
         # Extra surfacing (ADR 0008): one line whenever the local override file
         # diverges from defaults, so a flipped flag is never silently forgotten.
@@ -220,7 +223,8 @@ def main() -> int:
                 parts = [f"{k} {v.get('proposed', 0)}/20" for k, v in cats.items()
                          if v.get("graduable") and not v.get("auto_merge")]
                 if parts:
-                    print(f"[harness] autonomy: {' - '.join(parts)} (graduation at /meta-retro)")
+                    print(f"[harness] trust toward auto-merge: {' - '.join(parts)} "
+                          f"(reviewed at /meta-retro)")
             except (OSError, ValueError, AttributeError):
                 pass
     warn = _branch_warning(cwd)

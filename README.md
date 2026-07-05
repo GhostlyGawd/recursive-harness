@@ -73,6 +73,7 @@ git clone <your-fork> recursive-harness && cd recursive-harness
 # The fleet tooling pins CLAUDE_CONFIG_DIR; this fills the dir in (symlinks + generated settings).
 ./account-init.sh <name>      # or, inside a fleet session: ./account-init.sh
 ./project-init.sh             # run in a project root for its thin CLAUDE.md contract
+python3 bin/harness doctor    # verify the install — every problem prints its one-line fix
 
 # Single-user global (legacy, opt-in): symlink the whole repo to ~/.claude.
 ./install.sh --global-legacy  # refuses if ~/.claude is a real dir or CLAUDE_CONFIG_DIR is set

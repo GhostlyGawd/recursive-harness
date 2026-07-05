@@ -99,5 +99,78 @@ check("harness ask --context X -> exit 0 + the node id", rc == 0 and "guard_trun
 rc, out = run_cli("ask")
 check("harness ask (no args) -> non-zero + a usage hint", rc != 0 and "need a query" in out)
 
+# --- product-UX subcommands: explain / scorecard / doctor / approve --standing -------
+# provenance: 2026-07-05, session 975732da — product-UX roadmap items 1-4
+# (proposals/2026-07-05-product-ux-roadmap.md). Subprocess for the read-only trio;
+# module-level with a patched ledger for approve (never touches real approvals).
+
+rc, out = run_cli("explain", "receipt")
+check("harness explain <known term> -> exit 0 + a plain definition",
+      rc == 0 and "committed proof" in out)
+rc, out = run_cli("explain", "standing")
+check("harness explain fuzzy-matches partial terms", rc == 0 and "standing grant:" in out)
+rc, out = run_cli("explain", "notaterm12345")
+check("harness explain <unknown> -> exit 1 + lists what it CAN explain",
+      rc == 1 and "Terms I can explain" in out)
+rc, out = run_cli("explain")
+check("harness explain (bare) -> exit 0 + term list", rc == 0 and "calibration" in out)
+
+rc, out = run_cli("scorecard")
+check("harness scorecard -> exit 0 + all five sections in plain words",
+      rc == 0 and all(k in out for k in
+                      ("predictions:", "history:", "regression tests:", "skills:", "bug memory:")))
+
+env_nocfg = dict(os.environ)
+env_nocfg.pop("CLAUDE_CONFIG_DIR", None)
+proc = subprocess.run([sys.executable, os.path.join(ROOT, "bin", "harness"), "doctor"],
+                      capture_output=True, text=True, env=env_nocfg)
+out = proc.stdout + proc.stderr
+check("harness doctor (no brain pinned) -> flags it, names the launch fix, exit 1",
+      proc.returncode == 1 and "no brain is pinned" in out and "CLAUDE_CONFIG_DIR=" in out)
+check("doctor checks hook wiring + compile + state writability",
+      "hook wiring" in out and "hooks compile" in out and "writable" in out)
+check("doctor never prints raw jargon labels (plain-language rule)",
+      "TIER" not in out and "exit-2" not in out)
+
+_H = _load_harness_cli()
+import tempfile as _tf
+import types as _t
+_tmp = _tf.mkdtemp(prefix="standing_")
+_H.APPROVALS = os.path.join(_tmp, "approvals.jsonl")
+_H.MARKER = os.path.join(_tmp, "HUMAN_APPROVED")
+
+
+def _ap(**kw):
+    base = dict(scope="", grant="", session="s", revoke=False, status=False,
+                standing=False)
+    base.update(kw)
+    ns = _t.SimpleNamespace(**base)
+    setattr(ns, "list", kw.get("list_grants", False))
+    return ns
+
+
+rc = _H.cmd_approve(_ap(standing=True, scope="roadmap builds", grant="full approval for everything"))
+check("approve --standing records without placing the marker",
+      rc == 0 and not os.path.exists(_H.MARKER)
+      and any(r.get("action") == "standing" for r in _H._read(_H.APPROVALS)))
+rc = _H.cmd_approve(_ap(standing=True))
+check("approve --standing without scope+grant refuses (no fabricated grants)", rc == 1)
+import io as _io
+import contextlib as _cl
+buf = _io.StringIO()
+with _cl.redirect_stdout(buf):
+    rc = _H.cmd_approve(_ap(list_grants=True))
+check("approve --list shows the active standing grant + its verbatim words",
+      rc == 0 and "roadmap builds" in buf.getvalue()
+      and "full approval for everything" in buf.getvalue())
+old_ttl = _H.STANDING_TTL_DAYS
+_H.STANDING_TTL_DAYS = 0
+buf = _io.StringIO()
+with _cl.redirect_stdout(buf):
+    _H.cmd_approve(_ap(list_grants=True))
+check("standing grants DECAY past the TTL (no immortal approvals)",
+      "no active standing grants" in buf.getvalue())
+_H.STANDING_TTL_DAYS = old_ttl
+
 print(f"\n{PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
