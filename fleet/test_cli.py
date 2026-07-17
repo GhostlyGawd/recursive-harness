@@ -14,6 +14,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fleet import cli   # noqa: E402  (does not exist yet → RED)
+from fleet import eventlog as el   # noqa: E402
 
 
 def run(argv):
@@ -63,6 +64,28 @@ def test_send_inbox_ack_lifecycle():
         assert rc == 0
         rc, out = run(["--state-dir", d, "inbox", "--as", "reviewer"])
         assert "0 unread" in out
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_ack_rejects_ambiguous_prefix_without_clearing_mail():
+    d = tempfile.mkdtemp()
+    try:
+        first = el.new_event("handoff", target="@reviewer", actor="t1",
+                             ttl_s=10_000, now_s=100)
+        second = el.new_event("handoff", target="@release", actor="t2",
+                              ttl_s=10_000, now_s=110)
+        first["id"] = "abc111111111"
+        second["id"] = "abc222222222"
+        el.append(d, first)
+        el.append(d, second)
+
+        rc, out = run(["--state-dir", d, "ack", "abc"])
+
+        assert rc == 1
+        assert "ambiguous" in out.lower()
+        assert "abc111111111" in out and "abc222222222" in out
+        assert [e["kind"] for e in el.read_raw(d)] == ["handoff", "handoff"]
     finally:
         shutil.rmtree(d, ignore_errors=True)
 

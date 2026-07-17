@@ -95,3 +95,11 @@ to a shadowed-but-live claim, so monotonicity is a property of the live SET), an
   SUBMODULE to the function; `cli.py`'s `from . import units as ud` then bound to the function →
   `AttributeError: 'function' object has no attribute 'read_unit'`.
 - Fix: re-export as `live_units`. Guard: `test_cli.test_package_surface_units_is_module`.
+
+### BUG-5 — ambiguous short `ack` prefix cleared an arbitrary handoff  [fixed]
+- Found: 2026-07-17 / repository-health pass / CLI safety review.
+- Repro: two handoffs whose ids start with `abc`; `fleet ack abc` silently acknowledged the newer
+  one instead of refusing to choose, so the wrong recipient's mail could be cleared.
+- Cause: `cmd_ack` sorted every prefix match by timestamp and selected the newest match.
+- Fix: ambiguous prefixes now return an error naming the candidate ids and append no `ack`;
+  guard: `test_ack_rejects_ambiguous_prefix_without_clearing_mail`.
