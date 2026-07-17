@@ -1,0 +1,7 @@
+version: 2
+# provenance: 2026-07-17 security review — controlled updates for immutable Action pins.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
