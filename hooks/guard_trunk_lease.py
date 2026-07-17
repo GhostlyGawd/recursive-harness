@@ -105,39 +105,94 @@ _LEASE_DIR_REL = ("state", "trunk-lease")
 _LEASE_SWEEP_SECONDS = 86400  # housekeeping: drop a per-session lease unseen for a day
 _GIT_TIMEOUT = 5
 
-# Tree-MUTATING command classifier for Bash/PowerShell (heuristic; errs toward
-# checking). Catches the documented clobber path (git HEAD/index/worktree movers)
-# plus common file-writers in both shells. A miss only delays detection to the next
-# genuinely-checked op (see docstring KNOWN GAPS).
-_MUTATING_CMD = re.compile(
-    # Tolerate git GLOBAL OPTIONS (-C <path>, -c k=v, --no-pager) BEFORE the subcommand: the
-    # sanctioned `git -C "$HARNESS" <subcmd>` form (commands/harness-pr.md, retro.md, Gap D) was
-    # otherwise classified a READ, so a HEAD-moving op never re-stamped the lease AND a leading
-    # HARNESS_TRUNK_LEASE_OK=1 hatch silently no-opped (the hatch sits behind _is_mutating).
-    # (session f36989d6, 2026-06-21 - narrows the heuristic miss conceded in KNOWN GAPS (2).)
-    r"git\s+(?:(?:-C|-c)\s+(?:\"[^\"]*\"|'[^']*'|\S+)\s+|--no-pager\s+)*"
-    # `add` STAGES into the index -- a tracked/index change the dirty fingerprint
-    # captures. It was MISSING here, so a `git add` (the staging step of every commit
-    # flow, incl. /gc) never re-stamped the lease; the FOLLOWING `git commit` then
-    # PreToolUse-compared the now-staged tree to a stale clean lease and BLOCKED the
-    # session against its OWN staging (the /gc self-block, 2026-06-28). Matched broadly:
-    # unlike `branch` (whose -a/-r/-vv READ forms drove NIT-A's enumerate-mutating-only),
-    # `add`'s only read form is the rare `--dry-run`/`-n`; over-checking that is a
-    # harmless lease re-stamp (recoverable, non-destructive), so a simple token beats a
-    # lookahead. (tests/test_guard_trunk_lease.py case 17.)
-    r"(?:checkout|switch|reset|merge|rebase|commit|add|stash|pull|cherry-pick"
-    r"|am|revert|restore|apply|clean"
-    # `branch` only when it MUTATES a ref (-d/-D/-m/-M/-c/-C and the --delete/--move/
-    # --copy long forms). The old `branch\s+-[a-zA-Z]` over-flagged READS (-a/-r/-vv ->
-    # a noisy lease check) AND under-flagged the long forms (`branch --delete` slipped
-    # through as a read). (followup 512398 NIT-A)
-    r"|branch\s+(?:--(?:delete|move|copy)|-[dDmMcC]))"
-    r"|\b(?:rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|mkdir|patch"
+# Tree-MUTATING command classifier for Bash/PowerShell (heuristic; errs toward checking).
+# Git's repeated global-option prefix used to be one backtracking regex. CodeQL found two
+# exponential paths reachable from hook input; Git is now parsed by the bounded tokenizer
+# below, while this non-overlapping expression handles ordinary file writers.
+# provenance: 2026-07-17 security review — CodeQL py/redos alerts 2 and 3.
+_FILE_MUTATING_CMD = re.compile(
+    r"\b(?:rm|mv|cp|tee|truncate|chmod|chown|ln|dd|install|touch|mkdir|patch"
     r"|sed\s+-i|Set-Content|Add-Content|Clear-Content|Remove-Item|New-Item"
     r"|Move-Item|Copy-Item|Out-File)\b"
     r"|>{1,2}(?!&[0-9-])",
     re.IGNORECASE,
 )
+
+_GIT_MUTATING_SUBCOMMANDS = {
+    "checkout", "switch", "reset", "merge", "rebase", "commit", "add", "stash",
+    "pull", "cherry-pick", "am", "revert", "restore", "apply", "clean",
+}
+_GIT_MUTATING_BRANCH_OPTIONS = {"--delete", "--move", "--copy", "-d", "-D", "-m", "-M", "-c", "-C"}
+
+
+def _shell_words(command: str):
+    """Return shell-like words in one linear pass.
+
+    Quotes group a word; unquoted command separators end it. This is deliberately not a
+    shell evaluator: it only needs enough structure to locate `git`, its reviewed global
+    options, and the following subcommand without regex backtracking or interpolation.
+    """
+    words = []
+    token = []
+    quote = None
+    escaped = False
+    started = False
+    for char in command:
+        if quote is not None:
+            if escaped:
+                token.append(char)
+                escaped = False
+            elif char == "\\" and quote == '"':
+                escaped = True
+            elif char == quote:
+                quote = None
+            else:
+                token.append(char)
+            started = True
+        elif char in ("'", '"'):
+            quote = char
+            started = True
+        elif char.isspace() or char in ";&|()":
+            if started:
+                words.append("".join(token))
+                token = []
+                started = False
+        else:
+            token.append(char)
+            started = True
+    if escaped:
+        token.append("\\")
+    if started:
+        words.append("".join(token))
+    return words
+
+
+def _git_command_mutates(command: str) -> bool:
+    """Recognize reviewed Git mutators after bounded global-option parsing."""
+    words = _shell_words(command)
+    for index, word in enumerate(words):
+        if word.lower() != "git":
+            continue
+        cursor = index + 1
+        while cursor < len(words):
+            option = words[cursor]
+            if option in ("-C", "-c"):
+                if cursor + 1 >= len(words):
+                    break
+                cursor += 2
+            elif option == "--no-pager" or (len(option) > 2 and option[:2] in ("-C", "-c")):
+                cursor += 1
+            else:
+                break
+        if cursor >= len(words):
+            continue
+        subcommand = words[cursor].lower()
+        if subcommand in _GIT_MUTATING_SUBCOMMANDS:
+            return True
+        if (subcommand == "branch" and cursor + 1 < len(words)
+                and words[cursor + 1] in _GIT_MUTATING_BRANCH_OPTIONS):
+            return True
+    return False
 
 # The session-wide env hatch (HARNESS_TRUNK_LEASE_OK truthy) and the leading inline hatch
 # (`HARNESS_TRUNK_LEASE_OK=1 <cmd>` bash / `$env:HARNESS_TRUNK_LEASE_OK='1'; <cmd>` ps,
@@ -285,7 +340,8 @@ def _is_mutating(tool: str, ti: dict) -> bool:
         return True
     if tool in _SHELLS:
         cmd = ti.get("command", "")
-        return isinstance(cmd, str) and bool(_MUTATING_CMD.search(cmd))
+        return (isinstance(cmd, str)
+                and (_git_command_mutates(cmd) or bool(_FILE_MUTATING_CMD.search(cmd))))
     return False
 
 
