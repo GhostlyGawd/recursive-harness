@@ -186,6 +186,10 @@ def new_main_tree():
         os.path.join(os.path.dirname(_HOOK_SRC), "_wtpaths.py"),
         os.path.join(d, "hooks", "_wtpaths.py"),
     )
+    # State writes are centralized in the root-level stdlib primitive; preserve the
+    # synthetic repo's production layout so the copied guard exercises that dependency.
+    shutil.copyfile(os.path.join(ROOT, "private_state.py"),
+                    os.path.join(d, "private_state.py"))
     return d
 
 

@@ -77,6 +77,10 @@ import subprocess
 import sys
 import time
 
+HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
+
 try:
     from harness_features import flag, num
 except Exception:  # never let a config-reader import brick a guard
@@ -249,12 +253,9 @@ def _write_lease(lease_dir: str, sid: str, fp) -> None:
     dropped write only under-protects, never bricks). Sweeps leases unseen past the
     housekeeping window so churned-sid files don't accumulate."""
     try:
-        os.makedirs(lease_dir, exist_ok=True)
         path = os.path.join(lease_dir, _sanitize_sid(sid) + ".json")
-        tmp = f"{path}.tmp.{os.getpid()}"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"fp": fp, "ts": time.time(), "session_id": sid}, f)
-        os.replace(tmp, path)
+        private_state.atomic_write_json(
+            path, {"fp": fp, "ts": time.time(), "session_id": sid})
         _sweep(lease_dir)
     except Exception:
         pass

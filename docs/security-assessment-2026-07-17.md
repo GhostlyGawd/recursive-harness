@@ -75,15 +75,14 @@ without a commit.
 
 ## Recommended next security work
 
-1. Triage CodeQL regex findings first, then validate every path source against an explicit
-   trusted-root or intentional-local-input boundary. Fix reachable paths and document only
-   proven false positives; do not bulk-dismiss the baseline.
-2. Centralize private-state writes so every writer creates directories/files with
-   owner-only permissions, even when `account-init.sh` was not run.
-3. Add privacy-safe retention and redaction controls for correction/heal excerpts.
-4. Decide on a repository-wide license; keep the current scoped license statement until
+1. Continue CodeQL baseline triage, prioritizing reachable regex and filesystem paths.
+   Validate each path source against an explicit trusted-root or intentional-local-input
+   boundary; fix reachable paths and document only proven false positives.
+2. Pin each `worktree-repos.json` source to an immutable reviewed ref so distribution does
+   not silently follow a changing remote default branch.
+3. Decide on a repository-wide license; keep the current scoped license statement until
    that explicit governance decision is made.
-5. Consider requiring one approving review and resolved conversations on `main` if the
+4. Consider requiring one approving review and resolved conversations on `main` if the
    collaborator model can satisfy those rules without locking out the sole maintainer.
 
 ## Limitations

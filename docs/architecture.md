@@ -85,8 +85,11 @@ the ignored local override file.
 | `evals/` | Versioned | Regression fixtures and last replay evidence | Selection evidence; replay is interactive |
 | Git history | Durable, public | Reviewed code, documentation, proposals, and provenance | Canonical learning record |
 
-`/gc` rolls selected statistics into versioned memory. Raw prompt and failure excerpts do
-not automatically become durable knowledge; promotion requires review. See
+Privacy-bearing ledgers route through `private_state.py`: writes are sanitized, appends are
+serialized across processes, rewrites are atomic, and supported files/directories are
+owner-only. Session end expires raw correction/failure excerpts past the configured window
+without deleting their evidence metadata. `/gc` rolls selected statistics into versioned
+memory. Raw excerpts do not automatically become durable knowledge; promotion requires review. See
 [PRIVACY.md](../PRIVACY.md) for the exact data boundary.
 
 ## Enforcement boundary

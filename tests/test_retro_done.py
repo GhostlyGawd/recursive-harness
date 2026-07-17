@@ -68,7 +68,7 @@ def records(path):
 
 cli = load_cli()
 tmp = tempfile.mkdtemp()
-cli.RETRO_LOG = os.path.join(tmp, "retro_log.jsonl")
+cli.RETRO_LOG = os.path.join(tmp, "state", "retro_log.jsonl")
 
 # The ledger must NOT be a retro_gate_* name (those are deleted by session_end).
 base = os.path.basename(cli.RETRO_LOG)

@@ -20,6 +20,7 @@ Subcommands:
   retro-done   add | list | has — DURABLE ledger of retro'd sessions (persists past
                session end, unlike the ephemeral retro_gate_* flag); feeds /retro-backlog.
   gc           Roll hot state older than N days into versioned monthly summaries.
+  privacy      Audit or scrub expired raw prompt/failure excerpts in local state.
   fleet        emit | feed | reap — lateral-coordination event channel for agents
                (append-only, typed, self-reaping; resolves the one canonical state/).
   mission-control  Launch Mission Control — the read-only control-room TUI
@@ -91,6 +92,8 @@ STATE = _resolve_state_dir()
 # single git resolution (no extra git call, no duplicated logic). Git-absent: STATE falls
 # back to <script-root>/state, so MAIN_ROOT falls back to this script's own root too.
 MAIN_ROOT = os.path.dirname(STATE)
+sys.path.insert(0, ROOT)
+import private_state as _private_state
 
 PREDICTIONS = os.path.join(STATE, "predictions.jsonl")
 CORRECTIONS = os.path.join(STATE, "corrections.jsonl")
@@ -126,30 +129,15 @@ def _now() -> str:
 
 
 def _append(path: str, rec: dict) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    _private_state.append_jsonl(path, rec)
 
 
 def _read(path: str) -> list:
-    if not os.path.exists(path):
-        return []
-    out = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    out.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-    return out
+    return _private_state.read_jsonl(path)
 
 
 def _write_all(path: str, recs: list) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        for r in recs:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    _private_state.rewrite_jsonl(path, recs)
 
 
 # --- feature-flag readers (mirror hooks/harness_features; bin/ is off that path) ---
@@ -387,6 +375,42 @@ def cmd_gc(args) -> int:
         _write_all(path, hot)
     print(f"gc: rolled {moved} cold records into memory/calibration/ monthly summaries.")
     print("reminder: also run the user-model decay pass described in commands/gc.md.")
+    return 0
+
+
+# ---------------------------------------------------------------- privacy
+def cmd_privacy(args) -> int:
+    """Inventory or expire raw excerpts while retaining their surrounding evidence."""
+    from privacy_state import DEFAULT_RETENTION_DAYS, scrub_raw_excerpts
+
+    days = args.days
+    if days is None:
+        days = {
+            "corrections.jsonl": _feature(
+                "privacy.correction_excerpt_retention_days", DEFAULT_RETENTION_DAYS),
+            "candidates.jsonl": _feature(
+                "privacy.failure_excerpt_retention_days", DEFAULT_RETENTION_DAYS),
+        }
+    try:
+        values = days.values() if isinstance(days, dict) else (days,)
+        if any(float(value) <= 0 for value in values):
+            raise ValueError
+    except (TypeError, ValueError):
+        print("privacy retention must be a positive number of days", file=sys.stderr)
+        return 2
+    if args.action == "audit" and args.apply:
+        print("--apply is valid only with `privacy scrub`", file=sys.stderr)
+        return 2
+    apply = args.action == "scrub" and args.apply
+    report = scrub_raw_excerpts(STATE, retention_days=days, apply=apply)
+    mode = "applied" if apply else "dry-run"
+    print(f"privacy {args.action} ({mode}): {report['expired_fields']} expired raw field(s) "
+          f"and {report['redacted_records']} legacy record(s) needing redaction across "
+          f"{report['files']} file(s); {report['changed_files']} file(s) changed")
+    if args.action == "scrub" and not args.apply and report["expired_fields"]:
+        print("re-run with --apply to replace expired excerpts while preserving record metadata")
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, sort_keys=True))
     return 0
 
 
@@ -873,10 +897,7 @@ def cmd_features(args) -> int:
                   file=sys.stderr)
             return 1
         local[args.key] = _coerce_feature(args.value)  # stored flat; the reader flattens both
-        os.makedirs(os.path.dirname(FEATURES_LOCAL), exist_ok=True)
-        with open(FEATURES_LOCAL, "w", encoding="utf-8") as f:
-            json.dump(local, f, indent=2)
-            f.write("\n")
+        _private_state.atomic_write_json(FEATURES_LOCAL, local)
         print(f"set {args.key} = {json.dumps(local[args.key])}  "
               f"(local override -> state/features.local.json)")
         return 0
@@ -887,9 +908,7 @@ def cmd_features(args) -> int:
             return 1
         if args.key in local:
             del local[args.key]
-            with open(FEATURES_LOCAL, "w", encoding="utf-8") as f:
-                json.dump(local, f, indent=2)
-                f.write("\n")
+            _private_state.atomic_write_json(FEATURES_LOCAL, local)
             print(f"unset {args.key} (reverted to committed default)")
         else:
             print(f"{args.key} had no local override.")
@@ -1089,6 +1108,15 @@ def main() -> int:
     sp = sub.add_parser("gc")
     sp.add_argument("--days", type=int, default=30)
     sp.set_defaults(fn=cmd_gc)
+
+    sp = sub.add_parser("privacy", help="audit or scrub expired raw excerpts in local state")
+    sp.add_argument("action", choices=["audit", "scrub"])
+    sp.add_argument("--days", type=float, default=None,
+                    help="override both data-class retention windows")
+    sp.add_argument("--apply", action="store_true",
+                    help="perform the scrub; without this flag scrub is a dry run")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(fn=cmd_privacy)
 
     sp = sub.add_parser("features", help="view/set harness feature flags (ADR 0008)")
     sp.add_argument("action", nargs="?", default="list",

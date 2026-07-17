@@ -30,6 +30,7 @@ an unscored result only creates debt.
 | On the default five-session cadence | `/calibrate`, then `/gc` | Score debt, inspect calibration, and roll old hot state into cold summaries |
 | Monthly or before a major autonomy decision | `/meta-retro` | Audit use, rot, eval coverage, and acceptance evidence |
 | After structural changes | `/atlas` | Refresh the generated Atlas and Pulse |
+| At session end (automatic, fail-open) | Private-state scrub | Expire raw correction/failure excerpts past the configured window |
 
 The active cadence and feature flags are inspectable:
 
@@ -37,6 +38,7 @@ The active cadence and feature flags are inspectable:
 python3 bin/harness features
 python3 bin/harness stats
 python3 bin/harness skill-stats --days 30
+python3 bin/harness privacy audit --json
 ```
 
 Soft observability features can be disabled locally without changing the repository. For
@@ -49,6 +51,20 @@ python3 bin/harness features set observability.heal_autocapture false
 
 Safety-critical guard keys ignore local overrides. Their committed values require the
 enforcement-change workflow.
+
+Raw correction and failure excerpts default to 30-day retention. Preview and apply an
+explicit scrub with:
+
+```bash
+python3 bin/harness privacy scrub
+python3 bin/harness privacy scrub --apply
+```
+
+The scrub preserves record metadata and counts; it sanitizes legacy rows and replaces only
+expired raw excerpt fields. Adjust `privacy.correction_excerpt_retention_days`,
+`privacy.failure_excerpt_retention_days`, or `privacy.scrub_on_session_end` with the normal
+soft-feature command when local policy requires different per-class windows or manual-only
+cleanup. `privacy scrub --days N` deliberately overrides both windows for one run.
 
 ## Diagnostics
 

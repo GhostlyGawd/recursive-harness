@@ -4,9 +4,8 @@ Run either way (no pytest required):
     python -m pytest fleet/test_eventlog.py -q
     python fleet/test_eventlog.py
 
-The last test mechanically enforces the portability contract: the engine must import
-only the Python stdlib (no git / Claude Code / harness coupling), which is what keeps
-it extractable to its own repo.
+The last test mechanically enforces the portability contract: the engine may import
+only the Python stdlib and the bundled stdlib-only storage primitive.
 """
 import ast
 import os
@@ -142,9 +141,19 @@ def test_compact_persists_only_live():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_payload_is_sanitized_before_persistence():
+    d = tempfile.mkdtemp()
+    try:
+        written = el.emit(d, "note", payload={"authorization": "Bearer very-secret"})
+        assert written["payload"]["authorization"] == "[REDACTED]"
+        assert el.read_raw(d)[0]["payload"]["authorization"] == "[REDACTED]"
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 # --- portability contract -------------------------------------------------------
-def test_engine_imports_stdlib_only():
-    """The engine must import only the stdlib — the property that keeps it extractable."""
+def test_engine_imports_portable_only():
+    """The engine imports only stdlib plus its bundled, stdlib-only state primitive."""
     tree = ast.parse(open(el.__file__, encoding="utf-8").read())
     mods = set()
     for node in ast.walk(tree):
@@ -153,8 +162,8 @@ def test_engine_imports_stdlib_only():
                 mods.add(n.name.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             mods.add(node.module.split(".")[0])
-    allowed = {"json", "os", "time", "uuid", "typing", "__future__"}
-    assert mods <= allowed, f"engine must import only stdlib; found extra: {mods - allowed}"
+    allowed = {"json", "os", "time", "uuid", "typing", "__future__", "private_state"}
+    assert mods <= allowed, f"engine imported a non-portable dependency: {mods - allowed}"
 
 
 if __name__ == "__main__":

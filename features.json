@@ -37,6 +37,12 @@
     "heal_banner": false
   },
 
+  "privacy": {
+    "correction_excerpt_retention_days": 30,
+    "failure_excerpt_retention_days": 30,
+    "scrub_on_session_end": true
+  },
+
   "workflow": {
     "post_merge_return_to_trunk": true,
     "followup_ttl_days": 30

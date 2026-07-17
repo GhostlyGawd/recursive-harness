@@ -33,7 +33,8 @@ capture (`9de5620`).
   exits 0; they must never brick a session. Guards fail CLOSED.
 - **State.** Hot data is JSONL under `state/` (machine-local, gitignored):
   predictions, corrections, skill fires, session owner map, trunk lease,
-  approvals log.
+  approvals log. Privacy-bearing writers use the shared private-state primitive;
+  session end performs a fail-open raw-excerpt retention scrub.
 - **Deployment.** Live hooks run from the TRUNK via absolute paths baked into
   account settings (ADR 0004 symlink topology). A merged edit to an existing
   hook is live the moment the trunk working tree updates; `account-init.sh
