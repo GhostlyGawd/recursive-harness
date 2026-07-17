@@ -1,4 +1,6 @@
 name: harness-ci
+# Supply-chain provenance: official GitHub release tags reviewed 2026-07-17;
+# Dependabot proposes future SHA/comment updates for human review.
 # CI is pure Python by design (ADR 0003): no Claude invocation, headless or
 # otherwise, ever. Regression REPLAY happens in interactive sessions via the
 # /run-evals command; /harness-pr requires its report for enforcement diffs.
@@ -11,11 +13,11 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         # fetch-depth: 0 pulls FULL history (not a shallow clone): cartograph's
         # test_diff.py walks real commit history, so a shallow checkout fails it.
         with: {fetch-depth: 0}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with: {python-version: "3.12"}
       # `if: ${{ !cancelled() }}` on every test step so ONE CI run surfaces the FULL
       # failure set, not just the first red step. GitHub stops at the first failed
