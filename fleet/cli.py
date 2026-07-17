@@ -161,7 +161,12 @@ def cmd_ack(args):
     if not matches:
         print(f"fleet: no handoff matching id {args.id!r}", file=sys.stderr)
         return 1
-    full = sorted(matches, key=lambda e: e["ts"])[-1]["id"]  # most recent on an ambiguous prefix
+    if len(matches) > 1:
+        candidates = ", ".join(sorted(e["id"] for e in matches))
+        print(f"fleet: ambiguous handoff id prefix {args.id!r}; matches {candidates}. "
+              "Use a longer prefix.", file=sys.stderr)
+        return 1
+    full = matches[0]["id"]
     pb.ack(sd, full, actor=(args.actor or None))
     print(f"fleet: acked {full[:8]} -- cleared from the inbox.")
     return 0
@@ -262,7 +267,7 @@ def _parser():
     p.set_defaults(fn=cmd_inbox)
 
     p = sub.add_parser("ack", help="clear a handoff you've handled")
-    p.add_argument("id", help="full or short (prefix) handoff id")
+    p.add_argument("id", help="full id or unique short prefix")
     p.add_argument("--actor", default=None)
     p.set_defaults(fn=cmd_ack)
 

@@ -41,7 +41,7 @@ python -m fleet --state-dir ./state send reviewer --re fix/login --msg "ready fo
 python -m fleet --state-dir ./state feed
 python -m fleet --state-dir ./state claims          # + overlap conflicts
 python -m fleet --state-dir ./state inbox --as reviewer
-python -m fleet --state-dir ./state ack 3f9a2b1c    # full or short id
+python -m fleet --state-dir ./state ack 3f9a2b1c    # full id or unique short prefix
 ```
 Storage is injected: `--state-dir` > `$FLEET_STATE_DIR`. (Inside the harness, `bin/harness fleet`
 resolves the one canonical state dir and forwards here.)
