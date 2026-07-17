@@ -14,9 +14,17 @@ data boundary for operators and contributors; it is not a legal privacy policy.
 | Other `state/*.jsonl` | Predictions, follow-ups, skill use, approvals, coordination messages, leases, and session metadata | Ignored |
 | Linked worktrees | Checked-out source from local or configured Git repositories | Ignored by this repository |
 
-Prompt and failure excerpts are currently capped by their writers, but a short excerpt
-can still contain a secret or personal information. Do not use the ledgers as a secret
-store.
+Prompt and failure excerpts are capped by their writers. Before persistence, the shared
+private-state writer recursively redacts sensitive keys and common credential, email,
+IP-address, user-home-path, and authenticated-URL shapes. This is defense in depth, not a
+guarantee that every secret or identifier will be recognized. Do not use the ledgers as a
+secret store.
+
+Privacy-bearing JSONL writers use the shared `private_state.py` primitive. It creates
+owner-only directories/files where the operating system supports POSIX modes, serializes
+concurrent appends, and uses locked atomic replacement for rewrites. Fleet includes the
+same stdlib-only primitive in its extraction scaffold rather than maintaining a second
+writer.
 
 ## What can become public
 
@@ -53,9 +61,23 @@ The enforcement hooks are not a network or process sandbox.
    `chmod -R go-rwx .claude-private state` while no harness session is running.
 4. On Windows, verify the NTFS ACL on the workspace. `chmod` from Git Bash is not a
    substitute for a private Windows account and directory ACL on every filesystem.
-5. Keep raw secrets out of prompts when possible. Revoke exposed credentials; deleting
+5. Inspect the local inventory without changing data:
+
+   ```bash
+   python3 bin/harness privacy audit --json
+   python3 bin/harness privacy scrub             # dry run
+   python3 bin/harness privacy scrub --apply     # expire excerpts older than 30 days
+   ```
+
+   Correction prompts and failure snippets have independent soft settings:
+   `privacy.correction_excerpt_retention_days` and
+   `privacy.failure_excerpt_retention_days`. `privacy.scrub_on_session_end` controls
+   automatic, fail-open housekeeping. Scrubbing sanitizes legacy rows and replaces only an
+   expired raw excerpt, preserving its timestamp, signature, session, and surrounding
+   record for aggregate evidence.
+6. Keep raw secrets out of prompts when possible. Revoke exposed credentials; deleting
    a ledger entry does not revoke a secret or erase it from backups.
-6. Review `git diff --cached` before every commit for prompt excerpts, personal data,
+7. Review `git diff --cached` before every commit for prompt excerpts, personal data,
    machine paths, credentials, and private repository content.
 
 For a vulnerability, use the private reporting process in [SECURITY.md](SECURITY.md).

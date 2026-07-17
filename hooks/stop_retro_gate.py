@@ -16,6 +16,8 @@ except Exception:  # never let a config-reader import brick the hook
         return default
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 STATE = os.path.join(HARNESS_ROOT, "state")
 THRESHOLD = 3
 
@@ -41,20 +43,11 @@ def main() -> int:
     gate_flag = os.path.join(STATE, f"retro_gate_{session}")  # not `flag`: that name is the feature reader
     if os.path.exists(gate_flag):
         return 0
-    count = 0
     log = os.path.join(STATE, "corrections.jsonl")
-    if os.path.exists(log):
-        with open(log, encoding="utf-8") as f:
-            for line in f:
-                try:
-                    if json.loads(line).get("session") == session:
-                        count += 1
-                except json.JSONDecodeError:
-                    continue
+    count = sum(1 for record in private_state.read_jsonl(log)
+                if record.get("session") == session)
     if count >= THRESHOLD:
-        os.makedirs(STATE, exist_ok=True)
-        with open(gate_flag, "w", encoding="utf-8") as f:
-            f.write("nudged\n")
+        private_state.atomic_write_text(gate_flag, "nudged\n")
         print(json.dumps({
             "decision": "block",
             "reason": (f"Retro gate: {count} user corrections this session and no retro ran. "

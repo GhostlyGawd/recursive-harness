@@ -115,6 +115,8 @@ except Exception:  # never let a config-reader import brick a guard
 from _wtpaths import normalize as _normalize, worktree_root as _worktree_root, gitwalk_root as _gitwalk_root
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 _MAP_REL = ("state", "session_owners.json")
 # Fixed, deliberately NOT environment-overridable. A per-session env knob to
 # shorten the TTL would be a SELF-ASSERTABLE BYPASS: a second session sets it
@@ -128,8 +130,6 @@ _TTL_SECONDS = 900          # 15 min: covers normal idle gaps; a crashed session
 #                             frees its trees after this (clean exits free them
 #                             instantly via SessionEnd; moving trees frees the old
 #                             one on the next tool call).
-_REPLACE_RETRIES = 4       # Windows: os.replace fails if the file is open elsewhere.
-
 # MAIN-checkout concurrency window for the non-blocking WARNING (see
 # _concurrent_live_session + _warn_concurrent). A live session writes its transcript
 # every turn/tool-call but can pause a minute or two while a turn is composed, so the
@@ -213,49 +213,11 @@ def _load_map(repo_root: str) -> dict:
 
 
 def _save_map(repo_root: str, m: dict) -> None:
-    """Atomically persist the map. Best-effort: any failure is swallowed (the call
-    still ALLOWS; a dropped write only under-isolates). Retries os.replace because
-    Windows refuses to rename onto a file another hook process has open, and cleans
-    up the temp file / stray sibling temps so they don't accumulate in state/."""
+    """Atomically persist the private map; any failure is swallowed (fail-open)."""
     try:
         path = _map_path(repo_root)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = f"{path}.tmp.{os.getpid()}"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(m, f)
-        replaced = False
-        for attempt in range(_REPLACE_RETRIES):
-            try:
-                os.replace(tmp, path)
-                replaced = True
-                break
-            except PermissionError:
-                time.sleep(0.01)  # transient Windows open-handle window
-            except OSError:
-                break
-        if not replaced:
-            try:
-                os.remove(tmp)
-            except OSError:
-                pass
-        else:
-            _sweep_temps(os.path.dirname(path), os.path.basename(path))
+        private_state.atomic_write_json(path, m)
     except Exception:
-        pass
-
-
-def _sweep_temps(state_dir: str, base: str) -> None:
-    """Best-effort: drop orphaned `<base>.tmp.*` files left by a failed replace on
-    another process so they don't accumulate (Windows)."""
-    try:
-        prefix = base + ".tmp."
-        for name in os.listdir(state_dir):
-            if name.startswith(prefix):
-                try:
-                    os.remove(os.path.join(state_dir, name))
-                except OSError:
-                    pass
-    except OSError:
         pass
 
 

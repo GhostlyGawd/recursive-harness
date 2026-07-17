@@ -19,12 +19,19 @@ their normal explicit decisions and reviews.
 
 ### 1. Centralize private-state I/O
 
+**Delivered:** privacy-bearing CLI, hook, Fleet, auto-healer, and specialization ledgers
+now share an owner-only, concurrent-safe, atomic stdlib writer with regression coverage.
+
 Create one owner-only state writer and migrate `bin/harness`, hooks, Fleet, auto-healer,
 and specialization ledgers to it. Add Linux tests for `0700` directories, `0600` files,
 atomic replacement, and concurrent append behavior. This closes the remaining gap where
 direct use without `account-init.sh` inherits the process umask.
 
 ### 2. Add redaction and retention controls
+
+**Delivered:** recursive secret/common-PII redaction, a 30-day soft default, fail-open
+session-end expiry, and `harness privacy` dry-run/apply controls now preserve evidence
+metadata while removing expired raw excerpts.
 
 Make correction and failure excerpt capture explicitly configurable by data class. Add a
 shared secret/PII redaction pass, maximum retention for raw excerpts, a dry-run inventory,
@@ -130,12 +137,11 @@ These scenarios should assert observable outcomes, not prompt text.
 
 ## Suggested delivery sequence
 
-1. Private-state I/O and redaction/retention design
-2. Repository security settings and immutable Actions pins
-3. Distribution tests and cross-platform launcher
-4. License and supported-surface decisions
-5. Release checklist and end-to-end scenarios
-6. Connectedness and external-repository trust cleanup
+1. Repository security settings and immutable Actions pins
+2. Distribution tests and cross-platform launcher
+3. License and supported-surface decisions
+4. Release checklist and end-to-end scenarios
+5. Connectedness and external-repository trust cleanup
 
 The security-specific evidence and status are in
 [security-assessment-2026-07-17.md](security-assessment-2026-07-17.md). Architecture and

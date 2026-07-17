@@ -109,6 +109,7 @@ python3 bin/harness outcome PREDICTION_ID --result hit --notes "what happened"
 # Inspect the system
 python3 bin/harness scorecard
 python3 bin/harness health
+python3 bin/harness privacy audit
 python3 bin/harness ask --context commands/retro.md
 ```
 
@@ -123,10 +124,11 @@ it is not a sandbox. Treat configured skills, hook changes, MCP integrations, an
 repositories in `worktree-repos.json` as trusted code.
 
 Hot state and account/session data are gitignored, but they can contain short prompt or
-failure excerpts, machine paths, and session identifiers. Versioned memory, proposals,
-fixtures, and provenance are public once committed. Read [PRIVACY.md](PRIVACY.md) before
-using the harness with sensitive work and report vulnerabilities through the private path
-in [SECURITY.md](SECURITY.md).
+failure excerpts, machine paths, and session identifiers. State writes redact common
+secret/PII shapes and raw excerpts default to 30-day retention, but those controls are
+defense in depth. Versioned memory, proposals, fixtures, and provenance are public once
+committed. Read [PRIVACY.md](PRIVACY.md) before using the harness with sensitive work and
+report vulnerabilities through the private path in [SECURITY.md](SECURITY.md).
 
 ## Current limits
 

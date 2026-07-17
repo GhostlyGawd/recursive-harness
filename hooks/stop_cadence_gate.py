@@ -27,6 +27,8 @@ except Exception:  # never let a config-reader import brick the hook
         return float(default)
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 STATE = os.path.join(HARNESS_ROOT, "state")
 SESSIONS_SINCE_RETRO_THRESHOLD = 5
 
@@ -61,25 +63,18 @@ def _last_retro_epoch():
 def _sessions_since(epoch) -> int:
     """Count distinct sessions in sessions.jsonl that started after `epoch`."""
     log = os.path.join(STATE, "sessions.jsonl")
-    if not os.path.exists(log):
-        return 0
     seen = set()
     try:
-        with open(log, encoding="utf-8") as f:
-            for line in f:
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                sid, ts = rec.get("session"), rec.get("ts")
-                if not sid or not ts:
-                    continue
-                try:
-                    rec_epoch = dt.datetime.fromisoformat(ts).timestamp()
-                except (ValueError, TypeError):
-                    continue
-                if rec_epoch > epoch:
-                    seen.add(sid)
+        for rec in private_state.read_jsonl(log):
+            sid, ts = rec.get("session"), rec.get("ts")
+            if not sid or not ts:
+                continue
+            try:
+                rec_epoch = dt.datetime.fromisoformat(ts).timestamp()
+            except (ValueError, TypeError):
+                continue
+            if rec_epoch > epoch:
+                seen.add(sid)
     except OSError:
         return 0
     return len(seen)
@@ -117,9 +112,7 @@ def main() -> int:
     threshold = int(num("nudges.retro_cadence_sessions", SESSIONS_SINCE_RETRO_THRESHOLD))
     if n >= threshold:
         try:
-            os.makedirs(STATE, exist_ok=True)
-            with open(gate_flag, "w", encoding="utf-8") as f:
-                f.write("nudged\n")
+            private_state.atomic_write_text(gate_flag, "nudged\n")
         except OSError:
             return 0  # if we cannot record the once-per-session flag, do not nudge
         print(json.dumps({
