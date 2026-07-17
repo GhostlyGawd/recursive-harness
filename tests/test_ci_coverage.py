@@ -24,6 +24,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CI_YML = os.path.join(ROOT, ".github", "workflows", "ci.yml")
+DEPENDABOT_YML = os.path.join(ROOT, ".github", "dependabot.yml")
 
 # Tracked test files intentionally NOT wired into CI, each mapped to the reason it
 # cannot run there. Adding an entry is a CONSCIOUS, review-visible decision -- the
@@ -148,6 +149,33 @@ check(
 discovered = tracked_test_files()
 ci_text = open(CI_YML, encoding="utf-8").read()
 referenced = referenced_in_ci(ci_text)
+
+# Supply-chain fence (2026-07-17 security review): remote Actions are immutable
+# commit pins with a human-readable release comment, and Dependabot owns updates.
+expected_action_names = {"actions/checkout", "actions/setup-python"}
+action_refs = {
+    match.group(1): (match.group(2), match.group(3))
+    for match in re.finditer(r"uses:\s*([^@\s]+)@([^\s#]+)\s+#\s+(v[^\s]+)", ci_text)
+    if not match.group(1).startswith("./")
+}
+check(
+    "remote GitHub Actions use reviewed immutable SHAs with release comments",
+    set(action_refs) == expected_action_names
+    and all(re.fullmatch(r"[0-9a-f]{40}", sha) and re.fullmatch(r"v\d+\.\d+\.\d+", version)
+            for sha, version in action_refs.values()),
+    f"got {action_refs}; expected named actions with 40-hex pins + semver comments",
+)
+try:
+    dependabot_text = open(DEPENDABOT_YML, encoding="utf-8").read()
+except OSError:
+    dependabot_text = ""
+check(
+    "Dependabot is configured to update GitHub Actions pins weekly",
+    'package-ecosystem: "github-actions"' in dependabot_text
+    and 'directory: "/"' in dependabot_text
+    and 'interval: "weekly"' in dependabot_text,
+    "missing .github/dependabot.yml weekly github-actions update policy",
+)
 
 check("discovery finds the known-wired test_hooks.py", "tests/test_hooks.py" in discovered)
 
