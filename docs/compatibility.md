@@ -21,8 +21,8 @@ library by design. Optional surfaces have separate dependencies:
 
 - Mission Control: `textual>=0.60` from `mission_control/requirements.txt`.
 - Fleet MCP adapter: `mcp>=1.0`; Fleet's engine and CLI remain stdlib-only.
-- Huashu design skill: its locked Node dependency graph under
-  `skills/huashu-design/package-lock.json`.
+- Brand assets: committed SVG, PNG, JSON, CSS, and TypeScript files require no runtime
+  dependency or build tool.
 
 Installing an optional dependency does not make that subsystem part of the core runtime.
 

@@ -4,8 +4,8 @@
 
 Trigger-loaded procedures: the harness's how-to knowledge, one directory per
 skill (`<name>/SKILL.md` with `name` + `description` frontmatter, plus an
-optional `references/` for overflow). 23 tracked skills as of 2026-07-02 — 6
-seeds from v0.1.0 plus 17 non-seed skills — and any gitignored vendored-live
+optional `references/` for overflow). 22 tracked skills as of 2026-07-17 — 6
+seeds from v0.1.0 plus 16 non-seed skills — and any gitignored vendored-live
 repos living alongside (e.g. `brand-foundry/`, its own git repo, not a trunk
 artifact). Descriptions are ALWAYS loaded (they are the trigger surface);
 bodies load only when the skill fires (kernel: "procedures, loaded on trigger
@@ -19,7 +19,7 @@ harness-authoring, eval-capture. Growth since comes three ways: the learning
 loop — /retro routes "procedure" learnings here (kernel directive 2); the
 specialization loop (`ab271ed`) — recurring domain gaps logged by
 `skills/specialization/needs.py` get promoted into expert skills; and vendored
-imports of third-party skills (huashu-design, loop-prompt-architect) via skill
+imports of third-party skills (currently loop-prompt-architect) via skill
 `vendoring-skills`, which is import, not authoring. Each non-seed skill
 carries a `provenance:` line naming the session and trigger that birthed it
 (lint rule F2).
@@ -49,11 +49,11 @@ carries a `provenance:` line naming the session and trigger that birthed it
   a rule that must ALWAYS hold is a hook, not a skill), source-of-truth gate
   (verify external-behavior claims against live docs or an empirical test
   before shipping).
-- Third-party imports go through skill `vendoring-skills`: either tracked +
-  B3-waived via the allowlist (huashu-design) or gitignored vendored-live with
-  its own remote (brand-foundry).
+- Third-party imports go through skill `vendoring-skills`: either tracked and kept within
+  the standard budget, explicitly B3-waived through the currently empty allowlist, or
+  gitignored vendored-live with its own remote (brand-foundry).
 - New skills land via branch + PR like everything else; autonomy.json counts
-  the category (skills 14/14 accepted as of the 2026-06-28 reconcile; counted
+  the category (skills 16/16 accepted as of the 2026-07-17 reconcile; counted
   by `git ls-files` tracked dirs minus the 6 seeds).
 - Verify a change: `python3 lint/lint_harness.py` (budgets + provenance), and
   the duplication grep coming back clean.
