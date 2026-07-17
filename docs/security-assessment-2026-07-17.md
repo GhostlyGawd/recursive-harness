@@ -42,6 +42,7 @@ vulnerabilities without a reachable security impact.
 | RH-05 | Low | Open | GitHub Actions dependencies use major-version tags (`actions/checkout@v4`, `actions/setup-python@v5`) rather than immutable commit SHAs. Pin and automate reviewed updates as a supply-chain hardening step. |
 | RH-06 | Low | Open | `worktree-repos.json` can cause configured repositories to be cloned at their current remote default branch. This is convenient but makes each configured source a trusted-code boundary rather than a reproducible pinned input. |
 | RH-07 | Governance | Open | The repository has no root license. `fleet/LICENSE` covers only the extraction scaffold. A repository-wide license choice requires an explicit maintainer decision. |
+| RH-08 | Low | Open | `install.sh` replaces the effective `post-merge` hook without detecting or chaining an existing hook. Preserve custom hook logic before installation; a managed dispatcher or explicit coexistence strategy is recommended. |
 
 ## Validated non-findings
 
@@ -76,6 +77,7 @@ without a commit.
 5. Decide on a repository-wide license; keep the current scoped license statement until
    that explicit governance decision is made.
 6. Consider requiring one approving review and resolved conversations on `main`.
+7. Make the installed `post-merge` hook coexist with pre-existing project hooks.
 
 ## Limitations
 
