@@ -33,6 +33,8 @@ except Exception:  # never let a config-reader import brick the hook
         return float(default)
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 STATE = os.path.join(HARNESS_ROOT, "state")
 DEFAULT_RECURRENCE = 3
 
@@ -76,9 +78,7 @@ def main() -> int:
     if not hot:
         return 0
     try:
-        os.makedirs(STATE, exist_ok=True)
-        with open(gate_flag, "w", encoding="utf-8") as f:
-            f.write("nudged\n")
+        private_state.atomic_write_text(gate_flag, "nudged\n")
     except OSError:
         return 0  # if we cannot record the once-per-session flag, do not nudge
     top = hot[0]

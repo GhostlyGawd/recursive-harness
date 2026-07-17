@@ -75,6 +75,8 @@ def make_repo_with_worktree(base):
     main = os.path.join(base, "mainrepo")
     os.makedirs(os.path.join(main, "bin"))
     shutil.copy(HARNESS, os.path.join(main, "bin", "harness"))
+    for module in ("private_state.py", "privacy_state.py"):
+        shutil.copy(os.path.join(ROOT, module), os.path.join(main, module))
     _git(["init", "-q"], main)
     _git(["add", "-A"], main)
     _git(["commit", "-q", "-m", "seed"], main)

@@ -20,6 +20,8 @@ except Exception:  # never let a config-reader import brick the hook
         return default
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 LOG = os.path.join(HARNESS_ROOT, "state", "corrections.jsonl")
 
 SIGNALS = re.compile(
@@ -67,22 +69,14 @@ def main() -> int:
     if not SIGNALS.search(prompt[:280]):
         return 0
     session = data.get("session_id", "?")
-    os.makedirs(os.path.dirname(LOG), exist_ok=True)
-    with open(LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-            "session": session,
-            "snippet": prompt[:200],
-            "source": "auto",
-        }) + "\n")
-    count = 0
-    with open(LOG, encoding="utf-8") as f:
-        for line in f:
-            try:
-                if json.loads(line).get("session") == session:
-                    count += 1
-            except json.JSONDecodeError:
-                continue
+    private_state.append_jsonl(LOG, {
+        "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "session": session,
+        "snippet": prompt[:200],
+        "source": "auto",
+    })
+    count = sum(1 for record in private_state.read_jsonl(LOG)
+                if record.get("session") == session)
     if count == 3:
         print("[harness] Third correction this session. The user's model of the task and "
               "yours have diverged 3 times — finish the immediate fix, then run /retro to "

@@ -5,12 +5,12 @@ the smallest increment of the "Agent Mail" / lateral-coordination capability: th
 substrate plus the one view the harness's own evidence calls for (concurrent
 awareness — the 3-in-48h shared-HEAD clobber class).
 
-PORTABILITY CONTRACT (enforced by test_engine_imports_stdlib_only):
-    This module imports ONLY the Python stdlib — no git, no Claude Code, no
-    bin/harness, no harness ADRs. Storage location is INJECTED by the caller (a
-    resolved `state_dir`); the engine never resolves it itself. That keeps a single
-    canonical state-path resolver in the harness (state-single-ledger Option A) and
-    lets this engine be lifted into its own repo unchanged.
+PORTABILITY CONTRACT (enforced by test_engine_imports_portable_only):
+    This module imports only the Python stdlib plus the bundled, stdlib-only
+    `private_state` storage primitive — no git, Claude Code, bin/harness, or harness
+    ADRs. Storage location is INJECTED by the caller (a resolved `state_dir`); the
+    engine never resolves it itself. The extraction scaffold includes both the Fleet
+    package and private_state.py, so the engine still lifts unchanged.
     See proposals/2026-06-22-agent-mail-product.md (§0, §3, §5).
 
 Record shape (the only thing written):
@@ -28,6 +28,8 @@ import json
 import os
 import time
 import uuid
+
+import private_state
 
 EVENTS_RELPATH = ("fleet", "events.jsonl")  # under the injected state_dir
 DEFAULT_TTL_S = 3600.0      # in-flight state is ephemeral; 1h default
@@ -62,13 +64,9 @@ def new_event(kind, *, actor=None, target=None, payload=None,
 
 
 def append(state_dir, event):
-    """Append one event as a JSONL line. Append-only ⇒ concurrent-safe (no rewrite
-    race; same pattern as bin/harness:67). Returns the event."""
+    """Append one private, sanitized event without interleaving concurrent writers."""
     path = _events_path(state_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(event, ensure_ascii=False) + "\n")
-    return event
+    return private_state.append_jsonl(path, event)
 
 
 def emit(state_dir, kind, **kwargs):
@@ -78,20 +76,7 @@ def emit(state_dir, kind, **kwargs):
 
 def read_raw(state_dir):
     """All events as written, oldest-first. Missing log ⇒ []. Corrupt lines skipped."""
-    path = _events_path(state_dir)
-    if not os.path.exists(path):
-        return []
-    out = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                out.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    return out
+    return private_state.read_jsonl(_events_path(state_dir))
 
 
 def reap(events, *, now_s, cap=DEFAULT_CAP):
@@ -143,19 +128,18 @@ def compact(state_dir, *, now_s=None, cap=DEFAULT_CAP):
 
     This is the explicit lifecycle trigger a cron / host-hook can call (the harness wires
     it into session-end). Correctness does NOT depend on it — every read is already
-    reap-aware — so compaction is space reclamation, not a safety mechanism. Returns
-    (kept, dropped). Caveat: a concurrent append during the rewrite can be lost; acceptable
-    for an advisory channel reaped at low-contention moments (session end)."""
+    reap-aware — so compaction is space reclamation, not a safety mechanism. The shared
+    state lock prevents a concurrent append from being lost. Returns (kept, dropped)."""
     now_s = time.time() if now_s is None else now_s
-    raw = read_raw(state_dir)
-    if not raw:
-        return (0, 0)
-    live = reap(raw, now_s=now_s, cap=cap)
     path = _events_path(state_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        for e in live:
-            f.write(json.dumps(e, ensure_ascii=False) + "\n")
-    os.replace(tmp, path)
-    return (len(live), len(raw) - len(live))
+    if not os.path.exists(path):
+        return (0, 0)
+    counts = {"raw": 0, "live": 0}
+
+    def _reap_locked(raw):
+        live = reap(raw, now_s=now_s, cap=cap)
+        counts["raw"], counts["live"] = len(raw), len(live)
+        return live
+
+    private_state.transform_jsonl(path, _reap_locked)
+    return (counts["live"], counts["raw"] - counts["live"])

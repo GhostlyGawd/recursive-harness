@@ -38,6 +38,8 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, ROOT)
+import private_state
 _TREE_STATE = os.path.join(ROOT, "state")
 DEFAULT_THRESHOLD = 3  # recurrence at/above which a need becomes promotable
 STATUSES = ("open", "building", "built", "wontfix")
@@ -91,24 +93,11 @@ def _parse_tags(raw):
 
 
 def _append(path, rec):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    private_state.append_jsonl(path, rec)
 
 
 def _read(path):
-    if not os.path.exists(path):
-        return []
-    out = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    out.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-    return out
+    return private_state.read_jsonl(path)
 
 
 def _aggregate(records):

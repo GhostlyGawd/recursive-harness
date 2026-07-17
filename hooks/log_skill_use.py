@@ -16,6 +16,8 @@ except Exception:  # never let a config-reader import brick the hook
         return default
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 LOG = os.path.join(HARNESS_ROOT, "state", "skill_usage.jsonl")
 
 
@@ -36,13 +38,11 @@ def main() -> int:
         return 0
     ti = data.get("tool_input") or {}
     name = (ti.get("skill") or ti.get("name") or ti.get("command") or "unknown").strip()
-    os.makedirs(os.path.dirname(LOG), exist_ok=True)
-    with open(LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-            "skill": name,
-            "session": data.get("session_id", "?"),
-        }) + "\n")
+    private_state.append_jsonl(LOG, {
+        "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "skill": name,
+        "session": data.get("session_id", "?"),
+    })
     return 0
 
 

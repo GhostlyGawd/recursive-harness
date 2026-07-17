@@ -29,6 +29,8 @@ except Exception:  # never let a config-reader import brick the hook
         return default
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 HEAL_DIR = os.path.join(HARNESS_ROOT, "state", "heal")
 
 # Failure signals in tool output. Generous ON PURPOSE: a false positive only seeds a
@@ -138,9 +140,7 @@ def main() -> int:
             "session": data.get("session_id", "?"),
         }
         path = os.path.join(HEAL_DIR, repo, "candidates.jsonl")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        private_state.append_jsonl(path, rec)
     except (OSError, ValueError, KeyError, AttributeError):
         return 0  # fail-open: never block or slow a tool over best-effort capture
     return 0

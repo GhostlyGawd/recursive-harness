@@ -1,7 +1,7 @@
 # Agent Mail — extraction scaffold (Phase 5).
 # On extraction this file moves to the new repo root, one level ABOVE the `fleet/` package:
 #   agent-mail/
-#     pyproject.toml   README.md   LICENSE
+#     pyproject.toml   README.md   LICENSE   private_state.py
 #     fleet/__init__.py  eventlog.py  claims.py  units.py  postbox.py  render.py  cli.py  mcp_server.py
 # The core (engine + views + cli + render) needs NO third-party deps — only [mcp] does.
 [build-system]
@@ -37,5 +37,6 @@ Homepage = "https://github.com/GhostlyGawd/agent-mail"
 
 [tool.hatch.build.targets.wheel]
 packages = ["fleet"]
+include = ["private_state.py"]
 # pm/ is build-process state, not shippable code:
 exclude = ["fleet/pm", "fleet/test_*.py"]
