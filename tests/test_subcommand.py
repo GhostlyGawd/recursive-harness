@@ -136,7 +136,7 @@ _H = _load_harness_cli()
 import tempfile as _tf
 import types as _t
 _tmp = _tf.mkdtemp(prefix="standing_")
-_H.APPROVALS = os.path.join(_tmp, "approvals.jsonl")
+_H.APPROVALS = os.path.join(_tmp, "state", "approvals.jsonl")
 _H.MARKER = os.path.join(_tmp, "HUMAN_APPROVED")
 
 
