@@ -14,7 +14,7 @@ append-only evidence, and guarded boundaries.
 | `identity/favicon.svg` | Small-size mark | Deterministic SVG |
 | `applications/readme-hero.png` | README atmosphere and identity | Generated PNG, 2172×724 |
 | `applications/control-loop.svg` | Product feedback loop | Deterministic SVG |
-| `applications/system-map.svg` | Architecture overview | Deterministic SVG |
+| `applications/system-map-v2.svg` | Architecture overview | Deterministic SVG |
 | `tokens.json` | Source design tokens | JSON |
 | `dist/tokens.css`, `dist/tokens.ts` | Consumer-ready token exports | Generated deterministically from the token values |
 
