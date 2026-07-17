@@ -81,11 +81,18 @@ Classify commands, skills, hooks, and optional subsystems as stable, experimenta
 internal. Publish a short compatibility promise for stable interfaces and move volatile
 build history out of the operator path without deleting its provenance.
 
+**Documentation delivered:** [product-surface.md](product-surface.md) now defines supported
+beta, optional, experimental, internal, and legacy surfaces. Promotion evidence and any
+physical history cleanup remain implementation work.
+
 ### 9. Create a release checklist
 
 Automate version consistency, docs links, changelog/release notes, security scan summaries,
 fresh-install smoke tests, and upgrade tests. Keep publication manual until the checklist is
 proven across several releases.
+
+**Manual contract delivered:** [releasing.md](releasing.md) records the checklist and the
+current `VERSION`/tag/license gaps. Mechanical checks and repeated release evidence remain.
 
 ## P2 — improve maintainability with existing evidence
 

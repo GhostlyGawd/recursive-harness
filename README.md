@@ -10,6 +10,7 @@ the learning system has not weakened its own evidence.
 
 [Get started](docs/getting-started.md) · [Architecture](docs/architecture.md) ·
 [Operations](docs/operations.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md) ·
+[Compatibility](docs/compatibility.md) · [Support](SUPPORT.md) ·
 [Recommended next steps](docs/roadmap.md)
 
 ## Why this exists
