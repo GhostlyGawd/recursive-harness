@@ -6,10 +6,10 @@
     <text x="56" y="64" fill="#EAFBFF" font-size="28" font-weight="700">System map</text>
     <text x="56" y="92" fill="#83A8C5" font-size="16">Conceptual architecture — not a runtime screenshot</text>
     <g font-size="20" font-weight="700" fill="#EAFBFF">
-      <rect x="55" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="90" y="190">Claude Code events</text><text x="90" y="226" fill="#83A8C5" font-size="15" font-weight="400">session • tools • stop</text>
-      <rect x="355" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#123CFF"/><text x="390" y="190">Hooks + procedures</text><text x="390" y="226" fill="#83A8C5" font-size="15" font-weight="400">guards • skills • commands</text>
-      <rect x="655" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#8A6CFF"/><text x="690" y="190">Private hot state</text><text x="690" y="226" fill="#83A8C5" font-size="15" font-weight="400">predictions • corrections • fleet</text>
-      <rect x="955" y="145" width="190" height="120" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="990" y="190">Review gates</text><text x="990" y="226" fill="#83A8C5" font-size="15" font-weight="400">lint • tests • evals</text>
+      <rect x="55" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="170" y="190" text-anchor="middle">Claude Code events</text><text x="170" y="226" text-anchor="middle" fill="#83A8C5" font-size="14" font-weight="400">session • tools • stop</text>
+      <rect x="355" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#123CFF"/><text x="470" y="190" text-anchor="middle">Hooks + procedures</text><text x="470" y="226" text-anchor="middle" fill="#83A8C5" font-size="14" font-weight="400">guards • skills • commands</text>
+      <rect x="655" y="145" width="230" height="120" rx="14" fill="#07142B" stroke="#8A6CFF"/><text x="770" y="190" text-anchor="middle">Private hot state</text><text x="770" y="226" text-anchor="middle" fill="#83A8C5" font-size="14" font-weight="400">predictions • corrections • fleet</text>
+      <rect x="955" y="145" width="190" height="120" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="1050" y="190" text-anchor="middle">Review gates</text><text x="1050" y="226" text-anchor="middle" fill="#83A8C5" font-size="14" font-weight="400">lint • tests • evals</text>
     </g>
     <g stroke="#20D9FF" stroke-width="3" fill="none"><path d="M285 205H355"/><path d="M585 205H655"/><path d="M885 205H955"/></g>
     <rect x="355" y="345" width="530" height="105" rx="52" fill="#07142B" stroke="#2B6F9F" stroke-width="2"/>
