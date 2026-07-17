@@ -49,6 +49,7 @@ import datetime
 import io
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -2146,6 +2147,101 @@ class GraphAtError(Exception):
     """A git REF could not be materialized (bad ref / not a git repo)."""
 
 
+def _legacy_archive_path(name, *, parent=""):
+    """Return a normalized POSIX archive path, rejecting paths outside the tree.
+
+    Python 3.12 added tarfile's ``filter="data"`` extraction guard. This validator
+    gives older runtimes the same essential boundary for git-archive members and
+    symlink targets instead of falling back to unrestricted ``extractall``.
+    """
+    if not name or "\\" in name or posixpath.isabs(name):
+        raise GraphAtError(f"unsafe path in git archive: {name!r}")
+    candidate = posixpath.normpath(posixpath.join(parent, name))
+    if candidate in ("", ".", "..") or candidate.startswith("../"):
+        raise GraphAtError(f"unsafe path in git archive: {name!r}")
+    return candidate
+
+
+def _extract_tar_legacy(tf, destination):
+    """Safely materialize a git archive on Python versions without data filters.
+
+    Git archives contain directories, regular files, and symbolic links. Validate
+    the complete member set before writing anything, reject special files and link
+    pivots, then materialize those three supported types without calling tarfile's
+    unfiltered extraction APIs.
+    """
+    records = []
+    by_path = {}
+    for member in tf.getmembers():
+        path = _legacy_archive_path(member.name)
+        if path in by_path:
+            raise GraphAtError(f"duplicate path in git archive: {path!r}")
+        if not (member.isdir() or member.isfile() or member.issym()):
+            raise GraphAtError(f"unsupported member in git archive: {path!r}")
+        if member.issym():
+            _legacy_archive_path(member.linkname, parent=posixpath.dirname(path))
+        by_path[path] = member
+        records.append((path, member))
+
+    # No archive member may descend through an archive-provided symlink. Without
+    # this whole-archive check, a later ``link/child`` file could pivot outside.
+    symlinks = {path for path, member in records if member.issym()}
+    for path, _member in records:
+        parts = path.split("/")
+        for end in range(1, len(parts)):
+            if "/".join(parts[:end]) in symlinks:
+                raise GraphAtError(f"archive member descends through a symlink: {path!r}")
+
+    root = os.path.abspath(destination)
+
+    def disk_path(path):
+        target = os.path.abspath(os.path.join(root, *path.split("/")))
+        try:
+            contained = os.path.commonpath((root, target)) == root
+        except ValueError:
+            contained = False
+        if not contained:
+            raise GraphAtError(f"unsafe path in git archive: {path!r}")
+        return target
+
+    try:
+        # Parents first; explicit directory modes are restored after file writes.
+        for path, member in records:
+            if member.isdir():
+                os.makedirs(disk_path(path), exist_ok=True)
+
+        for path, member in records:
+            if not member.isfile():
+                continue
+            target = disk_path(path)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            if os.path.lexists(target):
+                raise GraphAtError(f"archive file collides with an existing path: {path!r}")
+            source = tf.extractfile(member)
+            if source is None:
+                raise GraphAtError(f"archive file has no payload: {path!r}")
+            with source, open(target, "xb") as out:
+                shutil.copyfileobj(source, out)
+            os.chmod(target, member.mode & 0o777)
+
+        for path, member in records:
+            if not member.issym():
+                continue
+            target = disk_path(path)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            if os.path.lexists(target):
+                raise GraphAtError(f"archive link collides with an existing path: {path!r}")
+            os.symlink(member.linkname, target)
+
+        for path, member in sorted(records, key=lambda item: item[0].count("/"), reverse=True):
+            if member.isdir():
+                os.chmod(disk_path(path), member.mode & 0o777)
+    except GraphAtError:
+        raise
+    except OSError as exc:
+        raise GraphAtError(f"could not materialize git archive: {exc}") from exc
+
+
 def graph_at(ref):
     """(graph, warnings) for the repo AS OF git REF. Materializes REF's tree via `git archive`
     into a temp dir and runs the CURRENT extractor over it - so extractor-LOGIC changes never
@@ -2167,7 +2263,7 @@ def graph_at(ref):
             try:
                 tf.extractall(tmp, filter="data")   # secure default; silences the 3.14 warning
             except TypeError:
-                tf.extractall(tmp)                   # Python < 3.12: no filter kwarg
+                _extract_tar_legacy(tf, tmp)         # Python < 3.12: equivalent path boundary
         ROOT = tmp
         g, warnings, _notes, _wired = build()
         return g, warnings

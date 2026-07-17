@@ -15,12 +15,14 @@ Run:  python cartograph/test_diff.py      # exits non-zero on any failure
 """
 import glob
 import importlib.util
+import io
 import json
 import os
 import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -233,8 +235,61 @@ check("Traceback" not in text, "no python traceback leaks to the user")
 check(diff_temps() <= before, "the extraction temp dir is cleaned up even on the error path")
 
 
-# ===================================================== 8. e2e: read-only on the real trunk
-print("[8] e2e: --diff against the real repo mutates nothing + leaves no temp dir")
+# ===================================================== 8. unit: legacy archive extraction rejects traversal
+print("[8] unit: the Python <3.12 archive fallback rejects traversal and extracts safe files")
+
+
+def tar_bytes(entries):
+    """Build a small tar fixture from (name, bytes, optional link-target) tuples."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tf:
+        for name, content, link_target in entries:
+            info = tarfile.TarInfo(name)
+            if link_target is not None:
+                info.type = tarfile.SYMTYPE
+                info.linkname = link_target
+                tf.addfile(info)
+            else:
+                info.size = len(content)
+                tf.addfile(info, io.BytesIO(content))
+    return buf.getvalue()
+
+
+def legacy_extract(payload, target):
+    with tarfile.open(fileobj=io.BytesIO(payload)) as tf:
+        ex._extract_tar_legacy(tf, target)
+
+
+safe_dir = tempfile.mkdtemp(prefix="cg-safe-tar-")
+_tmpdirs.append(safe_dir)
+legacy_extract(tar_bytes([("nested/readme.txt", b"safe\n", None)]), safe_dir)
+check(open(os.path.join(safe_dir, "nested", "readme.txt"), "rb").read() == b"safe\n",
+      "legacy extraction materializes an ordinary file")
+
+traversal_dir = tempfile.mkdtemp(prefix="cg-traversal-tar-")
+_tmpdirs.append(traversal_dir)
+escape = os.path.join(os.path.dirname(traversal_dir), "cartograph-escape.txt")
+try:
+    legacy_extract(tar_bytes([("../cartograph-escape.txt", b"escaped\n", None)]), traversal_dir)
+    traversal_blocked = False
+except ex.GraphAtError:
+    traversal_blocked = True
+check(traversal_blocked and not os.path.exists(escape),
+      "a ../ archive member is rejected before it can escape the destination")
+
+link_dir = tempfile.mkdtemp(prefix="cg-link-tar-")
+_tmpdirs.append(link_dir)
+try:
+    legacy_extract(tar_bytes([("pivot", b"", "../outside"),
+                              ("pivot/payload.txt", b"escaped\n", None)]), link_dir)
+    link_blocked = False
+except ex.GraphAtError:
+    link_blocked = True
+check(link_blocked, "an escaping symlink pivot is rejected before extraction")
+
+
+# ===================================================== 9. e2e: read-only on the real trunk
+print("[9] e2e: --diff against the real repo mutates nothing + leaves no temp dir")
 html = os.path.join(HERE, "index.html")
 before_html = os.path.getmtime(html) if os.path.exists(html) else None
 porc_before = git(ROOT, "status", "--porcelain").stdout
@@ -248,8 +303,8 @@ check(before_html == after_html, "index.html not rewritten by --diff (mtime guar
 check(diff_temps() <= temps_before, "no cartograph-diff-* temp dir left behind")
 
 
-# ===================================================== 9. e2e: json shape + advisory default
-print("[9] e2e: --diff --json on the real repo has the documented keys; default exit advisory")
+# ===================================================== 10. e2e: json shape + advisory default
+print("[10] e2e: --diff --json on the real repo has the documented keys; default exit advisory")
 rc, out, err = run("--diff", "HEAD~1", "--json")
 try:
     j = json.loads(out)
@@ -263,7 +318,7 @@ check(rc == 0, "default --diff (no --strict) exits 0 even if it found findings")
 check(ok, "--diff --json carries every documented key")
 
 
-# ===================================================== 10. e2e: real-history node-accounting
+# ===================================================== 11. e2e: real-history node-accounting
 # B10 in-practice, made a real CONSISTENCY check (not a smoke test). The CURRENT side of a diff
 # is built tracked-only (followup 3f3fab), so this repo's gitignored installed skills (e.g.
 # brand-foundry) are EXCLUDED to match git-archive - they no longer read as local additions
@@ -272,7 +327,7 @@ check(ok, "--diff --json carries every documented key")
 # are disjoint - cross-checked against an
 # independent --json node universe. Robust to history + working state; the all-empty-stub
 # burden is carried by the fixture delta tests [2]-[6], which require specific non-empty deltas.
-print("[10] e2e: real-history --diff is internally consistent with the live graph (node accounting)")
+print("[11] e2e: real-history --diff is internally consistent with the live graph (node accounting)")
 _, out_j, _ = run("--json")
 cur_ids = {n["id"] for n in json.loads(out_j)["nodes"]}
 rc, out, err = run("--diff", "HEAD~3", "--json")
@@ -285,13 +340,13 @@ except Exception:
 check(ok, "diff node accounting is sound vs the live graph: added subset of current, removed disjoint")
 
 
-# ============================================ 11. e2e: a gitignored on-disk artifact is EXCLUDED
+# ============================================ 12. e2e: a gitignored on-disk artifact is EXCLUDED
 # The symmetry fix (followup 3f3fab): the CURRENT side of a --diff is built tracked-only, so a
 # file present on disk but git-IGNORED (a vendored skill like brand-foundry/) is NOT read as
 # "added" - it matches what `git archive REF` feeds the other side, and its whole provenance/
 # cites cascade (the born_in session node, the cites edges) never forms. A plain UNTRACKED file
 # (a new artifact not yet committed) is NOT ignored, so it MUST still surface for review.
-print("[11] e2e: a gitignored on-disk artifact (+ its cascade) is excluded; an untracked one still surfaces")
+print("[12] e2e: a gitignored on-disk artifact (+ its cascade) is excluded; an untracked one still surfaces")
 d, sha = make_repo({**V1, ".gitignore": "skills/vendored/\n"})
 write(os.path.join(d, "skills/vendored/SKILL.md"),
       "---\nname: vendored\n---\n# vendored\n\n"
