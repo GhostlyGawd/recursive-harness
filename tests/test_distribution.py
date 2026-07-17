@@ -16,7 +16,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 FAILURES: list[str] = []
-BASH: str | None = None
+BASH_COMMAND = r"C:\Program Files\Git\bin\bash.exe" if os.name == "nt" else "/usr/bin/bash"
+POWERSHELL_COMMAND = "powershell" if os.name == "nt" else "pwsh"
 CAPTURE = {
     "text": True,
     "stdout": subprocess.PIPE,
@@ -40,8 +41,6 @@ def write_executable(path: Path, text: str) -> None:
 
 
 def test_bash_launcher() -> None:
-    assert BASH is not None
-    bash = BASH
     with tempfile.TemporaryDirectory(prefix="harness-launch-") as raw_tmp:
         repo = Path(raw_tmp)
         shutil.copy2(ROOT / "launch.sh", repo / "launch.sh")
@@ -57,22 +56,20 @@ def test_bash_launcher() -> None:
         env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
 
         result = subprocess.run(
-            [bash, str(repo / "launch.sh"), "dev", "--", "--version"], cwd=repo, env=env, **CAPTURE
+            [BASH_COMMAND, str(repo / "launch.sh"), "dev", "--", "--version"], cwd=repo, env=env, **CAPTURE
         )
         check("Bash launcher exits with the Claude process", result.returncode == 0, result.stderr)
         check("Bash launcher exports the selected account", "accounts/dev" in result.stdout.replace("\\", "/"))
         check("Bash launcher forwards arguments", "ARGS=--version" in result.stdout, result.stdout)
         check("Bash launcher announces its checkout", "Harness account : dev" in result.stderr, result.stderr)
 
-        missing = subprocess.run([bash, str(repo / "launch.sh"), "missing"], cwd=repo, env=env, **CAPTURE)
+        missing = subprocess.run([BASH_COMMAND, str(repo / "launch.sh"), "missing"], cwd=repo, env=env, **CAPTURE)
         check("Bash launcher refuses an uninitialized account", missing.returncode == 1, missing.stderr)
-        invalid = subprocess.run([bash, str(repo / "launch.sh"), "../escape"], cwd=repo, env=env, **CAPTURE)
+        invalid = subprocess.run([BASH_COMMAND, str(repo / "launch.sh"), "../escape"], cwd=repo, env=env, **CAPTURE)
         check("Bash launcher rejects path-like account names", invalid.returncode == 2, invalid.stderr)
 
 
 def test_hook_installation() -> None:
-    assert BASH is not None
-    bash = BASH
     with tempfile.TemporaryDirectory(prefix="harness-install-") as raw_tmp:
         repo = Path(raw_tmp)
         shutil.copy2(ROOT / "install.sh", repo / "install.sh")
@@ -89,7 +86,7 @@ def test_hook_installation() -> None:
         custom = "#!/usr/bin/env bash\necho custom-hook\nexit 7\n"
         write_executable(hooks_dir / "post-merge", custom)
 
-        first = subprocess.run([bash, str(repo / "install.sh")], cwd=repo.parent, **CAPTURE)
+        first = subprocess.run([BASH_COMMAND, str(repo / "install.sh")], cwd=repo.parent, **CAPTURE)
         check("installer succeeds with an existing hook", first.returncode == 0, first.stderr)
         dispatcher = hooks_dir / "post-merge"
         preserved = hooks_dir / "post-merge.d" / "10-existing-post-merge"
@@ -101,18 +98,16 @@ def test_hook_installation() -> None:
             "recursive-harness managed post-merge dispatcher" in dispatcher.read_text(encoding="utf-8"),
         )
 
-        second = subprocess.run([bash, str(repo / "install.sh")], cwd=repo.parent, **CAPTURE)
+        second = subprocess.run([BASH_COMMAND, str(repo / "install.sh")], cwd=repo.parent, **CAPTURE)
         check("hook installation is idempotent", second.returncode == 0, second.stderr)
         check("idempotent install leaves one preserved custom hook", preserved.read_text(encoding="utf-8") == custom)
-        dispatched = subprocess.run([bash, str(dispatcher)], cwd=repo, **CAPTURE)
+        dispatched = subprocess.run([BASH_COMMAND, str(dispatcher)], cwd=repo, **CAPTURE)
         check("dispatcher runs the preserved custom hook", "custom-hook" in dispatched.stdout, dispatched.stdout)
         check("dispatcher continues to the managed hook", "managed-sync" in dispatched.stdout, dispatched.stdout)
         check("dispatcher preserves custom hook failure semantics", dispatched.returncode == 7, dispatched.stderr)
 
 
 def test_account_initialization() -> None:
-    assert BASH is not None
-    bash = BASH
     if os.name == "nt":
         print("SKIP  account symlink/mode smoke test (covered by Ubuntu CI; Windows uses native links)")
         return
@@ -130,7 +125,7 @@ def test_account_initialization() -> None:
         env["HOME"] = str(home)
 
         first = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "alpha", "--store-account", "alpha", "--sync-settings"],
+            [BASH_COMMAND, str(repo / "account-init.sh"), "alpha", "--store-account", "alpha", "--sync-settings"],
             cwd=repo,
             env=env,
             **CAPTURE,
@@ -144,14 +139,14 @@ def test_account_initialization() -> None:
         check("generated settings are owner-only", stat.S_IMODE((private / "accounts" / "alpha" / "settings.json").stat().st_mode) == 0o600)
 
         second = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "beta", "--sync-settings"], cwd=repo, env=env, **CAPTURE
+            [BASH_COMMAND, str(repo / "account-init.sh"), "beta", "--sync-settings"], cwd=repo, env=env, **CAPTURE
         )
         beta_projects = private / "accounts" / "beta" / "projects"
         check("later accounts reuse the persisted owner", second.returncode == 0 and beta_projects.is_symlink(), second.stderr)
         check("later account store link targets the owner", os.path.realpath(beta_projects) == os.path.realpath(private / "accounts" / "alpha" / "projects"))
 
         changed_owner = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "beta", "--store-account", "beta"],
+            [BASH_COMMAND, str(repo / "account-init.sh"), "beta", "--store-account", "beta"],
             cwd=repo,
             env=env,
             **CAPTURE,
@@ -159,7 +154,7 @@ def test_account_initialization() -> None:
         check("account init refuses an unsafe store-owner switch", changed_owner.returncode == 1, changed_owner.stderr)
 
         again = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "alpha", "--sync-settings"], cwd=repo, env=env, **CAPTURE
+            [BASH_COMMAND, str(repo / "account-init.sh"), "alpha", "--sync-settings"], cwd=repo, env=env, **CAPTURE
         )
         backups = list((private / "accounts" / "alpha").glob("settings.json.pre-sync.*"))
         check("settings refresh backs up the previous file", again.returncode == 0 and bool(backups), again.stderr)
@@ -170,7 +165,7 @@ def test_account_initialization() -> None:
         alpha_settings.unlink()
         alpha_settings.symlink_to(external_settings)
         linked_settings = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "alpha", "--sync-settings"],
+            [BASH_COMMAND, str(repo / "account-init.sh"), "alpha", "--sync-settings"],
             cwd=repo,
             env=env,
             **CAPTURE,
@@ -183,7 +178,7 @@ def test_account_initialization() -> None:
         outside_env = env.copy()
         outside_env["CLAUDE_CONFIG_DIR"] = str(outside)
         refused = subprocess.run(
-            [bash, str(repo / "account-init.sh")], cwd=repo, env=outside_env, **CAPTURE
+            [BASH_COMMAND, str(repo / "account-init.sh")], cwd=repo, env=outside_env, **CAPTURE
         )
         check("account init refuses an out-of-silo config directory", refused.returncode == 1, refused.stderr)
 
@@ -192,15 +187,14 @@ def test_account_initialization() -> None:
         owner_file.unlink()
         owner_file.symlink_to(outside_owner)
         linked_config = subprocess.run(
-            [bash, str(repo / "account-init.sh"), "alpha"], cwd=repo, env=env, **CAPTURE
+            [BASH_COMMAND, str(repo / "account-init.sh"), "alpha"], cwd=repo, env=env, **CAPTURE
         )
         check("account init refuses a symlinked store-owner config", linked_config.returncode == 1, linked_config.stderr)
         check("symlink refusal does not overwrite the external target", outside_owner.read_text(encoding="utf-8") == "unchanged\n")
 
 
 def test_powershell_launcher() -> None:
-    powershell = shutil.which("pwsh") or shutil.which("powershell")
-    if not powershell:
+    if not shutil.which(POWERSHELL_COMMAND):
         print("SKIP  PowerShell launcher smoke test (PowerShell unavailable)")
         return
     with tempfile.TemporaryDirectory(prefix="harness-launch-ps-") as raw_tmp:
@@ -223,7 +217,7 @@ def test_powershell_launcher() -> None:
         env = os.environ.copy()
         env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
         result = subprocess.run(
-            [powershell, "-NoProfile", "-File", str(repo / "launch.ps1"), "dev", "--version"],
+            [POWERSHELL_COMMAND, "-NoProfile", "-File", str(repo / "launch.ps1"), "dev", "--version"],
             cwd=repo,
             env=env,
             **CAPTURE,
@@ -234,28 +228,8 @@ def test_powershell_launcher() -> None:
         check("PowerShell launcher announces its account", "Harness account : dev" in result.stderr, result.stderr)
 
 
-def find_bash() -> str | None:
-    discovered = shutil.which("bash")
-    if discovered:
-        return discovered
-    if os.name == "nt":
-        for root_name in ("ProgramFiles", "LOCALAPPDATA"):
-            root = os.environ.get(root_name)
-            if not root:
-                continue
-            candidates = [Path(root) / "Git" / "bin" / "bash.exe"]
-            if root_name == "LOCALAPPDATA":
-                candidates.append(Path(root) / "Programs" / "Git" / "bin" / "bash.exe")
-            for candidate in candidates:
-                if candidate.is_file():
-                    return str(candidate)
-    return None
-
-
 def main() -> int:
-    global BASH
-    BASH = find_bash()
-    if not BASH:
+    if not Path(BASH_COMMAND).is_file():
         print("FAIL  Bash is required for distribution smoke tests")
         return 1
     test_bash_launcher()
