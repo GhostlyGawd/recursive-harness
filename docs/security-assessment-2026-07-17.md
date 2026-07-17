@@ -23,7 +23,8 @@ manifests, the current tree, and Git history.
 Automated checks:
 
 - `pip-audit 2.10.1` against `mission_control/requirements.txt`
-- `npm audit` against `skills/huashu-design/package-lock.json`
+- `npm audit` against the then-present `skills/huashu-design/package-lock.json`; that
+  vendored skill and dependency graph were removed later on 2026-07-17
 - `Bandit 1.9.4` and `Semgrep 1.170.0` security rules over Python source
 - `detect-secrets 1.5.0` over the current tree
 - `Gitleaks 8.30.1` over 300 commits, with findings redacted during review
@@ -52,7 +53,8 @@ vulnerabilities without a reachable security impact.
 ## Validated non-findings
 
 - Python dependency audit: 0 known vulnerabilities in 10 resolved packages.
-- npm dependency audit: 0 known vulnerabilities.
+- Historical Huashu npm dependency audit: 0 known vulnerabilities before the vendored
+  package was removed later on 2026-07-17.
 - Dependabot: 0 open vulnerability alerts at review time.
 - GitHub secret scanning: 0 open alerts after enablement.
 - Current-tree secret scan: one synthetic test token, confirmed as a fixture.

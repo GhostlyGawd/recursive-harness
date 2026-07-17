@@ -4,7 +4,7 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-07-05` from extract.py @ `5db9ced`.
+**Build stamp** - generated `2026-07-17` from extract.py @ `d8939b3`.
 
 ---
 
@@ -12,24 +12,24 @@
 
 One pure-graph vital sign (0-100) distilled from the extracted graph - structural integrity in a single number, comparable across git history. Advisory: it INFORMS /meta-retro, never blocks or prunes. The **trend** matters more than the absolute - run `python cartograph/health.py --trend` for the trajectory /meta-retro reads.
 
-**Score: 75.2/100**
+**Score: 75.0/100**
 
 | Sub-score | Value | Weight | Measures |
 |---|---:|---:|---|
 | rot_free | 1.000 | 0.4 | structural-rot warnings (all build() reports, pre-baseline) - 0 is ideal |
 | connectedness | 0.696 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
-| provenance | 0.481 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
+| provenance | 0.469 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
 | adr_load_bearing | 0.583 | 0.2 | ADRs something actually cites (in-degree > 0) |
 
-Counts: 0 rot · 14/46 orphan artifacts · 39/81 provenanced · 7/12 ADRs referenced.
+Counts: 0 rot · 14/46 orphan artifacts · 38/81 provenanced · 7/12 ADRs referenced.
 
-Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:doctor`, `cli:fleet`, `cli:health`, `cli:scorecard`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:huashu-design`, `skill:language-selection`, `skill:loop-prompt-architect`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
+Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:doctor`, `cli:fleet`, `cli:health`, `cli:privacy`, `cli:scorecard`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:language-selection`, `skill:loop-prompt-architect`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
 
 ---
 
 ## Where the harness strains  `[point-in-time read of state/]`
 
-Overall prediction calibration: **33%** hit-rate (1 hit / 2 miss / 1 open over 4). Open follow-ups: **0**. The breakdowns below localize the friction.
+Overall prediction calibration: **100%** hit-rate (6 hit / 0 miss / 0 open over 6). Open follow-ups: **0**. The breakdowns below localize the friction.
 
 ### Friction hotspots - prediction reliability by category
 
@@ -37,7 +37,8 @@ Where the agent is *least* calibrated is where work is hardest / least understoo
 
 | Category | Hit | Miss | Hit-rate | Signal |
 |---|---:|---:|---:|---|
-| general | 1 | 2 | 33% | ⚠ friction |
+| general | 5 | 0 | 100% | ✅ strong |
+| security-hardening | 1 | 0 | 100% |  |
 
 ### Load - most-fired skills (this window)
 

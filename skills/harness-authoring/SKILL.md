@@ -148,7 +148,7 @@ that quoted the marker was blocked; the guard's own block message gave the fix.)
 - **User-model entries**: claims about THIS user's behavior only, with
   evidence counts. Decay rules live in commands/gc.md.
 - **Multi-stage skill SUITES** (a gated pipeline of skills/phases — e.g.
-  brand-foundry → huashu-design): give the suite ONE canonical funnel view —
+  product strategy → product README): give the suite ONE canonical funnel view —
   the ordered stages plus the gate between each — not only a router that says
   "pick the smallest entry point." A pure-router front door trains reactive,
   one-stage-at-a-time use; the funnel shows the whole path so a session entering

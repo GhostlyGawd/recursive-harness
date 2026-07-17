@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Recursive Harness control loop</title>
+  <desc id="desc">Predict, act, score, and learn form a reviewed loop protected by evidence and safety boundaries.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#20D9FF"/></marker></defs>
+  <rect width="1200" height="360" rx="24" fill="#020611"/>
+  <rect x="34" y="34" width="1132" height="292" rx="24" fill="none" stroke="#2B6F9F" stroke-width="2" stroke-dasharray="7 8"/>
+  <text x="60" y="70" fill="#83A8C5" font-family="monospace" font-size="15" letter-spacing="3">GUARDED EVIDENCE BOUNDARY</text>
+  <g font-family="system-ui, sans-serif" text-anchor="middle">
+    <g><rect x="80" y="125" width="210" height="110" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="185" y="173" fill="#EAFBFF" font-size="25" font-weight="700">Predict</text><text x="185" y="204" fill="#83A8C5" font-size="16">state an expectation</text></g>
+    <g><rect x="350" y="125" width="210" height="110" rx="14" fill="#07142B" stroke="#123CFF"/><text x="455" y="173" fill="#EAFBFF" font-size="25" font-weight="700">Act</text><text x="455" y="204" fill="#83A8C5" font-size="16">perform the work</text></g>
+    <g><rect x="620" y="125" width="210" height="110" rx="14" fill="#07142B" stroke="#8A6CFF"/><text x="725" y="173" fill="#EAFBFF" font-size="25" font-weight="700">Score</text><text x="725" y="204" fill="#83A8C5" font-size="16">record hit or miss</text></g>
+    <g><rect x="890" y="125" width="210" height="110" rx="14" fill="#07142B" stroke="#20D9FF"/><text x="995" y="173" fill="#EAFBFF" font-size="25" font-weight="700">Learn</text><text x="995" y="204" fill="#83A8C5" font-size="16">review a durable diff</text></g>
+  </g>
+  <g stroke="#20D9FF" stroke-width="3" fill="none" marker-end="url(#arrow)"><path d="M290 180H340"/><path d="M560 180H610"/><path d="M830 180H880"/><path d="M995 245C995 300 185 300 185 245"/></g>
+</svg>
