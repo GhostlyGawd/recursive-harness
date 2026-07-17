@@ -66,7 +66,7 @@ def new_event(kind, *, actor=None, target=None, payload=None,
 def append(state_dir, event):
     """Append one private, sanitized event without interleaving concurrent writers."""
     path = _events_path(state_dir)
-    return private_state.append_jsonl(path, event)
+    return private_state.append_jsonl(path, event, root=state_dir)
 
 
 def emit(state_dir, kind, **kwargs):
@@ -76,7 +76,7 @@ def emit(state_dir, kind, **kwargs):
 
 def read_raw(state_dir):
     """All events as written, oldest-first. Missing log ⇒ []. Corrupt lines skipped."""
-    return private_state.read_jsonl(_events_path(state_dir))
+    return private_state.read_jsonl(_events_path(state_dir), root=state_dir)
 
 
 def reap(events, *, now_s, cap=DEFAULT_CAP):
@@ -132,7 +132,7 @@ def compact(state_dir, *, now_s=None, cap=DEFAULT_CAP):
     state lock prevents a concurrent append from being lost. Returns (kept, dropped)."""
     now_s = time.time() if now_s is None else now_s
     path = _events_path(state_dir)
-    if not os.path.exists(path):
+    if not private_state.path_exists(path, root=state_dir):
         return (0, 0)
     counts = {"raw": 0, "live": 0}
 
@@ -141,5 +141,5 @@ def compact(state_dir, *, now_s=None, cap=DEFAULT_CAP):
         counts["raw"], counts["live"] = len(raw), len(live)
         return live
 
-    private_state.transform_jsonl(path, _reap_locked)
+    private_state.transform_jsonl(path, _reap_locked, root=state_dir)
     return (counts["live"], counts["raw"] - counts["live"])

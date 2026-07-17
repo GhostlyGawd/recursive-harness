@@ -1,9 +1,9 @@
 """Safe, stdlib-only storage for machine-local harness state.
 
 The helpers here keep state files private, serialize concurrent writers, replace
-rewrites atomically, and sanitize secret-shaped values before persistence. Callers
-remain responsible for choosing a machine-local path; this module owns the write
-mechanics so hooks and CLIs do not each reinvent them.
+rewrites atomically, and sanitize secret-shaped values before persistence. Every
+filesystem operation is confined to a conventional ``state/`` directory or an
+explicitly supplied private root; traversal and symlink escapes are refused.
 
 provenance: 2026-07-17, user-approved security/privacy roadmap implementation.
 """
@@ -54,23 +54,116 @@ def _thread_lock(path):
         return _THREAD_LOCKS.setdefault(key, threading.RLock())
 
 
-def ensure_private_dir(path):
-    """Create a state directory and constrain it to the current user where supported."""
-    if not path:
-        return
-    os.makedirs(path, mode=0o700, exist_ok=True)
-    # os.makedirs applies `mode` only to the leaf on modern Python. Tighten every
-    # component from a conventional state/ boundary down, including legacy dirs.
-    # For an injected non-harness path (Fleet tests/extraction), touch only the leaf.
-    private_dirs = [os.path.abspath(path)]
-    cursor = private_dirs[0]
-    while os.path.basename(cursor).casefold() != "state":
+def _has_parent_reference(path):
+    separators = {os.sep}
+    if os.altsep:
+        separators.add(os.altsep)
+    normalized = path
+    for separator in separators:
+        normalized = normalized.replace(separator, "/")
+    return ".." in normalized.split("/")
+
+
+def _nearest_state_root(path):
+    cursor = os.path.dirname(path)
+    while True:
+        if os.path.basename(cursor).casefold() == "state":
+            return cursor
         parent = os.path.dirname(cursor)
         if parent == cursor:
-            private_dirs = private_dirs[:1]
-            break
+            return None
         cursor = parent
+
+
+def _is_link(path):
+    is_junction = getattr(os.path, "isjunction", lambda unused: False)
+    return os.path.islink(path) or is_junction(path)
+
+
+def _assert_contained(path, boundary):
+    try:
+        common = os.path.commonpath((boundary, path))
+    except ValueError as exc:
+        raise ValueError("private-state path and root must share one filesystem") from exc
+    if (os.path.normcase(common) != os.path.normcase(boundary)
+            or os.path.normcase(path) == os.path.normcase(boundary)):
+        raise ValueError("private-state path must be a file below its state root")
+
+
+def _assert_no_link_escape(path, boundary):
+    """Reject links/junctions at or below the state boundary.
+
+    A link above an explicit boundary is part of the caller's chosen capability;
+    a link inside it could redirect a read, lock, temporary file, or replacement.
+    """
+    cursor = boundary
+    if os.path.lexists(cursor) and _is_link(cursor):
+        raise ValueError("private-state root must not be a symlink or junction")
+    relative = os.path.relpath(path, boundary)
+    for part in relative.split(os.sep):
+        if not part or part == ".":
+            continue
+        cursor = os.path.join(cursor, part)
+        if os.path.lexists(cursor) and _is_link(cursor):
+            raise ValueError("private-state path must not traverse a symlink or junction")
+    # Resolve the whole path as a second check. This catches platform-specific
+    # reparse behavior even when the runtime does not expose ``isjunction``.
+    real_boundary = os.path.realpath(boundary)
+    real_path = os.path.realpath(path)
+    try:
+        real_common = os.path.commonpath((real_boundary, real_path))
+    except ValueError as exc:
+        raise ValueError("private-state path escapes its state root") from exc
+    if os.path.normcase(real_common) != os.path.normcase(real_boundary):
+        raise ValueError("private-state path escapes its state root")
+
+
+def _resolve_private_path(path, root=None):
+    """Return an absolute file path plus the boundary that grants access to it."""
+    raw_path = os.fspath(path)
+    if not isinstance(raw_path, str) or not raw_path or "\0" in raw_path:
+        raise ValueError("private-state path must be a non-empty text path")
+    if not os.path.isabs(raw_path):
+        raise ValueError("private-state path must be absolute")
+    if _has_parent_reference(raw_path):
+        raise ValueError("private-state path must not contain parent traversal")
+    absolute = os.path.abspath(raw_path)
+
+    if root is None:
+        boundary = _nearest_state_root(absolute)
+        if boundary is None:
+            raise ValueError("private-state path must be below a state directory")
+    else:
+        raw_root = os.fspath(root)
+        if not isinstance(raw_root, str) or not raw_root or "\0" in raw_root:
+            raise ValueError("private-state root must be a non-empty text path")
+        if not os.path.isabs(raw_root):
+            raise ValueError("private-state root must be absolute")
+        if _has_parent_reference(raw_root):
+            raise ValueError("private-state root must not contain parent traversal")
+        boundary = os.path.abspath(raw_root)
+
+    _assert_contained(absolute, boundary)
+    _assert_no_link_escape(absolute, boundary)
+    return absolute, boundary
+
+
+def _ensure_private_dir(path, boundary):
+    """Create a capability-owned directory and constrain it to the current user."""
+    if not path:
+        return
+    _assert_contained(os.path.join(path, ".private-state-placeholder"), boundary)
+    os.makedirs(path, mode=0o700, exist_ok=True)
+    _assert_no_link_escape(path, boundary)
+    # os.makedirs applies `mode` only to the leaf on modern Python. Tighten every
+    # component owned by the capability, including legacy directories.
+    private_dirs = []
+    cursor = os.path.abspath(path)
+    while True:
         private_dirs.append(cursor)
+        if os.path.normcase(cursor) == os.path.normcase(boundary):
+            break
+        cursor = os.path.dirname(cursor)
     for directory in reversed(private_dirs):
         try:
             os.chmod(directory, 0o700)
@@ -86,10 +179,10 @@ def _constrain_file(path):
 
 
 @contextlib.contextmanager
-def _locked(path):
+def _locked(path, boundary):
     """Exclusive thread/process lock for a state file, portable across POSIX/Windows."""
     lock_path = path + ".lock"
-    ensure_private_dir(os.path.dirname(lock_path))
+    _ensure_private_dir(os.path.dirname(lock_path), boundary)
     local_lock = _thread_lock(lock_path)
     with local_lock:
         fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
@@ -145,11 +238,12 @@ def _json_line(record, sanitize_record=True):
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def append_jsonl(path, record, sanitize_record=True):
+def append_jsonl(path, record, sanitize_record=True, *, root=None):
     """Append one complete, sanitized JSON record without interleaving concurrent writers."""
-    ensure_private_dir(os.path.dirname(path))
+    path, boundary = _resolve_private_path(path, root=root)
+    _ensure_private_dir(os.path.dirname(path), boundary)
     payload = _json_line(record, sanitize_record=sanitize_record)
-    with _locked(path):
+    with _locked(path, boundary):
         fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
         _constrain_file(path)
         try:
@@ -179,12 +273,19 @@ def _read_jsonl_unlocked(path):
     return records
 
 
-def read_jsonl(path):
+def read_jsonl(path, *, root=None):
     """Read valid JSONL records, skipping corrupt lines like the legacy readers did."""
+    path, boundary = _resolve_private_path(path, root=root)
     if not os.path.exists(path):
         return []
-    with _locked(path):
+    with _locked(path, boundary):
         return _read_jsonl_unlocked(path)
+
+
+def path_exists(path, *, root=None):
+    """Return whether a capability-confined private-state path exists."""
+    path, _ = _resolve_private_path(path, root=root)
+    return os.path.exists(path)
 
 
 def _replace(tmp, path):
@@ -199,8 +300,8 @@ def _replace(tmp, path):
             time.sleep(0.01 * (attempt + 1))
 
 
-def _rewrite_jsonl_unlocked(path, records, sanitize_records=True):
-    ensure_private_dir(os.path.dirname(path))
+def _rewrite_jsonl_unlocked(path, boundary, records, sanitize_records=True):
+    _ensure_private_dir(os.path.dirname(path), boundary)
     tmp = "%s.tmp.%s.%s" % (path, os.getpid(), uuid.uuid4().hex[:8])
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
@@ -217,28 +318,31 @@ def _rewrite_jsonl_unlocked(path, records, sanitize_records=True):
             pass
 
 
-def rewrite_jsonl(path, records, sanitize_records=True):
+def rewrite_jsonl(path, records, sanitize_records=True, *, root=None):
     """Atomically replace a JSONL ledger while excluding concurrent writers."""
-    with _locked(path):
-        _rewrite_jsonl_unlocked(path, records, sanitize_records=sanitize_records)
+    path, boundary = _resolve_private_path(path, root=root)
+    with _locked(path, boundary):
+        _rewrite_jsonl_unlocked(path, boundary, records, sanitize_records=sanitize_records)
 
 
-def transform_jsonl(path, transform, sanitize_records=True):
+def transform_jsonl(path, transform, sanitize_records=True, *, root=None):
     """Read/transform/rewrite under one lock so a concurrent append cannot be lost."""
-    with _locked(path):
+    path, boundary = _resolve_private_path(path, root=root)
+    with _locked(path, boundary):
         before = _read_jsonl_unlocked(path)
         after = transform(list(before))
         if after != before:
-            _rewrite_jsonl_unlocked(path, after, sanitize_records=sanitize_records)
+            _rewrite_jsonl_unlocked(path, boundary, after, sanitize_records=sanitize_records)
         return before, after
 
 
-def atomic_write_json(path, value, sanitize_value=True, indent=2):
+def atomic_write_json(path, value, sanitize_value=True, indent=2, *, root=None):
     """Atomically write one private JSON document."""
-    ensure_private_dir(os.path.dirname(path))
+    path, boundary = _resolve_private_path(path, root=root)
+    _ensure_private_dir(os.path.dirname(path), boundary)
     prepared = sanitize(value) if sanitize_value else value
     payload = (json.dumps(prepared, ensure_ascii=False, indent=indent) + "\n").encode("utf-8")
-    with _locked(path):
+    with _locked(path, boundary):
         tmp = "%s.tmp.%s.%s" % (path, os.getpid(), uuid.uuid4().hex[:8])
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
@@ -254,12 +358,13 @@ def atomic_write_json(path, value, sanitize_value=True, indent=2):
                 pass
 
 
-def atomic_write_text(path, value, sanitize_value=True):
+def atomic_write_text(path, value, sanitize_value=True, *, root=None):
     """Atomically write a private UTF-8 text file."""
-    ensure_private_dir(os.path.dirname(path))
+    path, boundary = _resolve_private_path(path, root=root)
+    _ensure_private_dir(os.path.dirname(path), boundary)
     prepared = _sanitize_text(value) if sanitize_value else value
     payload = prepared.encode("utf-8")
-    with _locked(path):
+    with _locked(path, boundary):
         tmp = "%s.tmp.%s.%s" % (path, os.getpid(), uuid.uuid4().hex[:8])
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:

@@ -81,6 +81,64 @@ def test_private_modes_and_atomic_rewrite():
                 assert stat.S_IMODE(os.stat(directory).st_mode) == 0o700
 
 
+def test_paths_require_an_absolute_state_capability():
+    with tempfile.TemporaryDirectory() as d:
+        outside = os.path.join(d, "events.jsonl")
+        for path, root in (
+            ("state/events.jsonl", None),
+            (outside, None),
+            (outside, "relative-root"),
+        ):
+            try:
+                ps.append_jsonl(path, {"id": 1}, root=root)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("unsafe private-state path was accepted")
+        assert not os.path.exists(outside)
+
+
+def test_explicit_root_confines_extracted_consumers():
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "fleet", "events.jsonl")
+        ps.append_jsonl(path, {"id": 1}, root=d)
+        assert ps.path_exists(path, root=d)
+        assert ps.read_jsonl(path, root=d) == [{"id": 1}]
+
+
+def test_parent_traversal_is_refused_even_when_it_normalizes_inside_root():
+    with tempfile.TemporaryDirectory() as d:
+        root = os.path.join(d, "state")
+        path = os.path.join(root, "fleet", "..", "events.jsonl")
+        try:
+            ps.append_jsonl(path, {"id": 1}, root=root)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("parent traversal was accepted")
+
+
+def test_symlink_escape_is_refused_without_touching_the_target():
+    with tempfile.TemporaryDirectory() as d:
+        root = os.path.join(d, "state")
+        outside = os.path.join(d, "outside")
+        os.makedirs(root)
+        os.makedirs(outside)
+        link = os.path.join(root, "redirect")
+        try:
+            os.symlink(outside, link, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            return
+        path = os.path.join(link, "events.jsonl")
+        try:
+            ps.append_jsonl(path, {"id": 1}, root=root)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("symlink escape was accepted")
+        assert not os.path.exists(os.path.join(outside, "events.jsonl"))
+
+
 def test_retention_dry_run_then_apply_preserves_records_and_is_idempotent():
     with tempfile.TemporaryDirectory() as d:
         state = os.path.join(d, "state")
