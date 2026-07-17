@@ -184,10 +184,14 @@ with tempfile.TemporaryDirectory() as d:
     write(os.path.join(d, "proposals", "active", "P-2026-001-widget-rework.md"),
           "---\nid: P-2026-001\nstatus: ready\n---\n# Proposal\n\n"
           "Reworks skills/widget/SKILL.md substantially.\n")
+    write(os.path.join(d, "proposals", "active", "not-a-proposal.md"),
+          "---\nstatus: approved\n---\n# Checkout-controlled decoy\n\n"
+          "This must not be interpreted as a lifecycle record.\n")
     rc, out, err = run("--root", d, "--mission")
     j = json.loads(out)
     props = {p["name"]: p for p in j["work"]["proposals"]}
     check("P-2026-001-widget-rework" in props, "the proposal is listed in work.proposals")
+    check("not-a-proposal" not in props, "non-lifecycle filenames are excluded")
     check(props["P-2026-001-widget-rework"]["status"] == "ready",
           "the proposal's status was parsed from frontmatter")
     check("skill:widget" in props["P-2026-001-widget-rework"]["concerns"],

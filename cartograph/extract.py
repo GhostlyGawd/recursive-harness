@@ -50,6 +50,7 @@ import datetime
 import io
 import json
 import os
+from pathlib import Path
 import posixpath
 import re
 import shutil
@@ -2457,18 +2458,22 @@ def proposal_status(text):
 
 
 def proposal_record_files():
-    """Lifecycle records only: direct markdown files plus one README per bundle."""
+    """Lifecycle records only, without following checkout-controlled symlinks."""
     files = []
     for lifecycle in ("active", "resolved"):
-        folder = os.path.join(ROOT, "proposals", lifecycle)
-        if not os.path.isdir(folder):
+        folder = Path(ROOT, "proposals", lifecycle)
+        if not folder.is_dir() or folder.is_symlink():
             continue
-        for name in os.listdir(folder):
-            path = os.path.join(folder, name)
-            if os.path.isfile(path) and name.endswith(".md"):
-                files.append(path)
-            elif os.path.isdir(path) and os.path.isfile(os.path.join(path, "README.md")):
-                files.append(os.path.join(path, "README.md"))
+        for path in folder.glob("*.md"):
+            if (re.fullmatch(r"P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md", path.name)
+                    and path.is_file() and not path.is_symlink()):
+                files.append(str(path))
+        for path in folder.glob("*/README.md"):
+            bundle = path.parent
+            if (re.fullmatch(r"P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*", bundle.name)
+                    and bundle.is_dir() and not bundle.is_symlink()
+                    and path.is_file() and not path.is_symlink()):
+                files.append(str(path))
     return sorted(files)
 
 
