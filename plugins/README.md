@@ -26,7 +26,7 @@ must not be a budget-bypass.
 - **Tracked (first-party) plugins** clear the SAME lint budgets as top-level
   artifacts: skills under plugins/*/skills (B2/B3/F2), commands under
   plugins/*/commands (B4/F2), a root SKILL.md if present — and B3 is NOT
-  waived for them (VENDORED_SKILLS covers skills/huashu-design only).
+  waived for them (`VENDORED_SKILLS` is currently empty).
 - **Vendored-live plugins** are skipped by lint and surfaced as a `note:` —
   the skip keys on gitignore rules, and the merge-blocking boundary is CI:
   a local exclude can hide a dir in a developer's local run but NEVER past

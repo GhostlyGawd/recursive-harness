@@ -28,8 +28,9 @@ Born with the kernel in `c72ba4a` (v0.1.0, ADR 0001 "the repo is the memory"):
 routed learnings only stay routed if budgets and provenance are checked
 mechanically — "the harness lints itself, or it rots." Later additions each cite
 their trigger in-file: VENDORED_SKILLS allowlist (2026-06-13, session `61f58113`
-— the huashu-design import needed a human-gated B3 waiver that must not be
-self-assertable); plugin budget parity and the git-index-mode arm of H1, both
+— a large third-party import needed a human-gated B3 waiver that must not be
+self-assertable; the import and waiver were removed together on 2026-07-17);
+plugin budget parity and the git-index-mode arm of H1, both
 landed in commit `d408e35` (the in-file markers `3f9acb`/`e4c889` are follow-up
 ledger ids, not SHAs) — un-linted plugin content was shipping, and hooks passed
 local lint's filesystem check yet failed CI, which reads the committed mode.

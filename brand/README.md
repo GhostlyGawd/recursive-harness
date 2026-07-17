@@ -1,77 +1,51 @@
-# brand/ — the visual identity, code-packaged
+# Recursive Harness brand
 
-## Identity
+This directory contains the canonical visual identity for Recursive Harness. It is a
+sibling of the GhostlyGawd profile identity: the same near-black, cobalt, cyan, ice-white,
+and restrained-violet world, expressed through recursive signals, telemetry nodes,
+append-only evidence, and guarded boundaries.
 
-The Recursive Harness brand ("Append-Only Strata") as versioned artifacts, 45
-tracked files (44 payload + this README): `LANGUAGE.md` (the locked law — soul, logomark construction,
-type, palette, geometry), `tokens.json` (the 65-token set) compiled into
-`dist/` (tokens.css · tokens.ts · brand.css), `identity/` (logomark SVGs,
-favicon, identity sheet), `book/` (the rendered brand book), `applications/`
-(README hero, feature catalog, how-it-works, OG card — HTML + PNG pairs), and
-`exploration/` + `_build/` (the divergence rounds, DECISIONS.md, and foundry
-build scaffolding that produced the converged result).
+## Canonical assets
 
-## Why (provenance)
+| Asset | Purpose | Format |
+| --- | --- | --- |
+| `identity/mark.svg` | Primary product mark | Deterministic SVG |
+| `identity/mark-mono.svg` | One-color fallback | Deterministic SVG |
+| `identity/favicon.svg` | Small-size mark | Deterministic SVG |
+| `applications/readme-hero.png` | README atmosphere and identity | Generated PNG, 2172×724 |
+| `applications/control-loop.svg` | Product feedback loop | Deterministic SVG |
+| `applications/system-map.svg` | Architecture overview | Deterministic SVG |
+| `tokens.json` | Source design tokens | JSON |
+| `dist/tokens.css`, `dist/tokens.ts` | Consumer-ready token exports | Generated deterministically from the token values |
 
-Landed whole in `75a2c5e` (2026-06-28): grown from the harness's OWN material
-— the scored prediction ledger, the calibration diagonal, the append-only
-JSONL, the three nested loops — via the brand-foundry pipeline (skill
-`brand-foundry`, a gitignored vendored-live repo under skills/). The method
-SYNTHESIZES rather than selects: four exploration directions, human reactions
-in keep/kill/graft/redirect verbs (recorded in `exploration/DECISIONS.md`),
-then lock → codify → build out. DECISIONS.md records the keep verdict, the
-grafts, and the comparison read that eliminated the other three directions.
-LANGUAGE.md's own header states the contract:
-the document "records the converged result", it does not invent — every value
-is lifted from the chosen screens and extracted tokens.
+## Provenance
 
-## Contract
+The identity was selected on 2026-07-17 as a harness-specific sibling to the current
+GhostlyGawd profile banner (`GhostlyGawd/GhostlyGawd`, `brand/profile-banner-cyber-v1.png`).
+The old warm stratigraphic identity and its Huashu/brand-foundry build scaffolding were
+retired in the same reviewed change. Git history remains the archive for that system.
 
-- `LANGUAGE.md` is the single source of truth for how the harness looks,
-  feels, and reads; `tokens.json` → `dist/` is its machine layer. The INTENT
-  is consumers import `dist/tokens.css` / `brand.css`, never hand-copied hex —
-  but dist/ currently emits invalid declarations, so existing surfaces inline
-  the `:root` tokens pending the filed fix
-  (proposals/2026-06-28-brand-foundry-dist-gap.md).
-- The root README.md consumes `applications/` (hero banner, feature catalog,
-  how-it-works) — rebuilt on the brand in the same commit.
-- The load-bearing visual rules live in LANGUAGE.md as law: one oxide accent
-  rationed to four states (miss / debt / now / sealed), hard rectangles (no
-  border-radius, ever), the ragged right edge never normalized, serif
-  (Fraunces) only in its four permitted places.
-- The generator is external: brand-foundry needs node + headless Chrome and
-  its own repo; brand/ holds outputs plus enough `_build/` scaffolding
-  (seed/chosen JSON, extract + sanitize scripts) to reproduce.
+`applications/readme-hero.png` was generated with OpenAI's built-in image generation
+tool on 2026-07-17. Final prompt:
 
-## Operations (how to extend correctly)
+> Create a bright, high-contrast late-1990s/early-2000s cyber-futurist ultra-wide
+> panorama in near-black, cobalt, electric cyan, ice white, and restrained violet. Show
+> one unmistakable recursive telemetry loop with exactly four large luminous nodes, a
+> guarded boundary, an append-only trail, distant abstract infrastructure, CRT scanlines,
+> and restrained HUD marks. Preserve bright loop detail in the exported PNG. No text,
+> logos, people, fake metrics, warm colors, generic AI brains, watermarks, or excessive
+> glitch effects.
 
-- Any visual change starts in LANGUAGE.md (the law), flows to tokens.json,
-  and regenerates dist/ — never patch dist/ directly.
-- New applications (a page, a card, a diagram) are built AGAINST the law:
-  LANGUAGE.md §10 conformance plus the foundry's geometry/overlap linters
-  (skill `brand-foundry`, enforce stage).
-- brand/ is unlocked — ordinary branch + PR; the taste gate is human reaction
-  (the foundry's four verbs), not the critic.
-- Verify a change: regenerate dist/ from tokens.json with the foundry's
-  compiler (persist-lock, in the external brand-foundry repo — not in
-  _build/), and check the litmus from §1 — "If a screen feels like a SaaS
-  landing page, it is wrong. If it feels like reading a stratigraphic log …
-  it is right."
+The generated image is illustrative, not evidence of a running interface. Alt text:
+“Ghostlike cyan signal inside a guarded ellipse above a dark cyber-futurist horizon.”
 
-## Failure & learning
+## Usage rules
 
-- The failure mode is DRIFT: a consumer hand-copying hex, a new screen
-  inventing an off-law value, dist/ diverging from tokens.json. The law +
-  tokens split exists so drift is a diffable, catchable event.
-- Taste decisions are history, not vibes: exploration/DECISIONS.md records
-  the approval, the grafts, and the comparison that eliminated the losing
-  directions; a redesign argues with that record, not from scratch.
-- Brand-level learnings (a rule that proved wrong on a real surface) amend
-  LANGUAGE.md by PR with the receipt; generator bugs belong to the
-  brand-foundry repo, not here (its dist gap is already filed:
-  proposals/2026-06-28-brand-foundry-dist-gap.md).
+- Keep product copy outside raster artwork. Text-heavy explanations belong in Markdown or
+  accessible SVG.
+- Use the mark with generous clear space; do not add a mascot, faux-3D bevel, or warm accent.
+- Use bloom and scanlines sparingly. Information hierarchy must win over atmosphere.
+- Never present concept art, diagrams, or illustrative values as runtime proof.
+- New assets must record source version, date, alt text, and rights or generation provenance.
 
-<!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 17
-(criterion 1): department README for brand/, researched from LANGUAGE.md,
-commit 75a2c5e's body, the brand-foundry skill description, and git ls-files
-inventory. -->
+See [LANGUAGE.md](LANGUAGE.md) for the full identity law.

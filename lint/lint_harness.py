@@ -43,14 +43,13 @@ SEED_ARTIFACTS = {  # v1 ships these; provenance not required for seeds
     "agents/critic.md", "agents/retro-miner.md", "agents/harness-auditor.md",
 }
 
-# provenance: 2026-06-13, session 61f58113-3d14-49bb-b486-3d852924b177; event: user request to
-# vendor a large third-party skill (huashu-design, 472-line SKILL.md body) into the trunk, which
-# required a human-gated waiver of the B3 body-line cap. Add paths here only via /harness-pr.
+# provenance: 2026-06-13, session 61f58113-3d14-49bb-b486-3d852924b177; event: a large
+# third-party skill required a human-gated B3 waiver. The import and its waiver were removed
+# together on 2026-07-17. Keep the boundary even while empty; add paths only via /harness-pr.
 VENDORED_SKILLS = {  # third-party skills imported whole; B3 body cap waived ONLY for these.
     # This is the security boundary: a path lands here only through a human-gated PR edit
     # to this enforcement file. It deliberately does NOT key on frontmatter — a self-asserted
     # `vendored: true` would make B3 opt-out for the entire skills/ tree. B2/F2 still bind.
-    "skills/huashu-design",
 }
 
 
@@ -169,9 +168,9 @@ def check_plugins() -> None:
     plugin dir is an external / vendored-live plugin repo (its own .git, e.g. a
     nested-repo plugin) — out of trunk scope, skipped + surfaced exactly like a
     gitignored skill. First-party (tracked) plugins are NOT vendored: B3 is not
-    waived for them. (VENDORED_SKILLS holds skills/huashu-design ONLY; brand-foundry
-    is NOT in it — it's a gitignored vendored-live repo caught by the skip path
-    above, not a B3 waiver.) (3f9acb)"""
+    waived for them. (VENDORED_SKILLS is currently empty; brand-foundry is NOT in
+    it — it's a gitignored vendored-live repo caught by the skip path above, not a
+    B3 waiver.) (3f9acb)"""
     pdir = os.path.join(ROOT, "plugins")
     for name in sorted(os.listdir(pdir)) if os.path.isdir(pdir) else []:
         plugin_dir = os.path.join(pdir, name)
