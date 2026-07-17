@@ -1,7 +1,7 @@
 # Cartograph extractor — connectivity regression
 
 The harness ships a **read-only** graph extractor at `cartograph/extract.py`
-(Living Harness Cartograph, `proposals/2026-06-19-living-harness-cartograph.md`).
+(Living Harness Cartograph, `proposals/resolved/P-2026-003-living-harness-cartograph.md`).
 It derives the harness's connectivity graph from machine-truth — `settings.json`
 hook→event wiring, `provenance:` lines, `skill`/agent citations, `harness <cmd>`
 CLI calls, `ADR NNNN` references, and `state/*.jsonl` touches.

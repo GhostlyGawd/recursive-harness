@@ -1,6 +1,6 @@
 ---
 description: Re-sync the Harness Atlas — regenerate cartograph/ATLAS.md (the holistic, multi-diagram source-of-truth map) from machine-truth, confirm structural integrity via the cartograph gate, and report what moved (new gaps, friction hotspots, bug clusters).
-provenance: 2026-06-27, "map every component end-to-end + multiple visualization styles, kept synced over time" request; built on the Living Harness Cartograph (proposals/2026-06-19-living-harness-cartograph.md) rather than a second mapping system. See proposals/2026-06-27-harness-atlas.md.
+provenance: 2026-06-27, "map every component end-to-end + multiple visualization styles, kept synced over time" request; built on the Living Harness Cartograph (proposals/resolved/P-2026-003-living-harness-cartograph.md) rather than a second mapping system. See proposals/resolved/P-2026-021-harness-atlas.md.
 ---
 
 Re-sync the **Harness Atlas** for $ARGUMENTS (default: this repo). The Atlas is a
@@ -49,4 +49,4 @@ cartograph engine `cartograph/extract.py`), never hand-drawn.
 - Out of scope: editing the enforcement layer (hooks/ lint/ evals/ bin/ .github/
   autonomy.json settings.json templates/) — promoting atlas regen into a
   `bin/harness map` subcommand, a post-merge regen hook, or a CI drift-guard are
-  locked-layer changes → route via `/harness-pr` (see proposals/2026-06-27-harness-atlas.md).
+  locked-layer changes → route via `/harness-pr` (see proposals/resolved/P-2026-021-harness-atlas.md).

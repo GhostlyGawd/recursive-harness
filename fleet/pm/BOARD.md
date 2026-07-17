@@ -22,7 +22,7 @@ Backlog → Todo → In&nbsp;Progress → Review → Done._
 - _(none — roadmap complete; awaiting human action on the gated PR)_
 
 ### Awaiting human action
-- **R5 (gated)** — `proposals/2026-06-30-agent-mail-bin-delegation.md`: apply the 2 diffs to
+- **R5 (gated)** — `proposals/resolved/P-2026-030-agent-mail-bin-delegation.md`: apply the 2 diffs to
   `bin/harness` via `/harness-pr` (+ harness-auditor + `/run-evals`). The lone enforcement-gated edit.
 - **Optional gated follow-ons** (BACKLOG, demand-pulled): session-end reaper hook (B-01); default-OFF
   SessionStart `observability.fleet_banner` (UX-P4).
@@ -67,4 +67,4 @@ Backlog → Todo → In&nbsp;Progress → Review → Done._
 | 2026-06-30 | 6 | Built **R5 CLI shell** (`render.py`+`cli.py`+`__main__.py`) TDD: render 9/9, cli 14/14. Real `python -m fleet` e2e found+fixed **BUG-3** (cp1252 unicode crash) & **BUG-4** (`units` submodule shadowing) — both with regression guards. Curated `__init__` surface. CLI critic running. **Totals: 15+28+23+30+9+14 = 119 tests green.** |
 | 2026-06-30 | 7 | R5 CLI critic FIX-FIRST → BUG-3 was half-fixed (USER content still crashed cp1252). Fixed test-first: `_harden_stream` (backslashreplace) + dropped `ensure_ascii=False` + key cap. **R5 (unlocked) DONE.** **Totals: 15+28+23+30+9+15 = 120 tests green.** Next: R4 dogfooding + gated `bin/harness` `/harness-pr`. |
 | 2026-06-30 | 8 | **R4 dogfooding DONE** — emitted real progress+handoff to the CANONICAL shared log; read back identically by new CLI + `bin/harness fleet` adapter + Mission Control P4. One log / one resolver / three readers. Prediction `6437ec09` HIT. Next: prepare gated `bin/harness` `/harness-pr` (human-merge) + R6 extraction/MCP. |
-| 2026-06-30 | 9 | **R6 DONE** — `test_extraction` (whole package runs standalone, no harness on path), `fleet/mcp_server.py` (8 MCP tools, SDK confined to adapter, engine stays stdlib-only), two-process MCP smoke (send→inbox→ack read-once across processes), README+LICENSE+pyproject scaffold. **R5-gated PREPARED** as `proposals/2026-06-30-agent-mail-bin-delegation.md` (awaits human merge). Prediction `c792261d` HIT. **ROADMAP COMPLETE. 132 tests green.** |
+| 2026-06-30 | 9 | **R6 DONE** — `test_extraction` (whole package runs standalone, no harness on path), `fleet/mcp_server.py` (8 MCP tools, SDK confined to adapter, engine stays stdlib-only), two-process MCP smoke (send→inbox→ack read-once across processes), README+LICENSE+pyproject scaffold. **R5-gated PREPARED** as `proposals/resolved/P-2026-030-agent-mail-bin-delegation.md` (awaits human merge). Prediction `c792261d` HIT. **ROADMAP COMPLETE. 132 tests green.** |

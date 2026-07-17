@@ -32,7 +32,7 @@ is lifted from the chosen screens and extracted tokens.
   is consumers import `dist/tokens.css` / `brand.css`, never hand-copied hex —
   but dist/ currently emits invalid declarations, so existing surfaces inline
   the `:root` tokens pending the filed fix
-  (proposals/2026-06-28-brand-foundry-dist-gap.md).
+  (proposals/resolved/P-2026-024-brand-foundry-dist-gap.md).
 - The root README.md consumes `applications/` (hero banner, feature catalog,
   how-it-works) — rebuilt on the brand in the same commit.
 - The load-bearing visual rules live in LANGUAGE.md as law: one oxide accent
@@ -69,7 +69,7 @@ is lifted from the chosen screens and extracted tokens.
 - Brand-level learnings (a rule that proved wrong on a real surface) amend
   LANGUAGE.md by PR with the receipt; generator bugs belong to the
   brand-foundry repo, not here (its dist gap is already filed:
-  proposals/2026-06-28-brand-foundry-dist-gap.md).
+  proposals/resolved/P-2026-024-brand-foundry-dist-gap.md).
 
 <!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 17
 (criterion 1): department README for brand/, researched from LANGUAGE.md,

@@ -41,7 +41,7 @@ The stages and the pieces that serve them:
 > different altitude from the heavier whole-venture `venture-build` executor.
 
 Each brick is built and proven on a real product, then reused. `roadmap` was first dogfooded
-on **Codeweb** (see `proposals/2026-06-27-*.md`).
+on **Codeweb** (see `proposals/active/P-2026-019-*` and `P-2026-020-*`).
 
 ## Composes (never reimplements)
 

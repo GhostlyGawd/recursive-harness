@@ -60,7 +60,7 @@ wiring is a thin, separately-staged `/harness-pr`.
 
 ## Provenance
 
-The proposals (`proposals/2026-06-21-lateral-coordination-event-log.md`,
+The proposals (`proposals/resolved/P-2026-009-lateral-coordination-event-log.md`,
 `…2026-06-22-agent-mail-product.md`) deliberately deferred views 2–4 as "demand-pulled,
 not speculative." The **user explicitly pulled all of them** on 2026-06-30 ("do all
 recommended next steps in order, act as a full product team, use it end-to-end"). That

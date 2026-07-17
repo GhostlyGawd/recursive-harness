@@ -5,7 +5,7 @@ Map (P2), and the Console station with Proof counters + a read-only live-feed Te
 rendering the read-only `cartograph/extract.py --mission` payload (P0) and the `fleet.eventlog`
 feed in the Lathe "Phosphor Console" design language. P5 (the anti-`STATE.md` guard) is merged.
 
-Read-only. Adds no store. See `proposals/2026-06-21-mission-control-tui.md` for the locked design
+Read-only. Adds no store. See `proposals/resolved/P-2026-010-mission-control-tui.md` for the locked design
 and the P0–P5 roadmap.
 
 ```
@@ -124,7 +124,7 @@ The P0–P5 build is complete.
 ## Department notes (provenance + learning)
 
 - **Born:** design locked with the user in
-  `proposals/2026-06-21-mission-control-tui.md`; P1 skeleton `62661e2`
+  `proposals/resolved/P-2026-010-mission-control-tui.md`; P1 skeleton `62661e2`
   (2026-06-21), P2–P4 lenses `a2f4ca8` (2026-06-23), gated P4/P5 items via the
   bundle `cdcc611`, hardening `8247ee2` (#212, 2026-07-01).
 - **Extending:** the read-only invariant is the contract — a lens that writes

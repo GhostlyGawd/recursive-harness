@@ -7,7 +7,7 @@ from WITHIN this test process, so the Claude PreToolUse guards do not apply -- w
 freely pass a `.claude/worktrees/*` cwd to exercise the worktree-aware no-op.
 
 provenance: session d7de6b55, 2026-06-18 -- Fix A coverage; spec
-proposals/2026-06-18-harness-portability.md (eval scenarios T1-T3, T3b, T6).
+proposals/resolved/P-2026-001-harness-portability.md (eval scenarios T1-T3, T3b, T6).
 """
 import json
 import os

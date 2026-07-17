@@ -2,7 +2,7 @@
 
 P1 (this increment): the chrome bar + Signal lanes (Roster lens) + detail bay, rendering the
 read-only `cartograph/extract.py --mission` payload (P0) in the Lathe "Phosphor Console" design
-language. Read-only; adds no store. See proposals/2026-06-21-mission-control-tui.md for the
+language. Read-only; adds no store. See proposals/resolved/P-2026-010-mission-control-tui.md for the
 locked design and the P0-P5 roadmap.
 
 Run:  python -m mission_control            # live (reads --mission from this tree)

@@ -79,12 +79,12 @@ MIT — see `LICENSE`. (Phase-5 default; the originating proposal left MIT vs Ap
 Everything below is recursive-harness context; the product sections above are
 the extraction payload.
 
-- **Provenance.** Designed in `proposals/2026-06-21-lateral-coordination-event-log.md`
+- **Provenance.** Designed in `proposals/resolved/P-2026-009-lateral-coordination-event-log.md`
   (a /brainstorm run), revised to PLAN v2 after a fresh-context auditor pass in
-  `proposals/2026-06-22-agent-mail-product.md`. Engine landed `b366a02`
+  `proposals/resolved/P-2026-012-agent-mail-product.md`. Engine landed `b366a02`
   (Phase 1, 2026-06-22); views + CLI + MCP server landed `4c94d58` (2026-06-30);
   `bin/harness fleet` became a full delegation to `fleet.cli` in `8b1b8c1`
-  under `proposals/2026-06-30-agent-mail-bin-delegation.md` (explicit human
+  under `proposals/resolved/P-2026-030-agent-mail-bin-delegation.md` (explicit human
   grant recorded there).
 - **Harness wiring (CONTRACT).** `bin/harness fleet <verb>` resolves the one
   canonical `state/` (main checkout, via git-common-dir) and forwards here;

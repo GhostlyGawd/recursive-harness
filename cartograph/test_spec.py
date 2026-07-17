@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Red-first tests for Spec-Driven Development Phase A (the third cartograph edge class).
 
-Authoritative spec: proposals/2026-06-21-spec-driven-dev.md. Every check below is derived
+Authoritative spec: proposals/resolved/P-2026-011-spec-driven-dev.md. Every check below is derived
 from an INTENT clause in that proposal, NOT from the extract.py code it drives:
 
   * Decision B  - the THREE new edge types (specifies/requires/verified_by) live in NEITHER

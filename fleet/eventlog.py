@@ -11,7 +11,7 @@ PORTABILITY CONTRACT (enforced by test_engine_imports_portable_only):
     ADRs. Storage location is INJECTED by the caller (a resolved `state_dir`); the
     engine never resolves it itself. The extraction scaffold includes both the Fleet
     package and private_state.py, so the engine still lifts unchanged.
-    See proposals/2026-06-22-agent-mail-product.md (§0, §3, §5).
+    See proposals/resolved/P-2026-012-agent-mail-product.md (§0, §3, §5).
 
 Record shape (the only thing written):
     {id, ts, actor, kind, target, payload, ttl_s, supersedes}

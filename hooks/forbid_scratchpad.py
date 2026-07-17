@@ -4,7 +4,7 @@
 Registered as a PreToolUse hook in settings.json (matcher Write|Bash). HARNESS_ROOT is
 `dirname(dirname(__file__))`, so from hooks/ it resolves to the repo root — exactly like
 guard_enforcement_layer.py. (Merged via the Mission Control gated bundle; see
-proposals/2026-06-23-mission-control-gated-bundle/README.md.)
+proposals/resolved/P-2026-015-mission-control-gated-bundle/README.md.)
 
 WHY (the Contrarian half of the Mission Control synthesis): the instrument must never compete with a
 stale hand-rolled scratchpad. 3+ projects independently hand-rolled cross-session STATE.md /
@@ -101,7 +101,7 @@ def main() -> int:
             "goes stale (the sprawl P5 exists to stop).\n"
             "Route this to a DURABLE artifact instead:\n"
             "  • cross-session work state -> harness followup add \"...\"   (shows as a Signal lane)\n"
-            "  • a design / decision      -> a proposals/*.md with a `- **Status:**` line\n"
+            "  • a design / decision      -> `harness proposal list`, then add/update proposals/active/\n"
             "  • build progress / handoff -> the PR body (git commit -F FILE / gh pr create --body-file FILE)\n"
             f"  (path: {path})\n"
             "If this is genuinely not a scratchpad, name it something other than STATE/HANDOFF/SCRATCH, "

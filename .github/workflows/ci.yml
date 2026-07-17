@@ -28,6 +28,11 @@ jobs:
       - name: Harness self-lint (budgets, falsifiability, autonomy firewall)
         if: ${{ !cancelled() }}
         run: python3 lint/lint_harness.py
+      - name: Proposal lifecycle and transition tests
+        if: ${{ !cancelled() }}
+        run: |
+          python3 proposals/manage.py check --base origin/main
+          python3 tests/test_proposals.py
       - name: Hook behavior tests
         if: ${{ !cancelled() }}
         run: |

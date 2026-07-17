@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the Mission Control P5 guard — `forbid_scratchpad.py` (the anti-STATE.md PreToolUse
 hook, registered in settings.json). Imports the hook from hooks/; this is the live regression suite
-(the hook was merged from proposals/2026-06-23-mission-control-p5-guard/ via /harness-pr).
+(the hook was merged from proposals/resolved/P-2026-016-mission-control-p5-guard/ via /harness-pr).
 
 P5 SUCCESS CRITERIA (inline):
 

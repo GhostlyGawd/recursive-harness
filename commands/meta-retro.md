@@ -8,7 +8,7 @@ Audit the harness as a system (skill: retrospection, applied to the repo):
    per shell) — `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"; "$HARNESS/bin/harness" skill-stats --days 30`.
    This command operates entirely on the trunk: address every file as `"$HARNESS/<path>"`
    and run git as `git -C "$HARNESS"` (a relative path / bare git would misroute from a
-   foreign cwd — Gap D, proposals/2026-06-18-harness-portability.md).
+   foreign cwd — Gap D, proposals/resolved/P-2026-001-harness-portability.md).
    Zero-fire skills → propose pruning or a description rewrite (per
    skill-creator wisdom: skills under-trigger when descriptions aren't pushy).
    Also prune-review any skill flagged HURT>HELPED in skill-stats — tagged

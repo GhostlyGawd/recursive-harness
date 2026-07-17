@@ -1,7 +1,7 @@
 # Spec-binding gate — SDD Phase B regression
 
 Phase B of Spec-Driven Development (`cartograph/extract.py`, proposal
-`proposals/2026-06-21-spec-driven-dev.md`, Decision E) adds two structural-rot warn
+`proposals/resolved/P-2026-011-spec-driven-dev.md`, Decision E) adds two structural-rot warn
 classes that turn a co-located `spec:` binding's dangling pointers into a **gate**:
 
 - `dangling-spec:<slug>:<pointer>` — a `targets:`/`verified_by:` pointer (spec OR

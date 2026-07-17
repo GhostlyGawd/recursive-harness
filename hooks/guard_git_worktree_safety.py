@@ -5,12 +5,12 @@ retired guard_branch_first.py per the net-hook-count mandate.
 PROVENANCE / WHY ONE FILE. User correction 2026-06-19T17:10:46 (the META-PRINCIPLE
 for /meta-retro): "the harness already has too many hooks; net hook count should
 not grow ... CONSOLIDATE the several existing git-workflow hooks." So rather than
-land the dirty-revert BLOCK that proposal 2026-06-21-dirty-revert-guard.md specifies
+land the dirty-revert BLOCK that proposal P-2026-007 specifies
 as a SEPARATE new file (a net add), it ships HERE, folded into the same file that
 absorbs guard_branch_first's branch-first WARN. Net hook FILES: -1 (delete
 guard_branch_first.py) +1 (add this) = 0, and the dirty-revert capability is gained
-without a net add -- the whole point. See proposals/2026-06-21-guard-cluster-
-consolidation.md.
+without a net add -- the whole point. See
+proposals/resolved/P-2026-008-guard-cluster-consolidation.md.
 
 ARM A -- BRANCH-FIRST WARN (moved verbatim from guard_branch_first.py).
 Kernel directive 6 (ONE TRUNK) + the base rule "if on the default branch, branch
@@ -24,7 +24,7 @@ STARTING fresh work on main); after the first edit lands it goes silent. Scope: 
 harness MAIN checkout only (toplevel == HARNESS_ROOT; never a worktree or a foreign
 repo). SOFT flag guards.branch_first.warn (default True) silences it.
 
-ARM B -- DIRTY-REVERT BLOCK (implements proposal 2026-06-21-dirty-revert-guard.md
+ARM B -- DIRTY-REVERT BLOCK (implements proposal P-2026-007
 section 3). `git checkout <path>` / `git checkout -- .` / `git checkout <ref> -- <path>`
 / `git restore <path>` silently DISCARD uncommitted changes to the target. Used to
 undo a *temporary* edit while other uncommitted work to the same file is live, it
@@ -143,7 +143,7 @@ def _arm_a_branch_first(data: dict) -> int:
 
 
 # ---------------------------------------------------------------------------
-# ARM B: dirty-revert BLOCK (proposal 2026-06-21-dirty-revert-guard.md, section 3)
+# ARM B: dirty-revert BLOCK (proposal P-2026-007, section 3)
 # ---------------------------------------------------------------------------
 
 _TRUTHY = ("1", "true", "yes", "on")

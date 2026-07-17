@@ -18,6 +18,7 @@ Enforced invariants (each one exists to kill a specific failure mode):
   S2  autonomy.json: schema valid AND enforcement category can never auto-merge
   H1  hooks/*.py compile, are executable on disk, AND every tracked hook carries
       git index mode 100755 (CI reads the committed mode, not the Windows fs bit)
+  P1  proposal metadata, lifecycle folders, history, evidence, links, and index agree
 
 Skills + commands shipped inside plugins/*/ (plugins/*/skills, plugins/*/commands,
 and a plugin-level SKILL.md) clear the SAME B2/B3/B4/F2 budgets — a plugin is not a
@@ -133,7 +134,7 @@ def check_skills_dir(sdir: str, rel_prefix: str) -> None:
         if not os.path.isdir(os.path.join(sdir, name)):
             # A plain FILE here (e.g. README.md) is not a skill dir — skip, don't
             # flag "missing SKILL.md". Budgets still bind every real skill dir.
-            # provenance: 2026-07-02, proposals/2026-07-02-artifact-dir-readmes.md
+            # provenance: 2026-07-02, proposals/resolved/P-2026-032-artifact-dir-readmes.md
             # (a department README turned lint red live, codification iteration 9).
             continue
         skill_md = os.path.join(sdir, name, "SKILL.md")
@@ -256,6 +257,22 @@ def check_autonomy() -> None:
                 err("S2", f"autonomy.json: category '{name}' missing '{k}'")
 
 
+def check_proposals() -> None:
+    """Delegate proposal schema/lifecycle truth to its one stdlib manager."""
+    pdir = os.path.join(ROOT, "proposals")
+    sys.path.insert(0, pdir)
+    try:
+        import manage as proposal_manager
+        errors, warnings = proposal_manager.validate(proposal_manager.ROOT)
+    except Exception as exc:
+        err("P1", f"proposal manager failed: {exc}")
+        return
+    for warning in warnings:
+        print(f"  warning: {warning}")
+    for message in errors:
+        err("P1", message)
+
+
 def tracked_hook_index_modes() -> "dict[str, str] | None":
     """Git INDEX mode of every tracked file under hooks/, as {repo-rel path: mode}
     (e.g. {'hooks/x.py': '100755'}). Returns None when git is unavailable or this is
@@ -311,7 +328,7 @@ def check_hooks() -> None:
 
 def main() -> int:
     # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
-    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    # (proposal P-2026-017).
     for _s in (sys.stdout, sys.stderr):
         try:
             _s.reconfigure(encoding="utf-8", errors="replace")
@@ -325,6 +342,7 @@ def main() -> int:
     check_user_model()
     check_state()
     check_autonomy()
+    check_proposals()
     check_hooks()
     if ERRORS:
         print(f"HARNESS LINT: {len(ERRORS)} violation(s)\n" + "\n".join(ERRORS))

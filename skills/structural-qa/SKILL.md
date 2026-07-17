@@ -66,4 +66,4 @@ settings.json docks it — each from the brief, none from memory.
 Q&A … traverse the extracted graph with file:line citations instead of grepping"), sequenced
 after BET A (the oracle `--query`/`--context`, which this is the NL front-end for). The engine
 already existed; this skill routes a question to the right traversal. See
-proposals/2026-06-28-structural-qa.md. -->
+proposals/resolved/P-2026-029-structural-qa.md. -->

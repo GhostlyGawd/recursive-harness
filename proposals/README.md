@@ -1,79 +1,72 @@
-# proposals/ — decisions awaiting a human
+# Proposals — durable decisions with enforced state
 
-## Identity
+Proposals hold changes that need an explicit decision, implementation trail, or durable
+resolution. The authoritative queue is [INDEX.md](INDEX.md): five active records and the
+resolved history migrated on 2026-07-17.
 
-The queue of changes an agent may DESIGN but not DECIDE: 33 dated proposal
-files plus 2 directory-style bundles (a dir with its own README when one
-decision ships multiple gated items, e.g. the Mission Control gated bundle).
-Naming: `YYYY-MM-DD-slug.md`. A proposal captures a problem, its constraint
-inheritance, options with a recommendation, and a falsifiable acceptance test
-— then stops. The decision belongs to the human (kernel directive 5).
+## Layout
 
-## Why (provenance)
+```text
+proposals/
+├── active/       approved or undecided work that is not terminal
+├── resolved/     landed, abandoned, rejected, or superseded records
+├── INDEX.md      generated current view
+├── manage.py     lifecycle engine
+└── migrate_legacy.py  one-time migration receipt and evidence map
+```
 
-The directory's first entry landed in `390be28` (2026-06-18,
-harness-portability) and the shape stuck because it resolves a structural
-tension: the enforcement layer is write-locked to agents, yet most improvement
-ideas TARGET that layer. Proposals are the pressure valve — the agent banks
-the full design (research, options, acceptance) without touching the lock;
-the guard-tuning proposals beginning with
-2026-06-21-guard-cluster-consolidation (and all four 2026-07-02 filings) cite
-the standing meta-principle they inherit: tune existing hooks, NEVER add
-enforcement (correction `2026-06-19T17:10:46`).
+Files use `P-YYYY-NNN-short-readable-title.md`. A multi-file gated bundle uses the same
+stable name as a directory with its record in `README.md`. IDs never change when a title,
+status, or folder changes.
 
-## Contract
+## Required metadata
 
-- **Canonical header bullets**: `Date`, `Status`, `Origin` (the session/event
-  that surfaced it, with ledger citations). Older files and roadmap-style docs
-  deviate (some use Prediction/Source-session; a few carry none) — the
-  convention binds NEW standalone proposals, not retroactively (parked draft
-  companions of another proposal are excepted).
-- **Status is a lifecycle**, free-form but recognizable: `PROPOSAL`/`DRAFT`
-  (nothing built) → `REVISED`/`REJECTED` (auditor verdicts recorded verbatim,
-  e.g. 2026-06-22-auto-healer-cross-session-recall) → `Built non-locked on
-  branch …` / `STAGED` (work exists, gate not passed) → `RESOLVED`/`APPLIED`/
-  `MERGED` (names the landing PR/commit). Resolved proposals STAY — they are
-  the decision record.
-- Enforcement-touching proposals name their landing path explicitly: /harness-pr
-  + marker cycle + /run-evals + human merge.
-- Who reads it: /retro routes decision-shaped learnings here; the
-  harness-auditor cross-checks new proposals against adjacent ones; wave PRs
-  reference proposals as their justification trail.
+Every record has frontmatter with:
 
-## Operations (how to extend correctly)
+- `id`, `title`, `created`, `updated`, and `owner`
+- decision `status`: `draft`, `ready`, `approved`, `rejected`, or `superseded`
+- `implementation`: `not-started`, `in-progress`, `landed`, or `abandoned`
+- `resolution`: required for every record in `resolved/`
 
-- **Duplication check FIRST**: grep proposals/ for adjacent coverage before
-  filing; strengthen or cross-reference an existing proposal instead of
-  filing a sibling (e.g. 2026-06-21-dirty-revert-guard's Status line:
-  "See proposals/2026-06-21-guard-cluster-consolidation.md").
-- **Inherit standing constraints**: any proposal touching nudges/guards
-  restates the meta-principle it operates under; one that would reverse a
-  recorded "advisory, not a blocker" decision is reward-hack-adjacent
-  (harness-authoring, right-artifact check).
-- Make acceptance FALSIFIABLE: name the test/eval/observable that proves the
-  remedy, not "improves ergonomics".
-- An agent may build the NON-LOCKED part of a proposal on a branch and say so
-  in Status ("Built non-locked on branch …"); the locked part waits for the
-  human gate.
-- Verify: `python3 lint/lint_harness.py` (proposals carry no special lint
-  rules — the check is the auditor + human review).
+Decision state and implementation state are deliberately separate. An approved proposal
+that has not landed remains active. A record becomes resolved when the decision is rejected
+or superseded, or implementation is landed or abandoned.
 
-## Failure & learning
+Each transition appends a dated row to `## Status history`. The latest row must match the
+frontmatter. Active records with no update for 90 days produce a warning, not a CI failure.
 
-- The failure mode this directory kills: improvement ideas dying in chat
-  scrollback, or worse, being "helpfully" hot-patched into the enforcement
-  layer (the c36988-class hole the guard exists for).
-- A proposal without an acceptance test rots into an opinion — the auditor
-  flags unfalsifiable prose (corruption mode 4).
-- REJECTED is a success state: auditor-rejected designs stay on file with the
-  verdict verbatim (falsified-hypothesis memory, same principle as the heal
-  ledger's wontfix records).
-- Follow-ups smaller than a proposal go to `bin/harness followup add`, not
-  here; project-scale roadmaps live with their product (products/, fleet/),
-  not in proposals/ (two pre-norm roadmaps from 2026-06-27 remain
-  grandfathered here).
+## Operate the lifecycle
 
-<!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 11
-(LOOP-CODIFY.md criterion 1): department README for proposals/, researched from
-the 35 tracked proposal files' Status lines, 390be28, harness-authoring gates,
-and the 2026-07-02 duplication-check practice. -->
+```bash
+python3 bin/harness proposal list
+python3 bin/harness proposal show P-2026-035
+python3 bin/harness proposal transition P-2026-035 \
+  --status approved --implementation in-progress \
+  --evidence "approved in PR #NNN"
+python3 bin/harness proposal check
+```
+
+Use `proposal transition` for state changes. It updates metadata and history, moves the
+record between `active/` and `resolved/` when necessary, and regenerates the index. Direct
+body edits are allowed, but must advance `updated` and the status history in the same PR.
+
+`proposal check` fails on invalid fields, duplicate IDs, filename/ID mismatches, folder
+drift, missing terminal evidence, broken local links, stale indexes, or body changes that do
+not advance history. CI and `lint/lint_harness.py` both run the check.
+
+## Authoring rules
+
+- Search the index and adjacent records before creating another proposal.
+- State the problem, inherited constraints, meaningful options, recommendation, and a
+  falsifiable acceptance test.
+- Use a follow-up for small deferred work; use product-local roadmaps for product execution.
+- Enforcement proposals still require the repository approval workflow and human merge.
+- Rejected and superseded records remain in history; falsified ideas are useful evidence.
+
+The legacy migration assigned IDs chronologically, reconciled terminal records against
+merged PR history, retained original prose under “Historical record,” and rewrote repository
+references. The migration script is a receipt, not a recurring command.
+
+<!-- provenance: 2026-07-17 — lifecycle normalization requested by the maintainer; stable
+IDs, dual-axis state, evidence-backed transitions, active/resolved folders, and 90-day
+warning policy were explicitly selected in the approved implementation plan. -->

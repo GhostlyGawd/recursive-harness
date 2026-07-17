@@ -74,5 +74,5 @@ capture (`9de5620`).
   "Oddities under review" + a proposals/ file; tool failures are auto-captured
   into the heal candidates stream by `heal_autocapture.py` (flag-gated, default
   off — candidates only, never straight to bugs.jsonl); behavioral tuning
-  is proposed in proposals/ (e.g. `2026-07-02-context-blind-cadence-nudges.md`),
+  is proposed in proposals/ (e.g. `P-2026-033-context-blind-cadence-nudges.md`),
   never hot-patched.

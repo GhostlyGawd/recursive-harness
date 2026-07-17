@@ -2,7 +2,7 @@
 
 The native-first core of the "Agent Mail" capability: an append-only, typed,
 self-reaping event log with projection views. Stdlib-only and storage-injected so it
-stays cleanly extractable to its own repo (see proposals/2026-06-22-agent-mail-product.md).
+stays cleanly extractable to its own repo (see proposals/resolved/P-2026-012-agent-mail-product.md).
 
 v1 ships the substrate + the live-feed projection (the harness's evidenced need). The
 resource-claims, unit-doc, and postbox views are demand-pulled (built when a real

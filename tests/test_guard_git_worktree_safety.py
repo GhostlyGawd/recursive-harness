@@ -161,7 +161,7 @@ try:
     check("arm A never blocks (exit != 2)", rc != 2, f"rc={rc}")
 
     # =====================================================================
-    # ARM B — dirty-revert BLOCK (proposal 2026-06-21-dirty-revert-guard)
+    # ARM B — dirty-revert BLOCK (proposal P-2026-007)
     # =====================================================================
     # A repo with a COMMITTED file we then make dirty; the hook runs `git status`
     # in the command's cwd (= this repo) to decide whether a revert loses work.

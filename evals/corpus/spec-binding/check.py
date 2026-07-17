@@ -3,7 +3,7 @@
 
 argv[1] = sandbox dir (unused). This case validates the LIVE spec-pointer gate
 (cartograph/extract.py --check: the `dangling-spec` + `untested-requirement` classes,
-proposal 2026-06-21-spec-driven-dev.md Decision E) against throwaway --root fixtures, so
+proposal P-2026-011 Decision E) against throwaway --root fixtures, so
 it resolves the repo root from its own location (evals/corpus/spec-binding/check.py -> 4
 dirs up) rather than the sandbox, exactly like cartograph-gate's check.py.
 

@@ -35,6 +35,7 @@ Subcommands:
                autonomy progress, skill value, bug memory. Pull-only.
   doctor       Install sanity: which brain this session loaded + what's broken,
                each problem paired with the one command that fixes it.
+  proposal     List, show, transition, validate, and index durable proposals.
 
 All hot data is JSONL under state/ (machine-local, gitignored).
 Rollups land in memory/calibration/ (versioned, shippable).
@@ -923,7 +924,7 @@ def cmd_fleet(args) -> int:
     """Agent Mail — the lateral-coordination channel. Thin adapter: inject the ONE canonical
     state dir, then delegate the full action surface (feed|emit|claims|unit|send|inbox|ack|
     release|reap) to the unlocked, stdlib-only fleet.cli. Adding a view needs no further edit
-    here. See proposals/2026-06-30-agent-mail-bin-delegation.md + fleet/pm/specs/ARCHITECTURE.md."""
+    here. See proposals/resolved/P-2026-030-agent-mail-bin-delegation.md + fleet/pm/specs/ARCHITECTURE.md."""
     sys.path.insert(0, ROOT)  # fleet/ lives at the repo root
     try:
         from fleet import cli as fleet_cli
@@ -931,6 +932,18 @@ def cmd_fleet(args) -> int:
         print(f"fleet engine unavailable: {exc}", file=sys.stderr)
         return 1
     return fleet_cli.main(["--state-dir", _resolve_state_dir(), *args.rest])
+
+
+# ---------------------------------------------------------------- proposals
+def cmd_proposal(args) -> int:
+    """Thin front door over the proposal lifecycle manager."""
+    sys.path.insert(0, os.path.join(ROOT, "proposals"))
+    try:
+        import manage as proposal_manager
+    except ImportError as exc:
+        print(f"proposal manager unavailable: {exc}", file=sys.stderr)
+        return 1
+    return proposal_manager.main(args.rest, root=proposal_manager.ROOT)
 
 
 # ---------------------------------------------------------------- mission control
@@ -1137,6 +1150,12 @@ def main() -> int:
                     help="harness root to read --mission from (default: this tree)")
     sp.add_argument("--json", default="", help="render a saved --mission payload (offline/demo)")
     sp.set_defaults(fn=cmd_mission_control)
+
+    sp = sub.add_parser("proposal",
+                        help="list, show, transition, check, or index durable proposals")
+    sp.add_argument("rest", nargs=argparse.REMAINDER,
+                    help="forwarded to proposals/manage.py")
+    sp.set_defaults(fn=cmd_proposal)
 
     sp = sub.add_parser("map", help="regenerate the Harness Atlas (ATLAS.md + ATLAS-PULSE.md)")
     sp.add_argument("--html", action="store_true",

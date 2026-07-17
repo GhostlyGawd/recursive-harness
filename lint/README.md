@@ -2,8 +2,8 @@
 
 ## Identity
 
-One file, `lint_harness.py` (~330 lines): the self-lint that rejects harness rot
-at commit time. Its docstring is the rule table — ten invariants, each existing
+One file, `lint_harness.py`: the self-lint that rejects harness rot at commit time.
+Its docstring is the rule table — eleven invariants, each existing
 to kill a specific observed failure mode:
 
 | Rule | Invariant | Failure mode it kills |
@@ -18,6 +18,7 @@ to kill a specific observed failure mode:
 | S1 | state/*.jsonl parse as JSONL | corrupt ledgers poison calibration |
 | S2 | autonomy.json schema; enforcement NEVER auto-merges | the firewall |
 | H1 | hooks compile + executable + git index mode 100755 | CI exec-bit drift |
+| P1 | proposal metadata, folders, history, evidence, links, and index agree | stale or ambiguous decisions |
 
 Plugins clear the SAME budgets (plugins/*/skills, plugins/*/commands) — a plugin
 is not a budget-bypass.

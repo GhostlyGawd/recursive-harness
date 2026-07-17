@@ -5,7 +5,7 @@ description: Garbage-collect harness memory — roll up hot state, decay stale u
 1. `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
    This command operates entirely on the trunk: address every file as `"$HARNESS/<path>"`
    and run git as `git -C "$HARNESS"` (a relative path / bare git would misroute from a
-   foreign cwd — Gap D, proposals/2026-06-18-harness-portability.md).
+   foreign cwd — Gap D, proposals/resolved/P-2026-001-harness-portability.md).
    `"$HARNESS/bin/harness" gc --days 30` — rolls cold state/ records into
    memory/calibration/<YYYY-MM>.json (versioned). Unscored predictions are
    never silently archived; score or explicitly drop them first (/calibrate).

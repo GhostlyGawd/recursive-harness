@@ -1,7 +1,7 @@
 # Cartograph gate — structural-rot regression
 
 Part B of the cartograph tool (`cartograph/extract.py`, Living Harness Cartograph,
-`proposals/2026-06-19-living-harness-cartograph.md`) turns the extractor's
+`proposals/resolved/P-2026-003-living-harness-cartograph.md`) turns the extractor's
 consistency report from print-only into a **gate**:
 
 - `--check [BASELINE]` exits non-zero when an **un-baselined** structural warning

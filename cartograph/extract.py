@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """cartograph/extract.py — read-only cartograph extractor for the harness.
 
-Implements the "Living Harness Cartograph" (proposals/2026-06-19-living-harness-
-cartograph.md) — Phases 0–4: a text dump, an on-demand json export, and a
+Implements the "Living Harness Cartograph"
+(proposals/resolved/P-2026-003-living-harness-cartograph.md) — Phases 0–4: a
+text dump, an on-demand json export, and a
 self-contained interactive --html page (live-state overlay + git time-slider). The
 html is the SINGLE persistent artifact: it embeds the one canonical graph payload, so
 there is no separate map.json beside it to drift out of sync. This script DERIVES the
@@ -554,7 +555,7 @@ def build(tracked_only=False):
         scan(f"hook:{name}", f)
     scan("kernel:CLAUDE.md", os.path.join(ROOT, "CLAUDE.md"))
 
-    # ---- SDD Phase A: materialise the spec bindings (proposal 2026-06-21) ----------------
+    # ---- SDD Phase A: materialise the spec bindings (proposal P-2026-011) ----------------
     # Runs AFTER the scan loop so every targets: pointer resolves against the full node set.
     # The three edge types (specifies/requires/verified_by) are in SPEC_EDGE_TYPES - in
     # NEITHER REF nor DEP - so none of this perturbs in-degree / dependents / blast / orphans
@@ -715,7 +716,7 @@ def build(tracked_only=False):
         notes.append(f"{src.split(':', 1)[1]} cites a venture decision log "
                      f"(DECISIONS.md {num}), not a harness ADR - not counted as dangling")
 
-    # ---- SDD Phase B: the spec-binding gate classes (proposal 2026-06-21, Decision E) -------
+    # ---- SDD Phase B: the spec-binding gate classes (proposal P-2026-011, Decision E) -------
     # Two warn classes that turn Phase A's missing-node endpoints into gateable structural rot.
     # Both resolve EVERY pointer against MACHINE TRUTH (is the endpoint node missing=True?) and
     # NEVER trust status: as proof - the anti-backdoor invariant. status: is descriptive and may
@@ -1758,7 +1759,7 @@ def render_flow_text(g, roots, fadj):
 # consumer->provider (source depends on target), so dependents are PREDECESSORS and dependencies
 # are SUCCESSORS; born_in (lineage) is never a dependency. Everything here is read-only.
 DEP_EDGE_TYPES = REF_EDGE_TYPES | {"touches"}       # excludes born_in (provenance lineage)
-# SDD Phase A (proposal 2026-06-21, Decision B): the THIRD edge class - governance, not
+# SDD Phase A (proposal P-2026-011, Decision B): the THIRD edge class - governance, not
 # reference and not dependency. It is the born_in pattern: a spec edge in REF would silently
 # rescue its target from dead-weight/--audit; in DEP it would inflate blast-radius/dependents
 # and drop the target from orphans(). So all three are in NEITHER set, which makes the whole
@@ -2440,11 +2441,12 @@ def _name_index(comps):
 
 
 def proposal_status(text):
-    """The human Status of a proposal, read from its `- **Status:** <...>` markdown bullet (the
-    convention every proposals/*.md uses), reduced to the leading STATE WORD (DRAFT/PROPOSAL/
-    SHIPPED/...). Returns "" when no status line is present. Deliberately NOT the YAML `status:`
-    key (proposals carry no frontmatter; an SDD code-fence example contains a `status:` line that
-    is documentation, not the doc's own state) - so we anchor on the bold-bullet form only."""
+    """Read authoritative proposal frontmatter, with the legacy bold bullet as fallback."""
+    fm = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
+    if fm:
+        match = re.search(r"^status:\s*([a-z-]+)\s*$", fm.group(1), re.M | re.I)
+        if match:
+            return match.group(1).lower()
     m = re.search(r"^\s*[-*]\s*\*\*status:?\*\*\s*[:\-]?\s*(.+)$", text, re.M | re.I)
     if not m:
         return ""
@@ -2454,12 +2456,28 @@ def proposal_status(text):
     return word
 
 
+def proposal_record_files():
+    """Lifecycle records only: direct markdown files plus one README per bundle."""
+    files = []
+    for lifecycle in ("active", "resolved"):
+        folder = os.path.join(ROOT, "proposals", lifecycle)
+        if not os.path.isdir(folder):
+            continue
+        for name in os.listdir(folder):
+            path = os.path.join(folder, name)
+            if os.path.isfile(path) and name.endswith(".md"):
+                files.append(path)
+            elif os.path.isdir(path) and os.path.isfile(os.path.join(path, "README.md")):
+                files.append(os.path.join(path, "README.md"))
+    return sorted(files)
+
+
 def mission_proposals(comps, name_index):
-    """Every proposals/*.md as a work item: its filename, parsed Status, and the component(s) it
+    """Every active/resolved lifecycle record as a work item: its ID, status, and component(s) it
     best-effort concerns (by file-path or unique-name mention in its body). No proposal node is
     created in the graph; this is payload-only. A proposal that names no component is unscoped."""
     items = []
-    for f in listfiles("proposals", ".md"):
+    for f in proposal_record_files():
         text = read(f)
         items.append({
             "path": rel(f),

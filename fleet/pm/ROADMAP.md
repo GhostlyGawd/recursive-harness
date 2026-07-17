@@ -1,7 +1,8 @@
 # Agent Mail — Roadmap
 
 _Synthesized from the Product lens (2026-06-30), aligned to
-`proposals/2026-06-21-lateral-coordination-event-log.md` and `…2026-06-22-agent-mail-product.md`._
+`proposals/resolved/P-2026-009-lateral-coordination-event-log.md` and
+`proposals/resolved/P-2026-012-agent-mail-product.md`._
 
 **Discipline kept.** The proposals deferred views 2–4 as *demand-pulled, not speculative*.
 The user explicitly pulled all three. The rule was never "never build" — it was "don't build

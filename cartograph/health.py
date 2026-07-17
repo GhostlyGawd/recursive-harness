@@ -31,7 +31,7 @@ Usage:
                                           # (default 6; heavier - one graph per commit)
 
 Provenance: 2026-06-28 - BET D from cartograph/ROADMAP.md, sequenced after the Atlas
-(proposals/2026-06-28-atlas-autosync.md). Extends the Living Harness Cartograph.
+(proposals/resolved/P-2026-023-atlas-autosync.md). Extends the Living Harness Cartograph.
 """
 import argparse
 import json

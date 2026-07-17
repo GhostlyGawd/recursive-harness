@@ -5,7 +5,7 @@ argv[1] = sandbox dir (unused). Like cartograph-gate, this case validates the LI
 Control artifacts against the real harness repo, so it resolves the repo root from its own
 location. It walks UP to the dir that holds BOTH cartograph/extract.py and mission_control/ —
 so it is valid both at evals/corpus/mission-control-p2p5/check.py (post-merge, 4 dirs up) AND
-at proposals/2026-06-23-mission-control-gated-bundle/eval/check.py (pre-merge staging).
+at proposals/resolved/P-2026-015-mission-control-gated-bundle/eval/check.py (pre-merge staging).
 
 Headless by contract: no real terminal, no textual widget pilot (the widget behaviour lives in
 mission_control/test_*.py). Asserts the four load-bearing P2-P5 invariants — see task.md.

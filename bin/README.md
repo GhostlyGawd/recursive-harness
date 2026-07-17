@@ -10,7 +10,8 @@ enforcement approval verb (approve — records a human's grant and places/revoke
 the marker at the MAIN checkout root), delegated front doors to department
 engines (fleet → fleet.cli, mission-control → python -m mission_control,
 map → cartograph/atlas.py, health → cartograph/health.py, ask →
-cartograph/extract.py), and feature flags (features, ADR 0008).
+cartograph/extract.py, proposal → proposals/manage.py), and feature flags
+(features, ADR 0008).
 `python3 bin/harness --help` is the live index.
 
 ## Why (provenance)
@@ -44,6 +45,9 @@ the approval marker resolves to the guard's root, not the script's (`3618891`).
   run without an explicit human grant (fabricating one = the same betrayal as
   hand-placing the marker; /harness-pr step 2), and `--revoke` runs the moment
   the approved edit is done.
+- `proposal` changes only versioned proposal records. Use `proposal transition`
+  instead of hand-moving a record so metadata, status history, lifecycle folder,
+  and the generated index stay synchronized.
 
 ## Operations (how to extend correctly)
 
