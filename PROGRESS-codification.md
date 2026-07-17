@@ -43,8 +43,8 @@ VERSION, worktree-repos.json)
 - Built the full 22-row wiring table from settings.json (19 wirings, 17 distinct
   hooks); origins researched for 8 rows via git --diff-filter=A; rest marked TODO
   honestly. Filed both flagged oddities as proposals:
-  proposals/2026-07-02-context-blind-cadence-nudges.md,
-  proposals/2026-07-02-guard-blocks-readonly-inspection.md.
+  proposals/resolved/P-2026-033-context-blind-cadence-nudges.md,
+  proposals/resolved/P-2026-034-guard-blocks-readonly-inspection.md.
 - Duplication check done first: adjacent proposals (guard-cluster-consolidation,
   enforcement-merge-friction) are distinct; inherited their standing meta-principle
   (tune existing hooks, never add enforcement) into both new proposals.
@@ -84,7 +84,7 @@ VERSION, worktree-repos.json)
   exists this session; fabricating one is forbidden (harness-pr.md step 2, kernel
   directive 5). Per skill harness-pr-ops the human gate is the EXPECTED terminus →
   wave-1 locked-path writes paused. Drafts staged in
-  proposals/2026-07-02-wave1-locked-dept-readmes.md so the human cycle is:
+  proposals/resolved/P-2026-036-wave1-locked-dept-readmes.md so the human cycle is:
   grant marker → copy drafts verbatim → revoke → wave-1 PR.
 - Drafted hooks/README.md (76 lines, five-question format) from iteration-3
   research + hook docstrings + settings.json.
@@ -156,7 +156,7 @@ VERSION, worktree-repos.json)
   all 22 template wirings against root settings.json itself — 1:1). One minor
   fix applied (file-count becomes two once README lands).
 - All five wave-1 drafts now staged in
-  proposals/2026-07-02-wave1-locked-dept-readmes.md: hooks 4.8 · lint 4.8 ·
+  proposals/resolved/P-2026-036-wave1-locked-dept-readmes.md: hooks 4.8 · lint 4.8 ·
   evals 4.8 · bin 4.4 · templates 5.0 (all post-fix).
 - Criteria status: 1 partial (1 done + 5 drafted / 19) · 2 ✗ · 3 ✅ · 4 ✅ · 5 ✗
 - Next target: wave-1 checkpoint — full ci.yml battery, open the wave-1 PR,
@@ -186,14 +186,14 @@ VERSION, worktree-repos.json)
 - Root cause is general: skills/, commands/, agents/ are LOADER SURFACES —
   commands/README.md would likely register a junk /README slash command,
   agents/README.md a bogus agent (B5 demands frontmatter). Filed
-  proposals/2026-07-02-artifact-dir-readmes.md (recommended: one-line lint
+  proposals/resolved/P-2026-032-artifact-dir-readmes.md (recommended: one-line lint
   skip for non-dir entries — enforcement-locked, batch into wave-1b marker
   cycle; commands/agents pending an empirical loader check). Duplication
   check: clean.
 - Critic content verdict on the draft itself: 4.2 PASS; its three content
   fixes (vendored imports as third growth path, "17 non-seed skills",
   promotable-needs terminology) applied to the PARKED draft in
-  proposals/2026-07-02-artifact-dir-readmes-skills-draft.md.
+  proposals/resolved/P-2026-031-artifact-dir-readmes-skills-draft.md.
 - VERIFY (post-revert): lint ✅ · gate ✅ · criteria: 1 partial (1 done +
   5 drafted + 1 parked / 19; skills/commands/agents now ⚠ gated) · 2 ✗ ·
   3 ✅ · 4 ✅ (red mid-pass, green at pass end) · 5 ✗
@@ -449,7 +449,7 @@ BLOCKED — every remaining item needs the human:
   bin/ templates/ + the one-line lint skip → skills/README lands from its
   parked draft (followup 75d270).
 - Loader-surface decision for commands/ + agents/
-  (proposals/2026-07-02-artifact-dir-readmes.md; followup d8ceb3).
+  (proposals/resolved/P-2026-032-artifact-dir-readmes.md; followup d8ceb3).
 
 DIAGNOSIS: not stuck — the loop reached the designed human gates. When the
 four decisions above land, criterion 1 completes to 18/19 + the commands/

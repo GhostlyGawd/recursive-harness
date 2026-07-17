@@ -17,8 +17,8 @@ products/ out of versioned tracking, leaving thin stubs; ADR 0005 (2026-06-16,
 provenance: the cross-Grove retro) then recorded the general rule — a
 ship-grade venture owns its repo. The registry landed `0255064` (2026-06-30)
 to give the portfolio ONE lens, sourced from
-`proposals/2026-06-28-productization-map.md` (the 11 extractable segments),
-`proposals/2026-06-28-portfolio-landscape.md` (the ~40-repo external
+`proposals/resolved/P-2026-028-productization-map.md` (the 11 extractable segments),
+`proposals/resolved/P-2026-027-portfolio-landscape.md` (the ~40-repo external
 landscape), and the 2026-06-30 synergy audit curated in registry.py
 (effectively zero live cross-repo composition).
 

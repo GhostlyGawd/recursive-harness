@@ -4,7 +4,7 @@
 >
 > This file is **meant to drift**: regenerate with `/atlas` and commit it deliberately (e.g. at `/meta-retro`) to keep a friction-over-time record. Live machine-state, not topology.
 
-**Build stamp** - generated `2026-07-17` from extract.py @ `d8939b3`.
+**Build stamp** - generated `2026-07-17` from extract.py @ `54846ee`.
 
 ---
 
@@ -17,11 +17,11 @@ One pure-graph vital sign (0-100) distilled from the extracted graph - structura
 | Sub-score | Value | Weight | Measures |
 |---|---:|---:|---|
 | rot_free | 1.000 | 0.4 | structural-rot warnings (all build() reports, pre-baseline) - 0 is ideal |
-| connectedness | 0.696 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
-| provenance | 0.469 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
+| connectedness | 0.702 | 0.2 | skill/agent/cli nothing references (in-degree 0) |
+| provenance | 0.463 | 0.2 | artifacts carrying a session-lineage (born_in) edge |
 | adr_load_bearing | 0.583 | 0.2 | ADRs something actually cites (in-degree > 0) |
 
-Counts: 0 rot · 14/46 orphan artifacts · 38/81 provenanced · 7/12 ADRs referenced.
+Counts: 0 rot · 14/47 orphan artifacts · 38/82 provenanced · 7/12 ADRs referenced.
 
 Orphans (referenceable, in-degree 0 - a candidate signal, not a verdict): `cli:ask`, `cli:doctor`, `cli:fleet`, `cli:health`, `cli:privacy`, `cli:scorecard`, `skill:harness-pr-ops`, `skill:host-assumption-bleed`, `skill:language-selection`, `skill:loop-prompt-architect`, `skill:nested-repos`, `skill:roadmap`, `skill:structural-qa`, `skill:venture-build`.
 

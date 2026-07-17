@@ -6,7 +6,7 @@ description: Score pending predictions and review calibration stats. Run every ~
    `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
    This command operates entirely on the trunk: address every file as `"$HARNESS/<path>"`
    (a relative path would misroute from a foreign project's cwd — Gap D,
-   proposals/2026-06-18-harness-portability.md).
+   proposals/resolved/P-2026-001-harness-portability.md).
    `"$HARNESS/bin/harness" stats` — the calibration headline (hit rate, Brier, pending
    COUNT). NOTE: `stats` prints only the pending COUNT, not the ids, and there is no
    `--list-pending` flag — to get the pending ids to score, read the ledger directly:

@@ -6,7 +6,7 @@ provenance: 2026-06-23, retro-backlog sweep (sessions fa7d1457 + 853a5037) — t
   leading token (space-containing VAR= assignment defeated the guard regex), and a
   PowerShell Remove-Item was blocked TWICE as a "protected system path 'D:\GitHub'"
   because the guard split the repo path at the space. Same first-space-truncation
-  class as the locked guard_worktree_isolation bug (proposal 2026-06-22-guard-worktree-space-split.md).
+  class as the locked guard_worktree_isolation bug (proposal P-2026-014).
   extended: 2026-06-25, session b46882f7 — added Manifestations D & E. I shipped a bash-only tool
   to a Windows host and handed the user three bash invocations to paste into PowerShell 5.1 (where
   bash is not on PATH, `&&` is a parse error, `/d/` paths and `.sh` shebangs fail), asserting each
@@ -74,7 +74,7 @@ The Bash tool quotes the whole path as one argument, so the space never splits i
 the merged proposal to `_expand_simple_vars` (line 315): its assignment-value regex
 `([^\s;&|()]+)` stops at the first space, so a `$VAR` holding this repo's path
 expands TRUNCATED into a phantom `.claude/worktrees/<name>` operand. The fix is
-enforcement-locked and tracked in `proposals/2026-06-22-guard-worktree-space-split.md`
+enforcement-locked and tracked in `proposals/resolved/P-2026-014-guard-worktree-space-split.md`
 (human merges). Until it lands, expect worktree-path guard messages to show a
 truncated `D:\GitHub`.
 

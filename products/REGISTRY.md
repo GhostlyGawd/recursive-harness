@@ -6,7 +6,7 @@
 
 ## A. Extractable segments — what this harness could sell
 
-The 11 productizable pieces of *this repo*, by product line (source: `proposals/2026-06-28-productization-map.md`).
+The 11 productizable pieces of *this repo*, by product line (source: `proposals/resolved/P-2026-028-productization-map.md`).
 
 | # | Segment | Product line | Value | Maturity | Extraction | Lives in |
 |--:|---|---|---|---|---|---|

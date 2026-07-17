@@ -99,9 +99,16 @@ check("harness ask --context X -> exit 0 + the node id", rc == 0 and "guard_trun
 rc, out = run_cli("ask")
 check("harness ask (no args) -> non-zero + a usage hint", rc != 0 and "need a query" in out)
 
+rc, out = run_cli("proposal", "list", "--status", "ready")
+check("harness proposal list delegates to the lifecycle manager",
+      rc == 0 and "P-2026-019" in out and "P-2026-035" in out)
+rc, out = run_cli("proposal", "check")
+check("harness proposal check validates the current index",
+      rc == 0 and "PROPOSAL CHECK: clean" in out)
+
 # --- product-UX subcommands: explain / scorecard / doctor / approve --standing -------
 # provenance: 2026-07-05, session 975732da — product-UX roadmap items 1-4
-# (proposals/2026-07-05-product-ux-roadmap.md). Subprocess for the read-only trio;
+# (proposals/resolved/P-2026-039-product-ux-roadmap.md). Subprocess for the read-only trio;
 # module-level with a patched ledger for approve (never touches real approvals).
 
 rc, out = run_cli("explain", "receipt")

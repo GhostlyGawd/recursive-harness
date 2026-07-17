@@ -2,7 +2,7 @@
 """Test `harness gc`'s cold-rollup path into memory/calibration/<month>.json.
 
 The path had never produced a committed artifact (roadmap item 7,
-proposals/2026-07-05-feature-improvement-roadmap.md): state/ is machine-local, so
+proposals/resolved/P-2026-038-feature-improvement-roadmap.md): state/ is machine-local, so
 no fresh clone can show the rollup working. This proves it against synthetic
 state: cold scored records roll into the right monthly summary (n / scored /
 hit_rate / brier), UNSCORED predictions never archive silently, hot records

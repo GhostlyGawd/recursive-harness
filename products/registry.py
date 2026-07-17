@@ -68,7 +68,7 @@ SEGMENTS = [
 
 # --------------------------------------------------------------------------- C
 # Curated: the wider portfolio (separate GitHub repos — NOT part of this harness).
-# Source: proposals/2026-06-28-portfolio-landscape.md + live `gh repo list` + the
+# Source: proposals/resolved/P-2026-027-portfolio-landscape.md + live `gh repo list` + the
 # 2026-06-30 dependency audit. Reference only. Columns: repo, vis, status, one-liner, relation.
 # status: ACTIVE (pushed this week) · warm (this month) · dormant (older).
 EXTERNAL = {
@@ -209,7 +209,7 @@ def build_registry():
     L.append("## A. Extractable segments — what this harness could sell")
     L.append("")
     L.append("The 11 productizable pieces of *this repo*, by product line "
-             "(source: `proposals/2026-06-28-productization-map.md`).")
+             "(source: `proposals/resolved/P-2026-028-productization-map.md`).")
     L.append("")
     L.append(_table(
         ["#", "Segment", "Product line", "Value", "Maturity", "Extraction", "Lives in"],

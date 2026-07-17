@@ -10,7 +10,7 @@ Run the retrospection procedure (skill: retrospection). Concretely:
    **Target the trunk explicitly in every git/file step** (`git -C "$HARNESS" …`,
    `(cd "$HARNESS" && gh …)`, `"$HARNESS/<path>"`): from a foreign cwd a `cd` does not
    persist across Bash calls, so a bare `git push` / `gh pr create` would hit the wrong
-   repo (Gap D — proposals/2026-06-18-harness-portability.md).
+   repo (Gap D — proposals/resolved/P-2026-001-harness-portability.md).
    Gather signal for THIS session:
    - `"$HARNESS/bin/harness" corrections list`
    - `"$HARNESS/bin/harness" stats` — note this session's unscored ids; score them now.
@@ -59,7 +59,7 @@ Run the retrospection procedure (skill: retrospection). Concretely:
      session end by hooks/session_end.py): `touch "$HARNESS/state/retro_gate_<session_id>"`.
    - durable completion ledger (PERSISTS; /retro-backlog reads it to skip done
      sessions): `"$HARNESS/bin/harness" retro-done add <session_id> --slug <slug>`.
-   Then report to the user: events found, routes chosen, PR links (one line each) — and if a routed artifact changed harness STRUCTURE (skill/command/agent/hook/ADR/eval or settings wiring), run `python3 "$HARNESS/cartograph/atlas.py" --check` and re-sync via `/atlas` when it reports STALE (the chosen stay-synced mechanism; Atlas sync is a ritual, not a CI blocker — cartograph/test_atlas.py, proposals/2026-06-28-atlas-autosync.md).
+   Then report to the user: events found, routes chosen, PR links (one line each) — and if a routed artifact changed harness STRUCTURE (skill/command/agent/hook/ADR/eval or settings wiring), run `python3 "$HARNESS/cartograph/atlas.py" --check` and re-sync via `/atlas` when it reports STALE (the chosen stay-synced mechanism; Atlas sync is a ritual, not a CI blocker — cartograph/test_atlas.py, proposals/resolved/P-2026-023-atlas-autosync.md).
    If nothing met the signal bar, SAY SO and stop — empty retros are honest;
    padded ones poison the trunk.
 8. **Return to trunk AND refresh it: `git -C "$HARNESS" checkout main && git -C "$HARNESS" fetch origin && git -C "$HARNESS" merge --ff-only origin/main`** (branch-hygiene). A bare `checkout main` returns to a possibly-STALE local main — a PR merged on GitHub isn't there until pulled — so the `--ff-only` refresh keeps the next run from re-proposing already-merged work. If that FF aborts on an untracked local file an incoming PR now adds as TRACKED (e.g. a `proposals/*.md` you wrote this session), confirm the local copy is redundant — byte-identical, or EOL-only via `git show origin/main:<path> | diff --strip-trailing-cr - <path>` — then `rm` it and re-run; stop if it has REAL local edits. /retro branches

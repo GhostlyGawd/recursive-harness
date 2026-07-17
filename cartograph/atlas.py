@@ -40,7 +40,7 @@ Usage:
 
 Provenance: 2026-06-27 - built from the request "map every component end-to-end +
 provide multiple visualization styles, kept synced over time"; extends the
-cartograph (proposals/2026-06-19-living-harness-cartograph.md) rather than forking
+cartograph (proposals/resolved/P-2026-003-living-harness-cartograph.md) rather than forking
 a second mapping system.
 """
 import argparse

@@ -50,10 +50,10 @@ remedies must tune existing hooks, never add new enforcement.
    content — the nudge fires (and gets echoed by the agent) even right after
    atlas/gc/retro activity, or in sessions where it's a non sequitur. User rejected
    an agent-echoed nudge on 2026-07-02.
-   → [`proposals/2026-07-02-context-blind-cadence-nudges.md`](../proposals/2026-07-02-context-blind-cadence-nudges.md)
+   → [`proposals/resolved/P-2026-033-context-blind-cadence-nudges.md`](../proposals/resolved/P-2026-033-context-blind-cadence-nudges.md)
 2. **Enforcement guard blocks read-only inspection.** `guard_enforcement_layer.py`
    pattern-matches locked-path tokens in Bash command strings regardless of intent:
    `ls lint` is blocked while `git log -- hooks/…` and `python3 lint/lint_harness.py`
    pass. Observed live 2026-07-02. Protection against *modification* is the mandate;
    blocking *reads* only teaches path-avoidance.
-   → [`proposals/2026-07-02-guard-blocks-readonly-inspection.md`](../proposals/2026-07-02-guard-blocks-readonly-inspection.md)
+   → [`proposals/resolved/P-2026-034-guard-blocks-readonly-inspection.md`](../proposals/resolved/P-2026-034-guard-blocks-readonly-inspection.md)

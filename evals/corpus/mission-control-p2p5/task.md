@@ -1,7 +1,7 @@
 # Mission Control P2–P5 — regression eval
 
 Mission Control is the harness's read-only control-room TUI
-(`proposals/2026-06-21-mission-control-tui.md`). P2–P5 added the Map lens, the Console
+(`proposals/resolved/P-2026-010-mission-control-tui.md`). P2–P5 added the Map lens, the Console
 station with Proof counters + layer toggles, a read-only live-feed Terminal, and the
 anti-`STATE.md` PreToolUse guard. This case is the mechanical regression net that proves a
 future harness change has not silently broken the load-bearing contracts those lenses bind to.

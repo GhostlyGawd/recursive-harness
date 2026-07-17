@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Red-first tests for Spec-Driven Development Phase B (the spec-binding gate classes).
 
-Authoritative spec: proposals/2026-06-21-spec-driven-dev.md, Decision E + the build-phasing
+Authoritative spec: proposals/resolved/P-2026-011-spec-driven-dev.md, Decision E + the build-phasing
 table (Phase B). Every check below is derived from an INTENT clause in that proposal, NOT
 from the extract.py code it drives. Phase A (test_spec.py) proved the spec EDGES are drawn and
 that an absent pointer draws an edge to a missing=True node WITHOUT warning; Phase B is the

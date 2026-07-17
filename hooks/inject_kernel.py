@@ -22,7 +22,7 @@ stdout is reconfigured to utf-8/replace because CLAUDE.md contains non-cp1252 gl
 (see session_start.py:60-61 for the same hazard).
 
 provenance: session d7de6b55, 2026-06-18 -- Fix A of the harness-portability proposal
-(Gap A: kernel absent in foreign projects). Spec: proposals/2026-06-18-harness-portability.md.
+(Gap A: kernel absent in foreign projects). Spec: proposals/resolved/P-2026-001-harness-portability.md.
 """
 import json
 import os

@@ -2,8 +2,8 @@
 
 ## Identity
 
-One file, `lint_harness.py` (~330 lines): the self-lint that rejects harness rot
-at commit time. Its docstring is the rule table — ten invariants, each existing
+One file, `lint_harness.py`: the self-lint that rejects harness rot at commit time.
+Its docstring is the rule table — eleven invariants, each existing
 to kill a specific observed failure mode:
 
 | Rule | Invariant | Failure mode it kills |
@@ -18,6 +18,7 @@ to kill a specific observed failure mode:
 | S1 | state/*.jsonl parse as JSONL | corrupt ledgers poison calibration |
 | S2 | autonomy.json schema; enforcement NEVER auto-merges | the firewall |
 | H1 | hooks compile + executable + git index mode 100755 | CI exec-bit drift |
+| P1 | proposal metadata, folders, history, evidence, links, and index agree | stale or ambiguous decisions |
 
 Plugins clear the SAME budgets (plugins/*/skills, plugins/*/commands) — a plugin
 is not a budget-bypass.
@@ -69,7 +70,7 @@ local lint's filesystem check yet failed CI, which reads the committed mode.
 - False-block classes already paid for: Windows filesystem exec bit vs git index
   mode (`e4c889` — H1 now reads the index, degrading gracefully without git);
   cp1252 console crashes on non-ASCII output (stdout reconfigured to
-  utf-8/replace, proposal `2026-06-23-utf8-stdout-all-entrypoints`).
+  utf-8/replace, proposal `P-2026-017`).
 - When lint blocks you: the message names the rule and the remedy. Fix the
   ARTIFACT, never the linter — deleting the checks that slow you down is reward
   hacking (kernel directive 5).

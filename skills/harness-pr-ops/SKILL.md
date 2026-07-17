@@ -19,7 +19,7 @@ not re-ask. When the user gives blanket words ("full approval for everything",
 user-model's standing-grant test (evidence 4) mechanical instead of remembered.
 FLOORS ALWAYS OUTRANK: guard-weakening and destructive/irreversible actions need
 fresh explicit words no matter what --list shows.
-> receipt: roadmap item 2 (proposals/2026-07-05-product-ux-roadmap.md); the
+> receipt: roadmap item 2 (proposals/resolved/P-2026-039-product-ux-roadmap.md); the
 > re-ask friction fired 3x on 2026-06-27 and again 2026-07-05.
 
 ## Stacked PRs — retarget the child BEFORE deleting the base

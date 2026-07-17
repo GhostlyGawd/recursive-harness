@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """e2e + unit tests for the cartograph structural-rot gate (Part B).
 
-Covers the gate's stated job (proposals/2026-06-19-living-harness-cartograph.md,
+Covers the gate's stated job (proposals/resolved/P-2026-003-living-harness-cartograph.md,
 cartograph/STATE.md M3): break wiring on purpose, confirm `--check` exits non-zero;
 grandfather it, confirm it exits zero again. Pure-logic unit tests for gate() sit
 alongside the subprocess e2e so a regression is localized fast.

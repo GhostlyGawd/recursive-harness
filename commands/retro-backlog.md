@@ -22,7 +22,7 @@ Default (no args): this harness repo's sessions from the last 14 days, capped at
    `HARNESS="$(dirname "$(cd "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks" && pwd -P)")"`.
    Target the trunk explicitly in every git/file step (`git -C "$HARNESS" …`,
    `"$HARNESS/<path>"`) — a bare `cd` does not persist and a foreign cwd would hit
-   the wrong repo (Gap D, proposals/2026-06-18-harness-portability.md).
+   the wrong repo (Gap D, proposals/resolved/P-2026-001-harness-portability.md).
 
 2. Build the DONE set (sessions already retro'd):
    `"$HARNESS/bin/harness" retro-done list | awk '{print $1}'` → a set of session_ids.

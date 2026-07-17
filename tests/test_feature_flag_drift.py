@@ -14,7 +14,7 @@ Stdlib only (CI runs `python3 tests/x.py`, no pip install).
 Run:  python tests/test_feature_flag_drift.py
 
 provenance: session 975732da, 2026-07-05 — roadmap item 8
-(proposals/2026-07-05-feature-improvement-roadmap.md); the drift risk is
+(proposals/resolved/P-2026-038-feature-improvement-roadmap.md); the drift risk is
 documented in both files but was enforced by nothing.
 """
 import importlib.machinery

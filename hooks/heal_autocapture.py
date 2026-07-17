@@ -12,7 +12,7 @@ Dark by default: gated by the SOFT flag observability.heal_autocapture (default
 false, ADR 0008). Fail-open and ASCII-safe: any error -> exit 0, never blocks a tool.
 
 provenance: 2026-06-26, session 689f12f4 - followup db6750
-(proposal 2026-06-21-auto-healer-v2-locked-items.md, item 1).
+(proposal P-2026-005, item 1).
 """
 import datetime as dt
 import hashlib
@@ -108,7 +108,7 @@ def _repo_key(cwd):
 
 def main() -> int:
     # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
-    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    # (proposal P-2026-017).
     for _s in (sys.stdout, sys.stderr):
         try:
             _s.reconfigure(encoding="utf-8", errors="replace")

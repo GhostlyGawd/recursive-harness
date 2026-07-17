@@ -34,7 +34,7 @@ SIGNALS = re.compile(
 
 def main() -> int:
     # cp1252-safe stdout/stderr: degrade non-ASCII to '?' instead of crashing mid-print
-    # (proposal 2026-06-23-utf8-stdout-all-entrypoints).
+    # (proposal P-2026-017).
     for _s in (sys.stdout, sys.stderr):
         try:
             _s.reconfigure(encoding="utf-8", errors="replace")
