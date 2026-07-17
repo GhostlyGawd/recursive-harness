@@ -50,7 +50,6 @@ import datetime
 import io
 import json
 import os
-from pathlib import Path
 import posixpath
 import re
 import shutil
@@ -2458,23 +2457,20 @@ def proposal_status(text):
 
 
 def proposal_record_files():
-    """Lifecycle records only, without following checkout-controlled symlinks."""
+    """Lifecycle records from the root-bound inventory and validated generated index."""
     files = []
     for lifecycle in ("active", "resolved"):
-        folder = Path(ROOT, "proposals", lifecycle)
-        if not folder.is_dir() or folder.is_symlink():
-            continue
-        for path in folder.glob("*.md"):
-            if (re.fullmatch(r"P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md", path.name)
-                    and path.is_file() and not path.is_symlink()):
-                files.append(str(path))
-        for path in folder.glob("*/README.md"):
-            bundle = path.parent
-            if (re.fullmatch(r"P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*", bundle.name)
-                    and bundle.is_dir() and not bundle.is_symlink()
-                    and path.is_file() and not path.is_symlink()):
-                files.append(str(path))
-    return sorted(files)
+        for path in listfiles(f"proposals/{lifecycle}", ".md"):
+            if re.fullmatch(r"P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md",
+                            os.path.basename(path)):
+                files.append(path)
+    index = read(os.path.join(ROOT, "proposals", "INDEX.md"))
+    bundle_link = re.compile(
+        r"\]\(((?:active|resolved)/P-\d{4}-\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*/README\.md)\)"
+    )
+    for match in bundle_link.finditer(index):
+        files.append(os.path.join(ROOT, "proposals", *match.group(1).split("/")))
+    return sorted(set(files))
 
 
 def mission_proposals(comps, name_index):
@@ -2484,9 +2480,12 @@ def mission_proposals(comps, name_index):
     items = []
     for f in proposal_record_files():
         text = read(f)
+        basename = os.path.basename(f)
+        record_name = (os.path.basename(os.path.dirname(f)) if basename == "README.md"
+                       else os.path.splitext(basename)[0])
         items.append({
             "path": rel(f),
-            "name": os.path.splitext(os.path.basename(f))[0],
+            "name": record_name,
             "status": proposal_status(text),
             "concerns": sorted(_associate_text(text, comps, name_index)),
         })
