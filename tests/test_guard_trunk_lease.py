@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(ROOT, "hooks", "guard_trunk_lease.py")
@@ -35,7 +36,7 @@ def run(payload, env_extra=None):
     if env_extra:
         env.update(env_extra)
     p = subprocess.run([sys.executable, HOOK], input=json.dumps(payload),
-                       capture_output=True, text=True, env=env)
+                       capture_output=True, text=True, env=env, timeout=10)
     return p.returncode, p.stdout, p.stderr
 
 
@@ -322,6 +323,27 @@ try:
     run(pl("Bash", {"command": "git add -A"}, r, sid="A", event="PostToolUse"))  # add's PostToolUse re-stamps
     rc, _, err = run(pl("Bash", {"command": "git commit -m x"}, r, sid="A"))     # commit's PreToolUse check
     check("after `git add` re-stamps, the follow-up commit is ALLOWED (no self-block)", rc == 0, f"rc={rc} err={err[:60]}")
+
+    # --- 18. SECURITY (2026-07-17 CodeQL py/redos alerts 2 + 3): repeated `-c`
+    #         options in hook-controlled input must classify in linear time. The old regex
+    #         could backtrack exponentially over both unquoted and empty-quoted values. ---
+    r = fresh()
+    stamp(r, "A")
+    git(["checkout", "-q", "-b", "redos"], r)
+    started = time.monotonic()
+    rc, _, _ = run(pl("Bash", {"command": "git " + "-c ! " * 5000 + "status"}, r, sid="A"))
+    elapsed = time.monotonic() - started
+    check("adversarial unquoted git options stay bounded and read-only",
+          rc == 0 and elapsed < 8, f"rc={rc} elapsed={elapsed:.3f}s")
+    started = time.monotonic()
+    rc, _, err = run(pl("Bash", {"command": "git " + '-c "" ' * 5000 + "commit"}, r, sid="A"))
+    elapsed = time.monotonic() - started
+    check("adversarial quoted git options stay bounded and mutating",
+          blocked(rc, err) and elapsed < 8, f"rc={rc} elapsed={elapsed:.3f}s")
+    rc, _, _ = run(pl("Bash", {"command": 'echo "git commit"'}, r, sid="A"))
+    check("quoted git text is inert, not a mutating command", rc == 0, f"rc={rc}")
+    rc, _, err = run(pl("Bash", {"command": "echo ok; git commit -m x"}, r, sid="A"))
+    check("compound command still finds a real git mutator", blocked(rc, err), f"rc={rc}")
 
 finally:
     for d in REPOS:
