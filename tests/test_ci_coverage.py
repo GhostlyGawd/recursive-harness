@@ -153,15 +153,30 @@ referenced = referenced_in_ci(ci_text)
 # Supply-chain fence (2026-07-17 security review): remote Actions are immutable
 # commit pins with a human-readable release comment, and Dependabot owns updates.
 expected_action_names = {"actions/checkout", "actions/setup-python"}
-action_refs = {
-    match.group(1): (match.group(2), match.group(3))
-    for match in re.finditer(r"uses:\s*([^@\s]+)@([^\s#]+)\s+#\s+(v[^\s]+)", ci_text)
-    if not match.group(1).startswith("./")
-}
+action_refs = {}
+for raw_line in ci_text.splitlines():
+    line = raw_line.strip()
+    if not line.startswith("- uses: "):
+        continue
+    declaration, separator, comment = line.partition("#")
+    target = declaration.removeprefix("- uses: ").strip()
+    name, at, sha = target.partition("@")
+    if name.startswith("./"):
+        continue
+    if at and separator:
+        action_refs[name] = (sha.strip(), comment.strip())
+
+
+def is_semver_comment(value):
+    parts = value.removeprefix("v").split(".")
+    return value.startswith("v") and len(parts) == 3 and all(part.isdigit() for part in parts)
+
+
 check(
     "remote GitHub Actions use reviewed immutable SHAs with release comments",
     set(action_refs) == expected_action_names
-    and all(re.fullmatch(r"[0-9a-f]{40}", sha) and re.fullmatch(r"v\d+\.\d+\.\d+", version)
+    and all(len(sha) == 40 and all(char in "0123456789abcdef" for char in sha)
+            and is_semver_comment(version)
             for sha, version in action_refs.values()),
     f"got {action_refs}; expected named actions with 40-hex pins + semver comments",
 )
