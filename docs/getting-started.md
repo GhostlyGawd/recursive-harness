@@ -20,18 +20,17 @@ cd recursive-harness
 ./install.sh
 ```
 
-The default installer does not change `~/.claude`. It installs this checkout's
-`post-merge` Git hook, prints the siloed setup path, and runs the harness linter. The Git
-hook re-materializes account settings after the canonical template changes.
-
-The current installer owns this checkout's `post-merge` hook and replaces its contents.
-If the checkout already has a custom `post-merge` hook, preserve and integrate that logic
-before running the installer. Hook coexistence is tracked in the recommended roadmap.
+The default installer does not change `~/.claude`. It installs a managed `post-merge`
+dispatcher, prints the siloed setup path, and runs the harness linter. The harness-owned
+task re-materializes account settings after the canonical template changes. If a custom
+`post-merge` hook already exists, the installer preserves it byte-for-byte in
+`post-merge.d/10-existing-post-merge`; both hooks then run in lexical order. A conflicting
+or non-regular hook is refused for manual reconciliation rather than overwritten.
 
 ## 2. Create an account silo
 
 ```bash
-./account-init.sh dev
+./account-init.sh dev --store-account dev
 ```
 
 This creates `.claude-private/accounts/dev/`, links `agents/`, `commands/`, `hooks/`, and
@@ -47,9 +46,11 @@ Account initialization is idempotent. To refresh live settings after a template 
 The existing settings file is backed up before replacement, and optional
 `overrides.json` values are merged last.
 
-The shared session-store owner is currently named `rhen` in `account-init.sh`. Other
-accounts still initialize and run, but automatic cross-account `/resume` sharing is skipped
-until that canonical store exists. Making the owner configurable is a beta follow-up.
+The first initialized account becomes the shared session-store owner unless you select one
+with `--store-account <name>` or `HARNESS_STORE_ACCOUNT`. The choice is persisted in the
+ignored, owner-only `.claude-private/session-store-account` file so later accounts and Git
+hooks use the same store. Existing installations with a populated `rhen/projects` store are
+detected once for backward-compatible migration.
 
 ## 3. Pin the account and verify it
 
@@ -58,7 +59,7 @@ On Bash:
 ```bash
 export CLAUDE_CONFIG_DIR="$PWD/.claude-private/accounts/dev"
 python3 bin/harness doctor
-claude
+./launch.sh dev
 ```
 
 On PowerShell, after running account initialization from Git Bash:
@@ -66,21 +67,24 @@ On PowerShell, after running account initialization from Git Bash:
 ```powershell
 $env:CLAUDE_CONFIG_DIR = (Resolve-Path .\.claude-private\accounts\dev).Path
 python .\bin\harness doctor
-claude
+.\launch.ps1 dev
 ```
 
 `doctor` verifies the loaded config directory, hook parity, Python compilation, ledger
 writability, branch position, and recent eval replay. A different pinned config directory
 means a different brain; fix the launcher rather than editing the generated account files.
 
-Persist the `CLAUDE_CONFIG_DIR` pin in a launcher or shell profile you control. A plain
-`claude` invocation without the pin uses the operating system's default Claude config.
+The launchers validate that the account has settings, export `CLAUDE_CONFIG_DIR`, print the
+selected account/config/checkout to stderr, forward Claude Code arguments, and preserve the
+current working directory. A plain `claude` invocation without the pin uses the operating
+system's default Claude config.
 
 ## 4. Connect another repository
 
 Loading the harness and adding project-local instructions are separate choices.
 
-1. Launch Claude Code in the target repository with the same `CLAUDE_CONFIG_DIR` pin.
+1. From the target repository, invoke `/path/to/recursive-harness/launch.sh dev` on Bash or
+   `& C:\path\to\recursive-harness\launch.ps1 dev` on PowerShell.
 2. If the target needs repository-specific facts, run the harness's project initializer
    from the target root:
 
@@ -127,6 +131,7 @@ keeps account state inside the ignored checkout boundary.
 | Symptom | Likely cause | Resolution |
 | --- | --- | --- |
 | `doctor` reports a different brain | Launcher pinned another `CLAUDE_CONFIG_DIR` | Fix the launcher or export the intended account path |
+| Installer refuses an existing hook | The hook is a symlink/non-file, or a preserved copy conflicts | Reconcile the reported hook paths manually, then rerun `install.sh` |
 | Account links are directories instead of symlinks on Windows | Git Bash copied because native symlinks were unavailable | Enable Developer Mode, remove only the incorrect account silo after backing it up, then rerun initialization |
 | `projects/` is a populated real directory | Sessions diverged before the shared store was linked | Stop live sessions and use `sync-account-sessions.ps1` on Windows or `.sh` on Unix; the sync scripts back up conflicts |
 | Settings do not match the template | Account predates a wiring change | Run `./account-init.sh dev --sync-settings` |

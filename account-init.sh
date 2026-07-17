@@ -23,6 +23,7 @@
 #   ./account-init.sh                          # repair the account named by $CLAUDE_CONFIG_DIR
 #   ./account-init.sh <name>                   # init/repair .claude-private/accounts/<name>
 #   ./account-init.sh [name] --sync-settings   # also (re)generate settings.json (backs up first)
+#   ./account-init.sh <name> --store-account <name>  # choose/persist the shared-store owner
 #   ./account-init.sh --all [--sync-settings]  # repair/sync EVERY account in lock-step (keeps
 #                                              # all profiles' settings.json synced to the template)
 #
@@ -52,14 +53,40 @@ fi
 NAME=""
 SYNC_SETTINGS=0
 ALL=0
-for arg in "$@"; do
-  case "$arg" in
+STORE_ACCOUNT_ARG=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --sync-settings) SYNC_SETTINGS=1 ;;
     --all) ALL=1 ;;
-    -*) echo "unknown flag: $arg" >&2; exit 2 ;;
-    *) NAME="$arg" ;;
+    --store-account)
+      shift
+      [ "$#" -gt 0 ] || { echo "ERROR: --store-account requires a name." >&2; exit 2; }
+      STORE_ACCOUNT_ARG="$1"
+      ;;
+    --store-account=*) STORE_ACCOUNT_ARG="${1#*=}" ;;
+    -*) echo "unknown flag: $1" >&2; exit 2 ;;
+    *)
+      [ -z "$NAME" ] || { echo "ERROR: pass only one account name." >&2; exit 2; }
+      NAME="$1"
+      ;;
   esac
+  shift
 done
+
+valid_account_name() {
+  [ -n "$1" ] || return 1
+  case "$1" in -*|.|*/*|*\\*|*..*|*[!A-Za-z0-9._-]*) return 1 ;; esac
+  return 0
+}
+
+if [ -n "$NAME" ] && ! valid_account_name "$NAME"; then
+  echo "ERROR: invalid account name '$NAME' (non-empty; no '/', '\\', or '..')." >&2
+  exit 2
+fi
+if [ -n "$STORE_ACCOUNT_ARG" ] && ! valid_account_name "$STORE_ACCOUNT_ARG"; then
+  echo "ERROR: invalid store account '$STORE_ACCOUNT_ARG' (non-empty; no '/', '\\', or '..')." >&2
+  exit 2
+fi
 
 # --all: repair/sync EVERY account under .claude-private/accounts/ in one pass, so all
 # profiles stay in lock-step with the canonical template. Drift happens when the template
@@ -74,10 +101,12 @@ if [ "$ALL" -eq 1 ]; then
     acct="$(basename "$d")"
     case "$acct" in -*) echo "  SKIP $acct (account name starts with '-')" >&2; rc=1; continue ;; esac
     echo "========== $acct =========="
+    store_args=()
+    [ -n "$STORE_ACCOUNT_ARG" ] && store_args=(--store-account "$STORE_ACCOUNT_ARG")
     if [ "$SYNC_SETTINGS" -eq 1 ]; then
-      bash "${BASH_SOURCE[0]}" "$acct" --sync-settings || rc=1
+      bash "${BASH_SOURCE[0]}" "$acct" --sync-settings "${store_args[@]}" || rc=1
     else
-      bash "${BASH_SOURCE[0]}" "$acct" || rc=1
+      bash "${BASH_SOURCE[0]}" "$acct" "${store_args[@]}" || rc=1
     fi
   done
   exit $rc
@@ -85,7 +114,6 @@ fi
 
 # Resolve the target account config dir WITHOUT mutating anything outside the silo.
 if [ -n "$NAME" ]; then
-  case "$NAME" in */*|*..*) echo "ERROR: invalid account name '$NAME' (no '/' or '..')." >&2; exit 2 ;; esac
   TARGET="$REPO_DIR/.claude-private/accounts/$NAME"
   mkdir -p "$TARGET"   # safe: inside the silo by construction
 elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
@@ -112,6 +140,48 @@ fi
 chmod 700 "$PRIV" "$(dirname "$TARGET")" "$TARGET" 2>/dev/null || true
 if [ -d "$REPO_DIR/state" ]; then chmod 700 "$REPO_DIR/state" 2>/dev/null || true; fi
 
+# provenance: 2026-07-17 security/productization review — remove maintainer-specific defaults.
+# Resolve and validate the shared-store choice before creating links or settings. Once a
+# store is in use, changing it is a migration (sync + cutover), not an initialization flag.
+ACCT_NAME="$(basename "$TARGET")"
+STORE_CONFIG="$PRIV/session-store-account"
+STORE_ACCOUNT=""
+REQUESTED_STORE="${STORE_ACCOUNT_ARG:-${HARNESS_STORE_ACCOUNT:-}}"
+if [ -L "$STORE_CONFIG" ] || { [ -e "$STORE_CONFIG" ] && [ ! -f "$STORE_CONFIG" ]; }; then
+  echo "REFUSING: $STORE_CONFIG is not a regular file." >&2
+  exit 1
+fi
+if [ -f "$STORE_CONFIG" ]; then
+  STORE_ACCOUNT="$(cat "$STORE_CONFIG")"
+  if ! valid_account_name "$STORE_ACCOUNT"; then
+    echo "ERROR: invalid shared-store account in $STORE_CONFIG." >&2
+    exit 2
+  fi
+  if [ -n "$REQUESTED_STORE" ] && [ "$REQUESTED_STORE" != "$STORE_ACCOUNT" ]; then
+    echo "REFUSING: shared-store owner is already '$STORE_ACCOUNT'; requested '$REQUESTED_STORE'." >&2
+    echo "Consolidate session stores and links before changing $STORE_CONFIG." >&2
+    exit 1
+  fi
+elif [ -n "$REQUESTED_STORE" ]; then
+  STORE_ACCOUNT="$REQUESTED_STORE"
+elif [ -d "$REPO_DIR/.claude-private/accounts/rhen/projects" ]; then
+  # One-time compatibility migration for pre-config installs; new installs choose the
+  # first account they initialize instead of inheriting a maintainer-specific name.
+  STORE_ACCOUNT="rhen"
+else
+  STORE_ACCOUNT="$ACCT_NAME"
+fi
+if ! valid_account_name "$STORE_ACCOUNT"; then
+  echo "ERROR: invalid shared-store account '$STORE_ACCOUNT' from CLI, env, or $STORE_CONFIG." >&2
+  exit 2
+fi
+if [ ! -f "$STORE_CONFIG" ]; then
+  STORE_CONFIG_TMP="$STORE_CONFIG.tmp.$$"
+  printf '%s\n' "$STORE_ACCOUNT" > "$STORE_CONFIG_TMP"
+  chmod 600 "$STORE_CONFIG_TMP" 2>/dev/null || true
+  mv "$STORE_CONFIG_TMP" "$STORE_CONFIG"
+fi
+
 echo "Account dir   : $TARGET"
 echo "Repo (native) : $REPO_NATIVE"
 
@@ -135,14 +205,27 @@ link skills
 
 # --- Shared session store: every account reads/writes ONE projects/ so /resume
 # sees sessions across accounts (ADR 0004). Unlike the four brain dirs (which link
-# to the TRUNK), projects/ links to the canonical store in the rhen account; rhen
-# itself owns the real directory. New/empty accounts auto-link here. An account
+# to the TRUNK), projects/ links to a locally selected canonical account. The choice
+# is persisted inside the ignored/private silo so hooks and later runs agree. New/empty accounts auto-link here. An account
 # whose projects/ is already a populated REAL dir is left untouched with a warning:
 # consolidating it needs a lossless merge + a cutover that can't run while a session
 # of that account is live — see ./sync-account-sessions.sh.
-STORE_ACCOUNT="rhen"
 STORE="$REPO_DIR/.claude-private/accounts/$STORE_ACCOUNT/projects"
-ACCT_NAME="$(basename "$TARGET")"
+STORE_ACCOUNT_DIR="$(dirname "$STORE")"
+if [ -d "$STORE_ACCOUNT_DIR" ]; then
+  STORE_ACCOUNT_DIR_REAL="$(cd "$STORE_ACCOUNT_DIR" && pwd)"
+  case "$STORE_ACCOUNT_DIR_REAL/" in
+    "$PRIV/"*) : ;;
+    *) echo "REFUSING: canonical store account resolves outside '$PRIV'." >&2; exit 1 ;;
+  esac
+fi
+if [ -L "$STORE" ] || { [ -e "$STORE" ] && [ ! -d "$STORE" ]; }; then
+  echo "REFUSING: canonical store '$STORE' must be a real directory." >&2
+  exit 1
+fi
+if [ "$ACCT_NAME" = "$STORE_ACCOUNT" ]; then
+  mkdir -p "$STORE"
+fi
 if [ -d "$STORE" ]; then chmod 700 "$STORE" 2>/dev/null || true; fi
 echo "Session store:"
 if [ "$ACCT_NAME" = "$STORE_ACCOUNT" ]; then
@@ -169,11 +252,17 @@ fi
 SETTINGS="$TARGET/settings.json"
 TEMPLATE="$REPO_DIR/templates/account-settings.json"
 OVERRIDES="$TARGET/overrides.json"
+for account_file in "$SETTINGS" "$OVERRIDES"; do
+  if [ -L "$account_file" ] || { [ -e "$account_file" ] && [ ! -f "$account_file" ]; }; then
+    echo "REFUSING: account file '$account_file' must be a regular file." >&2
+    exit 1
+  fi
+done
 if [ -e "$SETTINGS" ] && [ "$SYNC_SETTINGS" -eq 0 ]; then
   echo "settings.json : exists — left as-is (pass --sync-settings to regenerate)."
 else
   if [ -e "$SETTINGS" ]; then
-    bak="$SETTINGS.pre-sync.$(date +%s)"
+    bak="$SETTINGS.pre-sync.$(date +%s).$$"
     cp "$SETTINGS" "$bak"
     chmod 600 "$bak" 2>/dev/null || true
     echo "settings.json : backed up -> $(basename "$bak")"
@@ -196,9 +285,16 @@ def deep_merge(base, over):
 if os.path.exists(overrides_path):
     deep_merge(data, json.load(open(overrides_path, encoding="utf-8")))
     print("  merged overrides.json")
-with open(out_path, "w", encoding="utf-8") as f:
+tmp_path = f"{out_path}.tmp.{os.getpid()}"
+with open(tmp_path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
+try:
+    os.chmod(tmp_path, 0o600)
+    os.replace(tmp_path, out_path)
+finally:
+    if os.path.exists(tmp_path):
+        os.unlink(tmp_path)
 print("  wrote settings.json")
 PY
 fi

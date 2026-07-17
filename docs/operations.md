@@ -91,16 +91,26 @@ python3 bin/harness ask path command:retro skill:routing-learnings
 
 ## Account and settings maintenance
 
-After pulling a change to `templates/account-settings.json`, the installed `post-merge` Git
-hook runs:
+After pulling a change to `templates/account-settings.json`, the harness task under the
+installed `post-merge.d` dispatcher runs:
 
 ```bash
 ./account-init.sh --all --sync-settings
 ```
 
-Run that command manually if the hook was not installed or reports a failure. Each live
-settings file is backed up before regeneration. Put per-account deviations in the ignored
-`overrides.json`, not in generated `settings.json`.
+Run that command manually if the hook was not installed or reports a failure. The dispatcher
+preserves a pre-existing custom hook and reports the name/status of any failing child hook.
+Each live settings file is backed up before regeneration. Put per-account deviations in the
+ignored `overrides.json`, not in generated `settings.json`.
+
+Choose the canonical session-store owner explicitly on first initialization:
+
+```bash
+./account-init.sh dev --store-account dev
+```
+
+The ignored `.claude-private/session-store-account` file persists the selection. Override it
+deliberately with the same flag or `HARNESS_STORE_ACCOUNT`; do not hand-edit account links.
 
 If accounts have separate populated `projects/` session stores, stop all affected Claude
 Code sessions before consolidation:
