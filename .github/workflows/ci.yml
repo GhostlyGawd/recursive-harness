@@ -63,6 +63,7 @@ jobs:
           python3 tests/test_harness_state_dir.py
           python3 tests/test_command_refresh_recipe.py
           python3 tests/test_settings_parity.py
+          python3 tests/test_distribution.py
           python3 tests/test_ci_coverage.py
           python3 tests/test_followup.py
           python3 tests/test_gc_rollup.py
@@ -106,3 +107,18 @@ jobs:
           python3 cartograph/test_spec_gate.py
           python3 cartograph/test_mission.py
           python3 cartograph/test_atlas.py
+
+  windows-distribution:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with: {python-version: "3.12"}
+      - name: Installer and launcher smoke tests
+        run: python tests/test_distribution.py
+      - name: Session-store cutover under Windows PowerShell 5.1
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\test-sync-account-sessions.ps1 -Runtime powershell
+      - name: Session-store cutover under PowerShell 7
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File tests\test-sync-account-sessions.ps1 -Runtime pwsh

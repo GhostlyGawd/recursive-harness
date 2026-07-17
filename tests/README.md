@@ -2,9 +2,10 @@
 
 ## Identity
 
-The tests for the harness's own machinery: 20 `test_*.py` files (hooks and
+The tests for the harness's own machinery: direct `test_*.py` scripts (hooks and
 guards, the bin/harness CLI, settings wiring parity, ledgers, the reaper) plus
-one PowerShell test (`test-sync-account-sessions.ps1`, Windows-only). This
+distribution smoke coverage and one PowerShell test (`test-sync-account-sessions.ps1`,
+Windows-only). This
 directory holds HARNESS-level tests; subsystem tests are colocated with their
 subsystem (fleet/test_*.py, mission_control/test_*.py, cartograph/test_*.py,
 skills/auto-healer/, skills/specialization/) — all of them one CI battery.
@@ -35,10 +36,9 @@ same way.
   is the only escape hatch (currently one entry: fleet/test_mcp.py, needs the
   `mcp` SDK). A `test_*.py` under proposals/ is staging surface — it
   graduates into ci.yml when it moves out.
-- The `.ps1` test is invisible to the coverage guard (it discovers `test_*.py`
-  only) and CI does not run it (Windows session-store/symlink semantics) —
-  re-verify it manually on any change to the session-store cutover tools
-  (ADR 0004).
+- The `.ps1` test is invisible to the Python coverage guard, so the Windows CI job wires it
+  explicitly under both Windows PowerShell 5.1 and PowerShell 7. Re-run both runtimes on any
+  change to the session-store cutover tools (ADR 0004).
 
 ## Operations (how to extend correctly)
 

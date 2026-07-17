@@ -2,13 +2,15 @@
 
 ## Identity
 
-A virtual department: six root-level scripts (no directory of their own) that
+A virtual department: eight root-level scripts (no directory of their own) that
 install, wire, and synchronize the harness. `install.sh` (installer; the
 global `~/.claude` path is demoted to `--global-legacy`), `account-init.sh`
 (makes a fleet account's CLAUDE_CONFIG_DIR a complete, siloed view of this
 repo: real symlinks for agents/commands/hooks/skills + settings.json
 materialized from templates/), `project-init.sh` (lets a foreign project
 CONSUME the harness via a thin CLAUDE.md contract — never forking the brain),
+`launch.sh` / `launch.ps1` (validate and visibly select one account before
+starting Claude Code without changing the working directory),
 `statusline-command.sh` (the fleet HUD: context % + 5h/7d rate-limit usage),
 and `sync-account-sessions.sh` / `.ps1` (one-time lossless cutover that
 consolidates a silo's session store into the shared canonical one).
@@ -33,6 +35,15 @@ stock Windows PowerShell).
 - **`--sync-settings`** regenerates the live silo settings.json FROM
   `templates/account-settings.json` (backs up first) — wiring changes deploy
   through the template, never by editing a live silo file (ADR 0004).
+- **Shared-store ownership:** `--store-account <name>` or
+  `HARNESS_STORE_ACCOUNT` selects the canonical transcript store. The choice
+  persists in ignored `.claude-private/session-store-account`; a new install
+  defaults to its first account, while an existing `rhen/projects` layout is
+  detected once for compatibility.
+- **Launch:** `./launch.sh <account>` and `.\launch.ps1 <account>` refuse an
+  uninitialized silo, print the account/config/checkout, export
+  `CLAUDE_CONFIG_DIR`, forward arguments, and retain the caller's working
+  directory.
 - **Code vs wiring:** merged hook-code fixes go live when the trunk working
   tree updates (the silo hooks/ is a symlink); distribution scripts are only
   involved when WIRING or silo STRUCTURE changes.
@@ -51,10 +62,10 @@ stock Windows PowerShell).
 - Symlink creation on Git-Bash/MSYS requires `MSYS=winsymlinks:nativestrict`
   or `ln -s` SILENTLY COPIES and forks the brain — verify with `ls -la`
   (ADR 0004, "Maintaining the symlinks").
-- The `.ps1` must stay ASCII-only (Windows PowerShell 5.1 misparses UTF-8) and
-  is verified by `tests/test-sync-account-sessions.ps1` under both PS 5.1 and
-  pwsh 7 — MANUALLY; CI does not run it (test discovery finds only
-  `test_*.py`; the test is Windows/symlink-specific).
+- The session-sync `.ps1` and its test must stay ASCII-only (Windows PowerShell
+  5.1 misparses UTF-8). CI runs the test under both Windows PowerShell 5.1 and
+  PowerShell 7; `tests/test_distribution.py` covers hook coexistence,
+  initialization, permissions, idempotency, and both launchers.
 - statusline changes come in two parts. The script itself lives here
   (unlocked) and must tolerate missing/non-numeric JSON fields (the ba54eba
   nit-fix hardened awk inputs). Its WIRING lives in
@@ -67,7 +78,8 @@ stock Windows PowerShell).
   skeleton (pre-ba54eba); a copied "symlink" silently forking the brain
   (MSYS); silos' session stores silently diverging until /resume lost
   sessions (930b021); the bash cutover being unusable on the host it was
-  written for (2d629b2); UTF-8 bytes crashing PS 5.1.
+  written for (2d629b2); UTF-8 bytes crashing PS 5.1; custom `post-merge`
+  logic being silently replaced; and a maintainer-specific shared-store name.
 - The cutover REFUSES when the store isn't a complete superset — a refusal
   is the tool working, not a bug; forked same-path transcripts are backed up
   `.forked.<ts>`, never merged silently.

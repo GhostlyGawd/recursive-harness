@@ -104,11 +104,14 @@ CI, review, OS permissions, and repository trust remain separate controls.
 
 The supported model is a single checkout with per-account silos under
 `.claude-private/accounts/`. Each silo links its procedure directories back to the checkout
-and materializes settings from one portable template. Multiple accounts can share one
-session store after the lossless sync step documented in [Distribution](../DISTRIBUTION.md).
+and materializes settings from one portable template. One locally selected account owns the
+shared session store; the ignored `session-store-account` file keeps that choice stable.
+Multiple populated stores converge through the lossless sync step documented in
+[Distribution](../DISTRIBUTION.md).
 
-Other repositories consume the harness by launching Claude Code with the silo's
-`CLAUDE_CONFIG_DIR`. An optional thin `CLAUDE.md` holds facts unique to the consuming
+Other repositories consume the harness through `launch.sh` or `launch.ps1`, which pins the
+silo's `CLAUDE_CONFIG_DIR` while preserving the target repository as the working directory.
+An optional thin `CLAUDE.md` holds facts unique to the consuming
 repository; reusable procedures return upstream instead of forking the brain.
 
 ## Structural source of truth

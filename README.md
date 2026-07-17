@@ -64,16 +64,16 @@ should use Git Bash with Developer Mode enabled so account links are real symlin
 git clone https://github.com/GhostlyGawd/recursive-harness.git
 cd recursive-harness
 
-./install.sh                 # installs the repo Git hook; changes nothing globally
-./account-init.sh dev        # creates an ignored, per-account config silo
+./install.sh                                  # preserves existing hooks; changes nothing globally
+./account-init.sh dev --store-account dev     # creates an ignored, per-account config silo
 
-export CLAUDE_CONFIG_DIR="$PWD/.claude-private/accounts/dev"
-python3 bin/harness doctor   # verifies wiring and prints exact fixes
-claude
+CLAUDE_CONFIG_DIR="$PWD/.claude-private/accounts/dev" python3 bin/harness doctor
+./launch.sh dev              # pins the account, prints the selection, then starts Claude Code
 ```
 
-To use the harness in another repository, keep `CLAUDE_CONFIG_DIR` pinned when launching
-Claude Code there. Optionally run `project-init.sh` from that project to append a thin,
+To use the harness in another repository, invoke the checkout's `launch.sh` or `launch.ps1`
+from that repository; the launcher keeps the current working directory while pinning the
+selected account. Optionally run `project-init.sh` from that project to append a thin,
 project-specific `CLAUDE.md` contract. The detailed Unix and Windows flows are in
 [Getting started](docs/getting-started.md).
 
