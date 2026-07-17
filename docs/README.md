@@ -7,6 +7,10 @@ Start with the page that matches the job you are doing.
 | [Getting started](getting-started.md) | Install an account silo, launch Claude Code with the correct brain, or connect another repository |
 | [Architecture](architecture.md) | Understand the runtime lifecycle, feedback loops, state flow, trust boundaries, and subsystem ownership |
 | [Operations](operations.md) | Run the daily workflow, diagnose an install, synchronize accounts, query structure, or recover safely |
+| [Product surface](product-surface.md) | Distinguish supported beta interfaces from optional, experimental, internal, and legacy surfaces |
+| [Compatibility and upgrades](compatibility.md) | Check supported runtimes, optional dependencies, and the safe upgrade procedure |
+| [Release checklist](releasing.md) | Evaluate version, security, install, upgrade, publication, and rollback readiness |
+| [Support](../SUPPORT.md) | Prepare a useful sanitized issue or route a sensitive report privately |
 | [Recommended next steps](roadmap.md) | Choose the next product, security, portability, or maintainability investment |
 | [Security policy](../SECURITY.md) | Report a vulnerability privately and understand the security model |
 | [Privacy and local data](../PRIVACY.md) | Understand what is local, what can become public, and how to protect the workspace |
