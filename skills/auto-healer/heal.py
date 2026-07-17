@@ -45,6 +45,8 @@ import sys
 import uuid
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 HEAL_DIR = os.path.join(HARNESS_ROOT, "state", "heal")
 
 LIVE = ("open", "healing", "recurred")  # not-yet-resolved statuses
@@ -70,31 +72,15 @@ def _parse_ts(s):
 
 
 def _append(path: str, rec: dict) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    private_state.append_jsonl(path, rec)
 
 
 def _read(path: str) -> list:
-    if not os.path.exists(path):
-        return []
-    out = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    out.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-    return out
+    return private_state.read_jsonl(path)
 
 
 def _write_all(path: str, recs: list) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        for r in recs:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    private_state.rewrite_jsonl(path, recs)
 
 
 def _repo_root(start: str = "") -> str:

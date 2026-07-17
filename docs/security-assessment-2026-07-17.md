@@ -71,9 +71,10 @@ without a commit.
 1. Enable GitHub secret scanning, push protection, and CodeQL where the repository plan
    supports them.
 2. Pin third-party GitHub Actions to reviewed commit SHAs and add an update mechanism.
-3. Centralize private-state writes so every writer creates directories/files with
-   owner-only permissions, even when `account-init.sh` was not run.
-4. Add privacy-safe retention and redaction controls for correction/heal excerpts.
+3. ~~Centralize privacy-bearing state writes with owner-only permissions, concurrent-safe
+   append, and atomic replacement.~~ Implemented by the private-state hardening change.
+4. ~~Add privacy-safe retention and redaction controls for correction/heal excerpts.~~
+   Implemented with a 30-day soft default and dry-run/apply operator controls.
 5. Decide on a repository-wide license; keep the current scoped license statement until
    that explicit governance decision is made.
 6. Consider requiring one approving review and resolved conversations on `main`.

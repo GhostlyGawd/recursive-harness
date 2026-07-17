@@ -12,23 +12,22 @@ import json
 import os
 import sys
 
+try:
+    from harness_features import flag
+except Exception:
+    def flag(key, default=None):
+        return default
+
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HARNESS_ROOT)
+import private_state
 STATE = os.path.join(HARNESS_ROOT, "state")
 
 
 def _count(name, session):
     path = os.path.join(STATE, name)
-    if not os.path.exists(path):
-        return 0
-    n = 0
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            try:
-                if json.loads(line).get("session") == session:
-                    n += 1
-            except json.JSONDecodeError:
-                continue
-    return n
+    return sum(1 for record in private_state.read_jsonl(path)
+               if record.get("session") == session)
 
 
 def _reap_fleet():
@@ -41,23 +40,39 @@ def _reap_fleet():
         pass
 
 
+def _scrub_private_state():
+    """Best-effort raw-excerpt expiry. Privacy housekeeping must never brick session end."""
+    if not flag("privacy.scrub_on_session_end", True):
+        return
+    try:
+        from privacy_state import DEFAULT_RETENTION_DAYS, scrub_raw_excerpts
+        days = {
+            "corrections.jsonl": flag(
+                "privacy.correction_excerpt_retention_days", DEFAULT_RETENTION_DAYS),
+            "candidates.jsonl": flag(
+                "privacy.failure_excerpt_retention_days", DEFAULT_RETENTION_DAYS),
+        }
+        scrub_raw_excerpts(STATE, retention_days=days, apply=True)
+    except Exception:
+        pass
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0
     session = data.get("session_id", "?")
-    os.makedirs(STATE, exist_ok=True)
-    with open(os.path.join(STATE, "sessions.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-            "session": session,
-            "corrections": _count("corrections.jsonl", session),
-            "predictions": _count("predictions.jsonl", session),
-            "skills_fired": _count("skill_usage.jsonl", session),
-        }) + "\n")
+    private_state.append_jsonl(os.path.join(STATE, "sessions.jsonl"), {
+        "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "session": session,
+        "corrections": _count("corrections.jsonl", session),
+        "predictions": _count("predictions.jsonl", session),
+        "skills_fired": _count("skill_usage.jsonl", session),
+    })
     # reap the fleet event log at this low-contention moment (space reclamation, fail-open)
     _reap_fleet()
+    _scrub_private_state()
     # clean up both per-session retro-nudge flags (stop_retro_gate + stop_cadence_gate)
     for pat in (f"retro_gate_{session}", f"cadence_gate_{session}"):
         for f in glob.glob(os.path.join(STATE, pat)):

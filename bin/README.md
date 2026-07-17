@@ -3,7 +3,7 @@
 ## Identity
 
 One executable: `bin/harness` (Python, run as `python3 bin/harness <sub>`), the
-state-ledger CLI — the kernel's prime directives made runnable. Sixteen
+state-ledger CLI — the kernel's prime directives made runnable. Its
 subcommands in four families: self-knowledge ledgers (predict, outcome, stats,
 corrections, skill-fired, skill-stats, followup, retro-done, gc), the
 enforcement approval verb (approve — records a human's grant and places/revokes
@@ -33,7 +33,9 @@ the approval marker resolves to the guard's root, not the script's (`3618891`).
   state/ ledgers DIRECTLY (e.g. log_skill_use.py appends skill_usage.jsonl;
   `skill-fired` is the CLI entry point to that ledger); the SessionStart banner
   reads its ledgers (calibration %, unscored debt); /retro, /calibrate, /gc,
-  /followups, /retro-backlog are all operated through it.
+  /followups, /retro-backlog are all operated through it. Every privacy-bearing
+  writer shares `private_state.py`; `privacy audit|scrub` inventories or expires
+  out-of-retention raw excerpts without deleting their evidence metadata.
 - Bash ergonomics (skill `harness-pr-ops`): run `bin/harness` on its OWN Bash
   call — chaining it after `git checkout`/`restore` or a file-write makes the
   enforcement guard read the locked `bin/` path token as a write target and

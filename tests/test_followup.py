@@ -52,7 +52,7 @@ def fargs(action, arg="", note="", folded_into="", all=False):
 
 # Redirect the ledger to a temp file so the real one is never touched.
 tmp = tempfile.mkdtemp()
-H.FOLLOWUPS = os.path.join(tmp, "followups.jsonl")
+H.FOLLOWUPS = os.path.join(tmp, "state", "followups.jsonl")
 
 # add -> one open record
 H.cmd_followup(fargs("add", "a symptom of the guard cluster"))
