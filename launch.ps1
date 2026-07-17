@@ -1,4 +1,5 @@
-<# Launch Claude Code with an explicit recursive-harness account silo. #>
+<# Launch Claude Code with an explicit recursive-harness account silo.
+   provenance: 2026-07-17 productization review - replace invisible profile pins. #>
 [CmdletBinding()]
 param(
   [Parameter(Position = 0, Mandatory = $true)][string]$Account,

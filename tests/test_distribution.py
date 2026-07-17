@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Hermetic smoke tests for installation, account initialization, and launchers."""
 
+# provenance: 2026-07-17 security/productization review — reproduce distribution claims.
+
 from __future__ import annotations
 
 import os

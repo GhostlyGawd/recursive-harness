@@ -108,6 +108,8 @@ jobs:
           python3 cartograph/test_mission.py
           python3 cartograph/test_atlas.py
 
+  # provenance: 2026-07-17 security/productization review — make the documented
+  # Windows distribution contract continuously reproducible under both PS runtimes.
   windows-distribution:
     runs-on: windows-latest
     steps:

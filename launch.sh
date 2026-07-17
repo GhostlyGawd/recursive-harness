@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Launch Claude Code with an explicit recursive-harness account silo.
+# provenance: 2026-07-17 productization review — replace invisible shell-profile pins.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

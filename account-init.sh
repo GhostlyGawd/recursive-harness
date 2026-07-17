@@ -140,6 +140,7 @@ fi
 chmod 700 "$PRIV" "$(dirname "$TARGET")" "$TARGET" 2>/dev/null || true
 if [ -d "$REPO_DIR/state" ]; then chmod 700 "$REPO_DIR/state" 2>/dev/null || true; fi
 
+# provenance: 2026-07-17 security/productization review — remove maintainer-specific defaults.
 # Resolve and validate the shared-store choice before creating links or settings. Once a
 # store is in use, changing it is a migration (sync + cutover), not an initialization flag.
 ACCT_NAME="$(basename "$TARGET")"
