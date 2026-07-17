@@ -43,7 +43,7 @@ paths, coordinate concurrent worktrees, record selected local signals, and surfa
 nudges. Skills, commands, and fresh-context agents do the reasoning. Lint, tests,
 evaluations, and Cartograph check the resulting change before it becomes durable memory.
 
-![Claude Code events flow through hooks and procedures into private state, review gates, and durable repository memory](brand/applications/system-map.svg)
+![Claude Code events flow through hooks and procedures into private state, review gates, and durable repository memory](brand/applications/system-map-v2.svg)
 
 | Loop | When it runs | Durable result |
 | --- | --- | --- |
