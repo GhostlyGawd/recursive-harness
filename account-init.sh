@@ -29,6 +29,11 @@
 # provenance: session 56295237, 2026-06-13 — fleet-config silo restructure (Stage 1).
 set -euo pipefail
 
+# Account settings, session transcripts, and local harness ledgers may contain prompt
+# excerpts and machine paths. New files created by this installer must be owner-only;
+# explicit chmod calls below also tighten the containing directories when possible.
+umask 077
+
 # Force REAL (native) symlinks on Windows/Git-Bash. Default MSYS `ln -s` silently deep-COPIES
 # a directory, which would defeat the entire point (each account would diverge from the repo).
 # `nativestrict` fails loudly instead of copying if symlink privilege is missing (enable
@@ -101,6 +106,12 @@ if [ "$TARGET" = "$(cd "$HOME" 2>/dev/null && pwd)/.claude" ]; then
   echo "REFUSING: target resolves to ~/.claude (global config). Aborting." >&2; exit 1
 fi
 
+# The directory boundary protects existing contents too, including state files that
+# may have been created under a more permissive process umask. chmod can be advisory
+# on some Windows filesystems, so PRIVACY.md also calls out the host ACL boundary.
+chmod 700 "$PRIV" "$(dirname "$TARGET")" "$TARGET" 2>/dev/null || true
+if [ -d "$REPO_DIR/state" ]; then chmod 700 "$REPO_DIR/state" 2>/dev/null || true; fi
+
 echo "Account dir   : $TARGET"
 echo "Repo (native) : $REPO_NATIVE"
 
@@ -132,6 +143,7 @@ link skills
 STORE_ACCOUNT="rhen"
 STORE="$REPO_DIR/.claude-private/accounts/$STORE_ACCOUNT/projects"
 ACCT_NAME="$(basename "$TARGET")"
+if [ -d "$STORE" ]; then chmod 700 "$STORE" 2>/dev/null || true; fi
 echo "Session store:"
 if [ "$ACCT_NAME" = "$STORE_ACCOUNT" ]; then
   echo "  ok    projects/ (this account OWNS the canonical store)"
@@ -163,6 +175,7 @@ else
   if [ -e "$SETTINGS" ]; then
     bak="$SETTINGS.pre-sync.$(date +%s)"
     cp "$SETTINGS" "$bak"
+    chmod 600 "$bak" 2>/dev/null || true
     echo "settings.json : backed up -> $(basename "$bak")"
   fi
   python3 - "$TEMPLATE" "$SETTINGS" "$REPO_NATIVE" "$OVERRIDES" <<'PY'
@@ -189,5 +202,9 @@ with open(out_path, "w", encoding="utf-8") as f:
 print("  wrote settings.json")
 PY
 fi
+
+for private_file in "$SETTINGS" "$OVERRIDES"; do
+  if [ -f "$private_file" ]; then chmod 600 "$private_file" 2>/dev/null || true; fi
+done
 
 echo "Done. Account '$(basename "$TARGET")' is a complete, siloed view of the harness."
