@@ -1,6 +1,0 @@
-{
-  "date": "2026-07-05",
-  "category": "enforcement-hooks",
-  "source_session": "975732da",
-  "origin": "memory/calibration/notes.md 2026-06-24: enforcement-hooks predictions ran 0% hit at ~72% claimed; Guard-B concurrent-session named as a missing corpus floor. Added via roadmap item 6 (proposals/resolved/P-2026-038-feature-improvement-roadmap.md)."
-}

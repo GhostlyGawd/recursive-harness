@@ -138,12 +138,24 @@ the product topology.
 
 ### 11. Clarify external repository trust
 
+**Delivered in P-2026-042:** distributed entries now name reviewed full commit
+SHAs. Materialization checks out and verifies the detached revision, rejects
+traversal/symlink-parent escapes, and removes failed partial clones. Explicit
+`development: true` remains available but is documented as non-distribution-safe.
+
 `worktree-repos.json` currently resolves configured repositories from a local primary
 checkout or the remote default branch. Add an optional immutable ref and verification mode
 for reproducible environments while retaining an explicit development mode for live local
 repos.
 
 ### 12. Add end-to-end operator scenarios
+
+**Delivered in P-2026-042:** a disposable-clone black-box journey covers install,
+account init, Doctor, project contract idempotency, predict/outcome/Scorecard,
+settings backup, uninstall retention, and rollback retention. Linux, macOS, and
+the exact Git 2.39.0 lower bound run it continuously; existing guard tests retain
+the multi-session/worktree conflict coverage. Model-backed replay remains a
+documented human release acceptance because CI must not invoke Claude.
 
 Keep unit tests, but add a small set of black-box stories:
 

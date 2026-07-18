@@ -57,7 +57,7 @@ def test_packaging_scaffold_present():
     pyproject = open(os.path.join(_HERE, "pyproject.toml"), encoding="utf-8").read()
     assert 'name = "agent-mail"' in pyproject
     assert "dependencies = []" in pyproject          # core stays dependency-free
-    assert 'mcp = ["mcp>=1.0"]' in pyproject          # MCP SDK is an OPTIONAL extra
+    assert 'mcp = ["mcp>=1.28,<2"]' in pyproject      # MCP v1 SDK is an OPTIONAL extra
     assert 'include = ["private_state.py"]' in pyproject
 
 

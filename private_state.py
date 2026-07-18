@@ -8,6 +8,7 @@ explicitly supplied private root; traversal and symlink escapes are refused.
 provenance: 2026-07-17, user-approved security/privacy roadmap implementation.
 """
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -46,6 +47,14 @@ _VALUE_PATTERNS = (
 _THREAD_LOCKS = {}
 _THREAD_LOCKS_GUARD = threading.Lock()
 _REPLACE_RETRIES = 5
+
+
+def safe_filename_id(value, prefix="id"):
+    """Map an external identifier to one path-component-safe, stable value."""
+    text = value if isinstance(value, str) else ""
+    digest = hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()
+    safe_prefix = "".join(char for char in str(prefix) if char.isalnum() or char in "_-") or "id"
+    return f"{safe_prefix}-{digest}"
 
 
 def _thread_lock(path):

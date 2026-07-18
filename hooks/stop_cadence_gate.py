@@ -98,10 +98,11 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
     session = data.get("session_id", "?")
+    session_file_id = private_state.safe_filename_id(session, "session")
     # Don't double-nudge: if the per-session correction gate already fired, skip.
-    if os.path.exists(os.path.join(STATE, f"retro_gate_{session}")):
+    if os.path.exists(os.path.join(STATE, f"retro_gate_{session_file_id}")):
         return 0
-    gate_flag = os.path.join(STATE, f"cadence_gate_{session}")  # not `flag`: that name is the feature reader
+    gate_flag = os.path.join(STATE, f"cadence_gate_{session_file_id}")  # not `flag`: that name is the feature reader
     if os.path.exists(gate_flag):
         return 0
     ref = _last_retro_epoch()

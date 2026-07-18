@@ -66,15 +66,18 @@ def nonempty_lines(path: str) -> int:
 def frontmatter(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
         text = f.read()
-    m = re.match(r"\A---\n(.*?)\n---\n", text, re.DOTALL)
     fm: dict[str, str] = {}
-    if m:
+    end = text.find("\n---\n", 4) if text.startswith("---\n") else -1
+    if end >= 0:
         key = None
-        for line in m.group(1).splitlines():
-            km = re.match(r"^([A-Za-z_-]+):\s*(.*)$", line)
-            if km:
-                key = km.group(1).strip()
-                fm[key] = km.group(2).strip().strip('"')
+        for line in text[4:end].splitlines():
+            candidate, separator, value = line.partition(":")
+            valid_key = bool(candidate) and all(
+                char.isalpha() or char in "_-" for char in candidate
+            )
+            if separator and valid_key:
+                key = candidate
+                fm[key] = value.strip().strip('"')
             elif key and line.startswith((" ", "\t")):
                 fm[key] += " " + line.strip()
     return fm

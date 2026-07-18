@@ -182,8 +182,83 @@ class Graph:
 
 def frontmatter(text):
     """Return the YAML-ish frontmatter block (between leading --- fences), or ''."""
-    m = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
-    return m.group(1) if m else ""
+    if not text.startswith("---\n"):
+        return ""
+    end = text.find("\n---", 4)
+    return text[4:end] if end >= 0 else ""
+
+
+def _identifier_names(text, suffix, allowed):
+    """Return identifier stems immediately before suffix using a linear scan."""
+    names = set()
+    search_at = 0
+    while True:
+        suffix_at = text.find(suffix, search_at)
+        if suffix_at < 0:
+            return names
+        start = suffix_at
+        while start > 0 and text[start - 1] in allowed:
+            start -= 1
+        if start < suffix_at:
+            names.add(text[start:suffix_at])
+        search_at = suffix_at + len(suffix)
+
+
+def _strip_html_comments(text):
+    """Remove complete HTML comments without a backtracking expression."""
+    chunks = []
+    cursor = 0
+    while True:
+        start = text.find("<!--", cursor)
+        if start < 0:
+            chunks.append(text[cursor:])
+            return "".join(chunks)
+        end = text.find("-->", start + 4)
+        if end < 0:
+            chunks.append(text[cursor:])
+            return "".join(chunks)
+        chunks.append(text[cursor:start])
+        chunks.append(" ")
+        cursor = end + 3
+
+
+def _python_name(command):
+    names = _identifier_names(command, ".py", set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"))
+    return sorted(names)[0] if names else None
+
+
+def _has_read_call(line):
+    if any(token in line for token in ("json.load(", "read_jsonl(", "_count(")):
+        return True
+    cursor = 0
+    while True:
+        start = line.find("_read", cursor)
+        if start < 0:
+            return False
+        end = start + len("_read")
+        while end < len(line) and (line[end].isalnum() or line[end] == "_"):
+            end += 1
+        if end < len(line) and line[end] == "(":
+            return True
+        cursor = start + 1
+
+
+def _identifiers(text):
+    found = set()
+    current = []
+    for char in text:
+        if char.isalnum() or char == "_":
+            current.append(char)
+        elif current:
+            token = "".join(current)
+            if token[0].isalpha() or token[0] == "_":
+                found.add(token)
+            current = []
+    if current:
+        token = "".join(current)
+        if token[0].isalpha() or token[0] == "_":
+            found.add(token)
+    return found
 
 
 def _split_top_commas(s):
@@ -239,9 +314,8 @@ def parse_binding(fm):
     i, n = 0, len(lines)
     while i < n:
         line = lines[i]
-        m = re.match(r"^(spec|intent|targets|verified_by|status):\s*(.*)$", line)
-        if m:
-            key, val = m.group(1), m.group(2)
+        key, separator, val = line.partition(":")
+        if separator and key in {"spec", "intent", "targets", "verified_by", "status"}:
             if key == "spec":
                 b["slug"] = val.strip().strip("'\"")
             elif key == "intent":
@@ -263,19 +337,20 @@ def parse_binding(fm):
                     continue
                 if not ln.startswith((" ", "\t")):
                     break  # back to a top-level key -> requirements block done
-                item = re.match(r"^\s*-\s*id:\s*(.+)$", ln)
-                if item:
-                    cur = {"id": item.group(1).strip().strip("'\""),
+                item_text = ln.strip()
+                item_key, item_separator, item_value = item_text[1:].strip().partition(":") if item_text.startswith("-") else ("", "", "")
+                if item_separator and item_key.strip() == "id" and item_value.strip():
+                    cur = {"id": item_value.strip().strip("'\""),
                            "ears": "", "verified_by": []}
                     b["requirements"].append(cur)
                     i += 1
                     continue
-                fld = re.match(r"^\s*(ears|verified_by):\s*(.*)$", ln)
-                if fld and cur is not None:
-                    if fld.group(1) == "ears":
-                        cur["ears"] = fld.group(2).strip().strip("'\"")
+                field, field_separator, field_value = ln.strip().partition(":")
+                if field_separator and field in {"ears", "verified_by"} and cur is not None:
+                    if field == "ears":
+                        cur["ears"] = field_value.strip().strip("'\"")
                     else:
-                        cur["verified_by"] = _yaml_list(fld.group(2))
+                        cur["verified_by"] = _yaml_list(field_value)
                 i += 1
             continue
         i += 1
@@ -304,11 +379,36 @@ def provenance_blocks(text):
     # any `provenance:` declaration (frontmatter, a trailing line, or mid-line) - a
     # superset of the old fm / first-1500-chars scan, so nothing it caught is lost
     blocks += re.findall(r"(?i)provenance:[^\n]*", text)
-    # <!-- provenance: ... --> comments (may span lines)
-    blocks += [m.group(1) for m in re.finditer(r"<!--\s*provenance:(.*?)-->", text, re.S | re.I)]
+    # <!-- provenance: ... --> comments (may span lines), scanned linearly.
+    cursor = 0
+    while True:
+        start = text.find("<!--", cursor)
+        if start < 0:
+            break
+        end = text.find("-->", start + 4)
+        if end < 0:
+            break
+        comment = text[start + 4:end].lstrip()
+        if comment.lower().startswith("provenance:"):
+            blocks.append(comment[len("provenance:"):])
+        cursor = end + 3
     # a markdown "## Provenance" section (heading -> next heading / end of file)
-    blocks += [m.group(1) for m in
-               re.finditer(r"(?ims)^\#{1,6}\s*provenance\b(.*?)(?=^\#{1,6}\s|\Z)", text)]
+    section = []
+    collecting = False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        hashes = len(stripped) - len(stripped.lstrip("#"))
+        is_heading = 1 <= hashes <= 6 and stripped[hashes:].startswith((" ", "\t"))
+        if is_heading:
+            if collecting and section:
+                blocks.append("\n".join(section))
+            title = stripped[hashes:].strip().lower()
+            collecting = title == "provenance"
+            section = []
+        elif collecting:
+            section.append(line)
+    if collecting and section:
+        blocks.append("\n".join(section))
     # the /harness-pr template's `session(s): <ids>` provenance line
     blocks += re.findall(r"(?im)^.*session\(s\):[^\n]*", text)
     return blocks
@@ -437,7 +537,7 @@ def build(tracked_only=False):
         g.node("evals:corpus", "evals", "evals/ (regression corpus)", "evals")
 
     # known state ledgers (from bin/harness constants + literal refs)
-    state_files = set(re.findall(r"([a-z_]+)\.jsonl", harness_src))
+    state_files = _identifier_names(harness_src, ".jsonl", set("abcdefghijklmnopqrstuvwxyz_"))
     for name in ("predictions", "corrections", "skill_usage", "followups", "approvals"):
         state_files.add(name)
     # ALSO harvest ledgers referenced only in hooks (e.g. sessions.jsonl, written by
@@ -445,7 +545,7 @@ def build(tracked_only=False):
     # discovery is complete rather than bin/harness-only — otherwise the dataflow view
     # silently drops a whole bus.
     for hf in hook_files.values():
-        for nm in re.findall(r"([a-z_]+)\.jsonl", read(hf)):
+        for nm in _identifier_names(read(hf), ".jsonl", set("abcdefghijklmnopqrstuvwxyz_")):
             state_files.add(nm)
 
     foreign_adr = []  # (artifact, num) for ADR cites that resolve to a venture DECISIONS.md
@@ -467,7 +567,7 @@ def build(tracked_only=False):
         # Strip HTML/provenance comments: a /command or `skill` ref that lives ONLY inside an
         # <!-- provenance: ... --> comment is lineage, not an active relation - counting it
         # (as nudges/cites) would contradict compute_flow() dropping born_in/references.
-        body = re.sub(r"<!--.*?-->", " ", body, flags=re.S)
+        body = _strip_html_comments(body)
         self_name = node_id.split(":", 1)[-1]
 
         # (2) born_in — provenance lineage: EVERY session the artifact declares in a
@@ -633,10 +733,9 @@ def build(tracked_only=False):
         for grp in groups:
             matcher = grp.get("matcher", "*")
             for h in grp.get("hooks", []):
-                m = re.search(r"([a-zA-Z0-9_]+)\.py", h.get("command", ""))
-                if not m:
+                hname = _python_name(h.get("command", ""))
+                if not hname:
                     continue
-                hname = m.group(1)
                 wired.add(hname)
                 if f"hook:{hname}" not in g.nodes:
                     g.node(f"hook:{hname}", "hook", f"{hname}.py")
@@ -669,9 +768,9 @@ def build(tracked_only=False):
         for groups in (tdata.get("hooks") or {}).values():
             for grp in groups:
                 for h in grp.get("hooks", []):
-                    tm = re.search(r"([A-Za-z0-9_]+)\.py", h.get("command", ""))
-                    if tm:
-                        template_wired.add(tm.group(1))
+                    template_name = _python_name(h.get("command", ""))
+                    if template_name:
+                        template_wired.add(template_name)
 
     # Warnings carry a stable, human-readable FINGERPRINT (orphan-hook:<name>,
     # dangling-adr:<NNNN>) so the Part B baseline survives message rewording and
@@ -1581,19 +1680,27 @@ def ledger_mode(text, st):
     the open()-mode + write/read signatures applied to the ledger or its alias - NOT a blind
     char window (which bled hints across adjacent ledgers and mistook json.load(sys.stdin) for a
     ledger read). Falls back to 'rw' on genuine ambiguity; this stays a heuristic, not a parser."""
-    litre = re.compile(re.escape(st) + r"\.jsonl")
-    aliases = set(re.findall(r"^[ \t]*([A-Za-z_]\w*)[ \t]*=[ \t]*[^\n]*" + re.escape(st) + r"\.jsonl",
-                             text, re.M))
-    alias_re = re.compile(r"\b(?:" + "|".join(re.escape(a) for a in aliases) + r")\b") if aliases else None
+    literal = st + ".jsonl"
+    aliases = set()
+    for source_line in text.splitlines():
+        left, separator, right = source_line.partition("=")
+        candidate = left.strip()
+        if (separator and literal in right and candidate and
+                (candidate[0].isalpha() or candidate[0] == "_") and
+                all(char.isalnum() or char == "_" for char in candidate)):
+            aliases.add(candidate)
     w = r_ = False
     for line in text.splitlines():
-        if not (litre.search(line) or (alias_re and alias_re.search(line))):
+        if literal not in line and not (aliases & _identifiers(line)):
             continue
         is_open = "open(" in line
-        write_mode = re.search(r",\s*['\"][aw]\+?['\"]", line)
+        compact = line.replace(" ", "").replace("\t", "")
+        write_mode = any(mode in compact for mode in (
+            ",'a'", ',"a"', ",'a+'", ',"a+"', ",'w'", ',"w"', ",'w+'", ',"w+"'
+        ))
         if (is_open and write_mode) or ".write(" in line or "json.dump(" in line:
             w = True
-        if (is_open and not write_mode) or re.search(r"json\.load\(|read_jsonl\(|_count\(|_read\w*\(", line):
+        if (is_open and not write_mode) or _has_read_call(line):
             r_ = True
     if w and not r_:
         return "writes"
@@ -2442,15 +2549,28 @@ def _name_index(comps):
 
 def proposal_status(text):
     """Read authoritative proposal frontmatter, with the legacy bold bullet as fallback."""
-    fm = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
-    if fm:
-        match = re.search(r"^status:\s*([a-z-]+)\s*$", fm.group(1), re.M | re.I)
-        if match:
-            return match.group(1).lower()
-    m = re.search(r"^\s*[-*]\s*\*\*status:?\*\*\s*[:\-]?\s*(.+)$", text, re.M | re.I)
-    if not m:
+    fm = frontmatter(text)
+    for line in fm.splitlines():
+        field, separator, value = line.partition(":")
+        value = value.strip().lower()
+        if (separator and field.strip().lower() == "status" and value and
+                all(char.isalpha() or char == "-" for char in value)):
+            return value
+    raw = ""
+    for line in text.splitlines():
+        candidate = line.strip()
+        if not candidate.startswith(("-", "*")):
+            continue
+        candidate = candidate[1:].lstrip()
+        lowered = candidate.lower()
+        for label in ("**status:**", "**status**"):
+            if lowered.startswith(label):
+                raw = candidate[len(label):].lstrip(" \t:-")
+                break
+        if raw:
+            break
+    if not raw:
         return ""
-    raw = m.group(1).strip()
     # the state word is the leading token up to the first separator (em dash / slash / period)
     word = re.split(r"[—\-/.,(]", raw, 1)[0].strip()
     return word

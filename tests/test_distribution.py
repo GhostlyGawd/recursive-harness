@@ -20,7 +20,11 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 FAILURES: list[str] = []
-BASH_COMMAND = r"C:\Program Files\Git\bin\bash.exe" if os.name == "nt" else "/usr/bin/bash"
+BASH_COMMAND = (
+    r"C:\Program Files\Git\bin\bash.exe"
+    if os.name == "nt"
+    else (shutil.which("bash") or "/bin/bash")
+)
 POWERSHELL_COMMAND = "powershell" if os.name == "nt" else "pwsh"
 CAPTURE = {
     "text": True,

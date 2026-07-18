@@ -18,7 +18,6 @@ drift in either.
 Stdlib only (CI runs `python3 tests/x.py`, no pip install).
 """
 import os
-import re
 import subprocess
 import sys
 
@@ -31,10 +30,6 @@ DEPENDABOT_YML = os.path.join(ROOT, ".github", "dependabot.yml")
 # documented escape hatch, NOT a dumping ground. Empty is the healthy steady state.
 INTENTIONALLY_UNWIRED = {
     # "path/to/test_x.py": "why it cannot run in CI (e.g. needs a dep CI lacks)",
-    "fleet/test_mcp.py": "needs the third-party `mcp` SDK; mainline CI is stdlib-only and does "
-                         "not pip-install it. This test enforces the MCP adapter's portability "
-                         "(the engine never imports mcp) locally; the engine/view suites + "
-                         "fleet/test_extraction.py cover the rest in CI.",
 }
 
 # STAGING path prefixes that are NOT mainline CI surface. A test_*.py here is
@@ -46,10 +41,11 @@ INTENTIONALLY_UNWIRED = {
 # it is also robust to a concurrent session adding/moving/removing proposal tests.
 EXCLUDED_DIRS = ("proposals/",)
 
-# A path basename that IS a test module (test_<name>.py), and a path-like token as
-# it appears inside a ci.yml `run:` line (e.g. `python3 cartograph/test_gate.py`).
-_TEST_BASENAME = re.compile(r"test_[A-Za-z0-9_]+\.py")
-_TEST_REF = re.compile(r"[\w./-]*test_[A-Za-z0-9_]+\.py")
+def _is_test_basename(name):
+    if not name.startswith("test_") or not name.endswith(".py"):
+        return False
+    stem = name[5:-3]
+    return bool(stem) and all(char.isalnum() or char == "_" for char in stem)
 
 
 def tracked_test_files():
@@ -70,7 +66,7 @@ def tracked_test_files():
         line = line.strip()
         if not line or line.startswith(EXCLUDED_DIRS):
             continue
-        if _TEST_BASENAME.fullmatch(line.rsplit("/", 1)[-1]):
+        if _is_test_basename(line.rsplit("/", 1)[-1]):
             files.add(line)
     return files
 
@@ -80,7 +76,14 @@ def _strip_comments(ci_text):
     to EOL) so a commented-OUT `run:` line does NOT read as a wired test -- the most
     common way a test gets silently disabled. A '#' not preceded by whitespace (e.g.
     a URL fragment, `foo#bar`) is left intact."""
-    return "\n".join(re.sub(r"(^|\s)#.*$", r"\1", ln) for ln in ci_text.splitlines())
+    clean = []
+    for line in ci_text.splitlines():
+        for index, char in enumerate(line):
+            if char == "#" and (index == 0 or line[index - 1].isspace()):
+                line = line[:index]
+                break
+        clean.append(line)
+    return "\n".join(clean)
 
 
 def _strip_dot_slash(p):
@@ -92,7 +95,22 @@ def _strip_dot_slash(p):
 def referenced_in_ci(ci_text):
     """Every test_*.py path token referenced in ci.yml, with comments removed first."""
     text = _strip_comments(ci_text)
-    return {_strip_dot_slash(m.group(0)) for m in _TEST_REF.finditer(text)}
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-")
+    tokens = []
+    current = []
+    for char in text:
+        if char in allowed:
+            current.append(char)
+        elif current:
+            tokens.append("".join(current))
+            current = []
+    if current:
+        tokens.append("".join(current))
+    return {
+        _strip_dot_slash(token)
+        for token in tokens
+        if _is_test_basename(token.rsplit("/", 1)[-1])
+    }
 
 
 FAILURES = []
@@ -129,9 +147,9 @@ check(
 )
 check(
     "discovery: basename filter is exact",
-    _TEST_BASENAME.fullmatch("test_hooks.py") is not None
-    and _TEST_BASENAME.fullmatch("conftest.py") is None
-    and _TEST_BASENAME.fullmatch("extract.py") is None,
+    _is_test_basename("test_hooks.py")
+    and not _is_test_basename("conftest.py")
+    and not _is_test_basename("extract.py"),
     "basename filter admits non-test files or rejects real ones",
 )
 check(

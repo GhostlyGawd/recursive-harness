@@ -5,11 +5,11 @@
 | Component | Supported baseline | Verification status |
 | --- | --- | --- |
 | Python | CPython 3.12.x for the root harness | Ubuntu CI runs the complete stdlib suite on 3.12 |
-| Git | Git 2.39 or newer | This is the selected lower bound; a dedicated minimum-version CI job is still a release-readiness gap |
+| Git | Git 2.39 or newer | CI builds checksummed Git 2.39.0 source and runs the Git-facing distribution/operator journeys at that exact lower bound |
 | Bash | Bash 5.x on Linux; current Git Bash on Windows | Shell scripts use Bash rather than portable POSIX `sh`; current environments are smoke-tested, not every 5.x minor |
 | PowerShell | Windows PowerShell 5.1 and PowerShell 7.x for the native session-sync utility | Both runtimes are reproduced by the distribution suite |
-| Operating system | Current Ubuntu LTS and current supported Windows desktop/server | macOS is best-effort until it has a continuous test job |
-| Claude Code | Current stable Claude Code with settings-driven hooks and commands | No numeric minimum is guaranteed yet; `harness doctor` is the compatibility gate |
+| Operating system | Current GitHub-hosted Ubuntu, Windows, and macOS images | Distribution/operator journeys run continuously on all three; host filesystem and symlink policies still apply |
+| Claude Code | Settings-driven hooks and commands; release acceptance tested with Claude Code 2.1.200 | No numeric minimum is guaranteed yet; `harness doctor` is the compatibility gate and deterministic CI never invokes a model |
 
 The Fleet extraction scaffold has its own `requires-python >=3.8` contract. That does not
 lower the root harness's Python 3.12 requirement.
@@ -19,12 +19,15 @@ lower the root harness's Python 3.12 requirement.
 The core CLI, hooks, tests, eval runner, Fleet engine, and Cartograph are Python-standard-
 library by design. Optional surfaces have separate dependencies:
 
-- Mission Control: `textual>=0.60` from `mission_control/requirements.txt`.
-- Fleet MCP adapter: `mcp>=1.0`; Fleet's engine and CLI remain stdlib-only.
+- Mission Control: the reviewed `textual==8.2.8` snapshot from
+  `mission_control/requirements.txt`.
+- Fleet MCP adapter: the stable v1 line (`mcp>=1.28,<2`) with the reviewed
+  `mcp==1.28.1` CI snapshot; Fleet's engine and CLI remain stdlib-only.
 - Brand assets: committed SVG, PNG, JSON, CSS, and TypeScript files require no runtime
   dependency or build tool.
 
 Installing an optional dependency does not make that subsystem part of the core runtime.
+Both optional surfaces have their own CI job and weekly Dependabot update path.
 
 ## Upgrade procedure
 

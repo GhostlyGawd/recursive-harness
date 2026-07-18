@@ -15,15 +15,8 @@ this module alongside it. Behaviour is byte-equivalent to the inlined copies it
 replaces — the guard unit tests pin that.
 """
 import os
-import re
 
-# A ".claude/worktrees/<name>" segment, case-insensitive on the literal
-# ".claude/worktrees" part (Windows is case-insensitive), tolerating both '/' and
-# '\\'. group(1) spans from the start through <name> — the worktree root.
-WT_RE = re.compile(
-    r"^(.*?[\\/]\.claude[\\/]worktrees[\\/][^\\/]+)(?:[\\/].*)?$",
-    re.IGNORECASE,
-)
+_WT_MARKER = "/.claude/worktrees/"
 
 # Bounded parent walk so a pathological cwd can't spin.
 MAX_WALK = 80
@@ -54,32 +47,31 @@ def normalize(path: str) -> str:
 
 
 def worktree_root(norm_path: str):
-    """The worktree root (``WT_RE`` group 1) if ``norm_path`` is inside a
-    `.claude/worktrees/<name>`, else None. Expects an already-normalized path."""
-    m = WT_RE.match(norm_path)
-    return m.group(1) if m else None
+    """Return the `.claude/worktrees/<name>` prefix using a linear path scan.
 
-
-# A cheap "does this path CONTAIN a .claude/worktrees/<name> segment" check, distinct
-# from WT_RE: it is UNANCHORED (a substring .search, not WT_RE's ^...$ .match) and does
-# NOT capture the root. guard_trunk_lease only needs the yes/no ("is this cwd a worktree
-# Guard B already governs?") and historically used exactly this pattern. Kept separate
-# from WT_RE so is_worktree_path stays byte-identical to that former local copy (follow-up
-# 579fb9 — this was the last worktree-regex copy outside _wtpaths). The two differ only on
-# the pathological case of an embedded newline in the path (WT_RE's `.` / `^$` are
-# newline-sensitive; this contains-search is not), which a real cwd never contains.
-WT_CONTAINS_RE = re.compile(
-    r"[\\/]\.claude[\\/]worktrees[\\/][^\\/]+",
-    re.IGNORECASE,
-)
+    Expects an already-normalized path. The returned spelling preserves the
+    caller's separators and case. A missing or empty worktree name is rejected.
+    """
+    if not norm_path or "\n" in norm_path or "\r" in norm_path:
+        return None
+    comparable = norm_path.replace("\\", "/")
+    marker_at = comparable.lower().find(_WT_MARKER)
+    if marker_at < 0:
+        return None
+    name_at = marker_at + len(_WT_MARKER)
+    name_end = comparable.find("/", name_at)
+    if name_end < 0:
+        name_end = len(comparable)
+    if name_end == name_at:
+        return None
+    return norm_path[:name_end]
 
 
 def is_worktree_path(path: str) -> bool:
     r"""True if ``path`` is inside a `.claude/worktrees/<name>` tree (the cheap boolean
-    Guard C uses to skip a worktree cwd). Backslashes are normalized to '/' first, then a
-    substring search -- byte-identical to guard_trunk_lease's former local _WT_RE/_is_worktree
-    (follow-up 579fb9). Unlike worktree_root() it does NOT require a normalized path."""
-    return bool(path) and bool(WT_CONTAINS_RE.search(path.replace("\\", "/")))
+    Guard C uses to skip a worktree cwd). Unlike worktree_root() it does NOT
+    require an absolute/normalized path."""
+    return worktree_root(path) is not None
 
 
 def gitwalk_root(norm_path: str) -> str:

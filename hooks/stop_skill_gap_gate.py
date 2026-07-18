@@ -67,7 +67,8 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
     session = data.get("session_id", "?")
-    gate_flag = os.path.join(STATE, f"skill_gap_gate_{session}")
+    session_file_id = private_state.safe_filename_id(session, "session")
+    gate_flag = os.path.join(STATE, f"skill_gap_gate_{session_file_id}")
     if os.path.exists(gate_flag):
         return 0  # already nudged this session
     try:

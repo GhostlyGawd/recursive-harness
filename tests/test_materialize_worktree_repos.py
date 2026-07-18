@@ -70,6 +70,7 @@ def main():
         # --- the source sub-repo (stands in for an external plugin like brand-foundry)
         source = os.path.join(tmp, "source-plugin")
         init_repo(source, "plugin-v1")
+        REF = git("rev-parse", "HEAD", cwd=source)
         REMOTE = "https://example.com/ghostly/source-plugin.git"  # declared remote
 
         # --- the harness "primary" checkout, with a registry + gitignore + a dev copy
@@ -77,7 +78,7 @@ def main():
         init_repo(primary, "harness")
         with open(os.path.join(primary, ".gitignore"), "w") as f:
             f.write("vendored/\n")
-        registry = {"repos": [{"path": "vendored/plugin", "remote": REMOTE}]}
+        registry = {"repos": [{"path": "vendored/plugin", "remote": REMOTE, "ref": REF}]}
         with open(os.path.join(primary, "worktree-repos.json"), "w") as f:
             json.dump(registry, f)
         git("add", "-A", cwd=primary)
@@ -98,6 +99,8 @@ def main():
         check("F3: materialized repo is functional",
               os.path.isdir(os.path.join(target, ".git")) and
               _git_log_ok(target), "git log failed in materialized copy")
+        check("F3b: materialized HEAD equals the reviewed immutable ref",
+              git("rev-parse", "HEAD", cwd=target) == REF, "materialized HEAD drifted")
         origin = git("remote", "get-url", "origin", cwd=target, check_rc=False) if os.path.isdir(target) else ""
         check("F9: origin set to the declared remote", origin == REMOTE, f"origin={origin!r}")
 
@@ -123,7 +126,7 @@ def main():
         with open(os.path.join(primary2, ".gitignore"), "w") as f:
             f.write("vendored/\n")
         with open(os.path.join(primary2, "worktree-repos.json"), "w") as f:
-            json.dump({"repos": [{"path": "vendored/plugin", "remote": source}]}, f)
+            json.dump({"repos": [{"path": "vendored/plugin", "remote": source, "ref": REF}]}, f)
         git("add", "-A", cwd=primary2)
         git("commit", "-q", "-m", "reg", cwd=primary2)
         rc, err = run_hook(primary2)
@@ -140,7 +143,7 @@ def main():
         with open(os.path.join(primary3, ".gitignore"), "w") as f:
             f.write("vendored/\n")
         with open(os.path.join(primary3, "worktree-repos.json"), "w") as f:
-            json.dump({"repos": [{"path": "vendored/plugin", "remote": source}]}, f)
+            json.dump({"repos": [{"path": "vendored/plugin", "remote": source, "ref": REF}]}, f)
         git("add", "-A", cwd=primary3)
         git("commit", "-q", "-m", "reg", cwd=primary3)
         wt3 = os.path.join(tmp, "wt3")
@@ -161,7 +164,8 @@ def main():
             f.write("vendored/\n")
         with open(os.path.join(primary4, "worktree-repos.json"), "w") as f:
             json.dump({"repos": [{"path": "vendored/plugin",
-                                  "remote": os.path.join(tmp, "does-not-exist")}]}, f)
+                                  "remote": os.path.join(tmp, "does-not-exist"),
+                                  "ref": REF}]}, f)
         git("add", "-A", cwd=primary4)
         git("commit", "-q", "-m", "reg", cwd=primary4)
         wt4 = os.path.join(tmp, "wt4")
@@ -178,7 +182,7 @@ def main():
         with open(os.path.join(p5, ".gitignore"), "w") as f:
             f.write("vendored/\n")
         with open(os.path.join(p5, "worktree-repos.json"), "w") as f:
-            json.dump({"repos": [{"path": "../../ESCAPED_TARGET", "remote": source}]}, f)
+            json.dump({"repos": [{"path": "../../ESCAPED_TARGET", "remote": source, "ref": REF}]}, f)
         git("add", "-A", cwd=p5)
         git("commit", "-q", "-m", "reg", cwd=p5)
         wt5 = os.path.join(tmp, "wt5")
@@ -195,7 +199,7 @@ def main():
         with open(os.path.join(p6, ".gitignore"), "w") as f:
             f.write("vendored/\n")
         with open(os.path.join(p6, "worktree-repos.json"), "w") as f:
-            json.dump({"repos": [{"path": abs_escape, "remote": source}]}, f)
+            json.dump({"repos": [{"path": abs_escape, "remote": source, "ref": REF}]}, f)
         git("add", "-A", cwd=p6)
         git("commit", "-q", "-m", "reg", cwd=p6)
         wt6 = os.path.join(tmp, "wt6")
@@ -203,6 +207,30 @@ def main():
         rc, err = run_hook(wt6)
         check("F-sec c: absolute path refused", rc == 0 and not os.path.exists(abs_escape),
               f"absolute path not refused; rc={rc} exists={os.path.exists(abs_escape)}")
+
+        # ====================================================================
+        print("Scenario 7 — unpinned or unavailable refs are refused without residue")
+        p7 = os.path.join(tmp, "primary7")
+        init_repo(p7, "harness7")
+        with open(os.path.join(p7, ".gitignore"), "w") as f:
+            f.write("vendored/\n")
+        with open(os.path.join(p7, "worktree-repos.json"), "w") as f:
+            json.dump({"repos": [{"path": "vendored/unpinned", "remote": source}]}, f)
+        git("add", "-A", cwd=p7)
+        git("commit", "-q", "-m", "reg", cwd=p7)
+        wt7 = os.path.join(tmp, "wt7")
+        git("worktree", "add", "-q", wt7, "-b", "wt7", cwd=p7)
+        rc, err = run_hook(wt7)
+        check("F-sec d: missing immutable ref is refused",
+              rc == 0 and not os.path.exists(os.path.join(wt7, "vendored", "unpinned")), err)
+
+        wrong_ref = "f" * 40 if REF != "f" * 40 else "e" * 40
+        with open(os.path.join(wt7, "worktree-repos.json"), "w") as f:
+            json.dump({"repos": [{"path": "vendored/wrong-ref", "remote": source,
+                                  "ref": wrong_ref}]}, f)
+        rc, err = run_hook(wt7)
+        check("F-sec e: unavailable ref leaves no partial clone",
+              rc == 0 and not os.path.lexists(os.path.join(wt7, "vendored", "wrong-ref")), err)
 
     print()
     if FAILURES:

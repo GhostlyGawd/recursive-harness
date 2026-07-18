@@ -50,15 +50,6 @@ from _guard_common import env_hatch, inline_hatch
 
 _GH_TIMEOUT = 20
 
-# A real `gh pr merge` INVOCATION: at a command boundary (start, after ; & | ( {,
-# or && / ||), past any leading `VAR=val` assignments. Anchoring to a boundary keeps
-# an inert quoted MENTION (`echo "gh pr merge"`) from tripping a hard block -- the
-# cost a broad match would carry that post_merge_return_to_trunk (a mere reminder)
-# can afford but a blocking gate cannot.
-_MERGE_RE = re.compile(
-    r"(?:^|[\n;&|({]|&&|\|\|)\s*(?:[A-Za-z_]\w*=\S*\s+)*gh\s+pr\s+merge\b",
-    re.IGNORECASE,
-)
 # `--auto` queues the merge to fire WHEN checks pass -- already safe; never block it.
 _AUTO_RE = re.compile(r"(?:^|\s)--auto(?:[\s=]|$)")
 # The merge command's tail (up to the next separator), then the first PR reference in
@@ -69,6 +60,36 @@ _PR_URL_RE = re.compile(r"/pull/(\d+)")
 _PR_NUM_RE = re.compile(r"(?:^|\s)#?(\d+)\b")
 
 _HATCH_VAR = "HARNESS_PRE_MERGE_OK"
+
+
+def _assignment(word: str) -> bool:
+    """A shell-style NAME=value prefix, parsed without a backtracking regex."""
+    name, separator, value = word.partition("=")
+    return bool(separator and name and
+                (name[0].isalpha() or name[0] == "_") and
+                all(ch.isalnum() or ch == "_" for ch in name))
+
+
+def _merge_invocation(command: str) -> bool:
+    """Find a real `gh pr merge` command in one linear pass over shell segments.
+
+    This intentionally recognizes the same simple boundary/assignment grammar as
+    the former regex while refusing quoted mentions such as `echo "gh pr merge"`.
+    """
+    segments = []
+    start = 0
+    for index, char in enumerate(command):
+        if char in "\n;&|({":
+            segments.append(command[start:index])
+            start = index + 1
+    segments.append(command[start:])
+    for segment in segments:
+        words = segment.strip().split()
+        while words and _assignment(words[0]):
+            words.pop(0)
+        if len(words) >= 3 and [word.lower() for word in words[:3]] == ["gh", "pr", "merge"]:
+            return True
+    return False
 
 
 def _pr_ref(command: str):
@@ -156,7 +177,7 @@ def main() -> int:
         if not isinstance(ti, dict):
             return 0
         cmd = ti.get("command", "")
-        if not isinstance(cmd, str) or not _MERGE_RE.search(cmd):
+        if not isinstance(cmd, str) or not _merge_invocation(cmd):
             return 0
         if _AUTO_RE.search(cmd):
             return 0  # --auto merges only when green -> already safe

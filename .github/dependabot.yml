@@ -5,3 +5,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/mission_control"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/fleet"
+    schedule:
+      interval: "weekly"

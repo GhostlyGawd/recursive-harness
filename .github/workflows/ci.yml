@@ -69,6 +69,7 @@ jobs:
           python3 tests/test_command_refresh_recipe.py
           python3 tests/test_settings_parity.py
           python3 tests/test_distribution.py
+          python3 tests/test_operator_journeys.py
           python3 tests/test_ci_coverage.py
           python3 tests/test_followup.py
           python3 tests/test_gc_rollup.py
@@ -140,3 +141,61 @@ jobs:
           $env:TMP = $env:TEMP
           New-Item -ItemType Directory -Path $env:TEMP -Force | Out-Null
           pwsh -NoProfile -ExecutionPolicy Bypass -File tests\test-sync-account-sessions.ps1 -Runtime pwsh
+
+  macos-distribution:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with: {python-version: "3.12"}
+      - name: Distribution and complete operator journeys
+        run: |
+          python3 tests/test_distribution.py
+          python3 tests/test_operator_journeys.py
+          python3 tests/test_materialize_worktree_repos.py
+
+  minimum-git:
+    runs-on: ubuntu-latest
+    env:
+      GIT_VERSION: "2.39.0"
+      GIT_SOURCE_SHA256: "ba199b13fb5a99ca3dec917b0bd736bc0eb5a9df87737d435eddfdf10d69265b"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with: {python-version: "3.12"}
+      - name: Build the documented minimum Git from its checksummed source
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libcurl4-gnutls-dev libexpat1-dev libssl-dev zlib1g-dev
+          curl --fail --location --proto '=https' --tlsv1.2 --output "$RUNNER_TEMP/git.tar.xz" \
+            "https://www.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.xz"
+          echo "$GIT_SOURCE_SHA256  $RUNNER_TEMP/git.tar.xz" | sha256sum --check --strict
+          tar -C "$RUNNER_TEMP" -xf "$RUNNER_TEMP/git.tar.xz"
+          make -C "$RUNNER_TEMP/git-$GIT_VERSION" -j2 \
+            prefix="$RUNNER_TEMP/git-min" NO_GETTEXT=YesPlease NO_TCLTK=YesPlease all install
+          echo "$RUNNER_TEMP/git-min/bin" >> "$GITHUB_PATH"
+      - name: Exercise Git-facing distribution at the exact lower bound
+        run: |
+          test "$(git --version)" = "git version $GIT_VERSION"
+          python3 tests/test_distribution.py
+          python3 tests/test_materialize_worktree_repos.py
+          python3 tests/test_operator_journeys.py
+
+  optional-surfaces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with: {python-version: "3.12"}
+      - name: Install reviewed optional dependency snapshots
+        run: python3 -m pip install -r mission_control/requirements.txt -r fleet/requirements-mcp.txt
+      - name: MCP adapter and full Mission Control UI
+        run: |
+          python3 fleet/test_mcp.py
+          python3 mission_control/test_smoke.py
+          python3 mission_control/test_console.py
+          python3 mission_control/test_feed.py
+          python3 mission_control/test_graph.py
+          python3 mission_control/test_robustness.py

@@ -281,7 +281,7 @@ def _sanitize_sid(sid: str) -> str:
     anything else collapses to a hash so a hostile id can't escape the lease dir."""
     if re.fullmatch(r"[A-Za-z0-9._-]{1,128}", sid or ""):
         return sid
-    return "sid-" + hashlib.sha1((sid or "").encode("utf-8", "replace")).hexdigest()
+    return "sid-" + hashlib.sha256((sid or "").encode("utf-8", "replace")).hexdigest()
 
 
 def _lease_dir(toplevel: str):
