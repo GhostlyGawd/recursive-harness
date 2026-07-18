@@ -24,7 +24,7 @@ worktree (it will NOT — see leaf 3). Pick from the tree, don't default.
 2. **Must be present in every worktree with ZERO setup, and you mainly CONSUME
    it from upstream** (rarely edit it in place)? → **subtree**.
 3. **You DEVELOP it in place as its own repo** (push to its own remote), want it
-   in EVERY worktree, and the parent should NOT track its version? →
+   in EVERY worktree, and the parent should track only a reviewed source ref? →
    **gitignore + materialize-hook** (register it in `worktree-repos.json`).
 4. **Parent must pin an EXACT version and you bump deliberately**, and a one-time
    init step per worktree is acceptable? → **submodule**.
@@ -69,13 +69,15 @@ it's out of the parent's history.
   enumerates as nothing to copy. Verified 2026-06-20 (prediction 55b1735b miss —
   brand-foundry never rode in, twice). Single gitignored *files* ride fine; a
   nested repo never does. Do not reach for `.worktreeinclude` here.
-- **Instead, REGISTER it.** Add a `{path, remote}` entry to `worktree-repos.json`
-  at the repo root. `hooks/materialize_worktree_repos.py` (wired to SessionStart
+- **Instead, REGISTER it.** At the repo root, add a `{path, remote, ref}` entry
+  to `worktree-repos.json`, where `ref` is the reviewed full 40-character commit
+  SHA. `hooks/materialize_worktree_repos.py` (wired to SessionStart
   + PostToolUse[EnterWorktree]) clones any missing entry into the worktree —
   from the local primary checkout if present (fast, offline), else the remote,
-  then points `origin` at the remote. No-op in the primary checkout; never
-  clobbers an existing dir; fails open. Registering a new sub-repo is a one-line
-  append, no code change.
+  checks out that exact detached commit, verifies it, then points `origin` at the
+  remote. No-op in the primary checkout; never clobbers an existing dir; fails
+  open. A mutable local experiment may explicitly set `development: true`, but
+  that mode is not reproducible or distribution-safe and must not ship unnoticed.
 - **Update**: develop/`git pull` in place exactly as a standalone repo.
 - **Worktree**: cloned in automatically on `EnterWorktree` (verified end-to-end
   2026-06-20 — a real EnterWorktree auto-fired the hook and cloned brand-foundry
@@ -83,8 +85,8 @@ it's out of the parent's history.
   separately live-fired). Subagent `isolation:worktree` worktrees fire neither
   trigger — minor edge; clone manually if a subagent needs it.
 - **Pick when**: you develop it in place as its own repo, want it in EVERY
-  worktree, and the parent must NOT track its version (the sub-repo's own remote
-  is the source of truth). This is what brand-foundry uses.
+  worktree, and the parent should track a reviewed source revision without
+  absorbing the sub-repo's files/history. This is what brand-foundry uses.
 
 ### vendor-and-commit
 Slim a clone and commit a snapshot into the trunk at `<path>`. → **skill
@@ -95,9 +97,10 @@ updates = re-vendor (never hand-edit, or you lose upstream-trackability).
 `skills/brand-foundry/` is its own repo (`github.com/GhostlyGawd/brand-foundry`),
 developed in place; no separate clone exists on disk. Goal: develop in place +
 ride into every worktree, without the trunk owning its history. → tree node **3**:
-gitignore `skills/brand-foundry/` (keeps it out of the trunk) + register it in
-`worktree-repos.json`; the materialize hook clones it into each worktree. The
-FIRST attempt used `.worktreeinclude` and failed — it can't carry a nested-repo
+gitignore `skills/brand-foundry/` (keeps it out of the trunk) + register its
+remote and reviewed commit in `worktree-repos.json`; the materialize hook clones
+and verifies that commit in each worktree. The FIRST attempt used
+`.worktreeinclude` and failed — it can't carry a nested-repo
 dir (prediction 55b1735b miss). Submodule was rejected (empty in fresh worktrees
 + trunk-coupling); subtree was rejected (would break in-place own-repo dev).
 

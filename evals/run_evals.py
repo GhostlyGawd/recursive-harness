@@ -36,11 +36,30 @@ def discover() -> list[str]:
     if not os.path.isdir(CORPUS):
         return []
     return sorted(d for d in os.listdir(CORPUS)
-                  if os.path.isdir(os.path.join(CORPUS, d)))
+                  if os.path.isdir(os.path.join(CORPUS, d)) and
+                  not os.path.islink(os.path.join(CORPUS, d)))
+
+
+def case_dir(slug: str) -> str | None:
+    """Resolve one declared corpus slug without traversal or symlink escape."""
+    if (not slug or slug in {".", ".."} or "/" in slug or "\\" in slug or
+            not all(char.isalnum() or char in "-_" for char in slug)):
+        return None
+    case = os.path.join(CORPUS, slug)
+    if not os.path.isdir(case) or os.path.islink(case):
+        return None
+    try:
+        if os.path.commonpath((os.path.realpath(CORPUS), os.path.realpath(case))) != os.path.realpath(CORPUS):
+            return None
+    except ValueError:
+        return None
+    return case
 
 
 def validate(slug: str) -> list[str]:
-    case = os.path.join(CORPUS, slug)
+    case = case_dir(slug)
+    if not case:
+        return ["invalid or missing corpus slug"]
     problems = []
     if not os.path.exists(os.path.join(case, "task.md")):
         problems.append("missing task.md")
@@ -121,8 +140,9 @@ def main() -> int:
 
     if args.grade:
         slug, workdir = args.grade
-        check = os.path.join(CORPUS, slug, "check.py")
-        if not os.path.exists(check):
+        case = case_dir(slug)
+        check = os.path.join(case, "check.py") if case else ""
+        if not case or not os.path.isfile(check) or os.path.islink(check):
             print(f"{slug} has no check.py — it is rubric-graded; spawn the critic "
                   "subagent and use --record instead")
             return 1
@@ -136,6 +156,9 @@ def main() -> int:
 
     if args.record:
         slug, status, detail = args.record
+        if not case_dir(slug):
+            print("slug must name an existing corpus case")
+            return 1
         if status not in ("pass", "fail"):
             print("status must be pass|fail")
             return 1

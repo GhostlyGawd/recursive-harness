@@ -1,4 +1,4 @@
 # Mission Control TUI runtime dependency (P1+). Deliberately the ONE new dependency, kept OUT of
 # the harness pure-Python CI / enforcement path (the proposal's stack decision). Pinned to the
-# >=0.60 line for the Static.render() + App.run_test() pilot API this build uses.
-textual>=0.60
+# current reviewed v8 line for the Static.render() + App.run_test() pilot API.
+textual==8.2.8

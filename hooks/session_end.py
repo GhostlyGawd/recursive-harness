@@ -7,7 +7,6 @@ docstring already names ("the harness wires it into session-end"). Correctness n
 brick session end. (followups d72eec / ed2b67; deferred out of Agent Mail PR #121.)
 """
 import datetime as dt
-import glob
 import json
 import os
 import sys
@@ -74,12 +73,12 @@ def main() -> int:
     _reap_fleet()
     _scrub_private_state()
     # clean up both per-session retro-nudge flags (stop_retro_gate + stop_cadence_gate)
-    for pat in (f"retro_gate_{session}", f"cadence_gate_{session}"):
-        for f in glob.glob(os.path.join(STATE, pat)):
-            try:
-                os.remove(f)
-            except OSError:
-                pass
+    session_file_id = private_state.safe_filename_id(session, "session")
+    for name in (f"retro_gate_{session_file_id}", f"cadence_gate_{session_file_id}"):
+        try:
+            os.remove(os.path.join(STATE, name))
+        except OSError:
+            pass
     return 0
 
 

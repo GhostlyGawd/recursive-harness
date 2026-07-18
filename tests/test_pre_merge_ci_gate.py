@@ -86,15 +86,17 @@ RED = lambda *a, **k: rollup(run("lint-and-test", "FAILURE"))
 GREEN = lambda *a, **k: rollup(run("lint-and-test", "SUCCESS"))
 
 # --- Command detection ----------------------------------------------------------
-check("merge: bare invocation matches", bool(mod._MERGE_RE.search("gh pr merge")))
-check("merge: with number matches", bool(mod._MERGE_RE.search("gh pr merge 176 --squash")))
-check("merge: after && matches", bool(mod._MERGE_RE.search('(cd "$H" && gh pr merge 5)')))
-check("merge: after leading env-assign matches", bool(mod._MERGE_RE.search("FOO=1 gh pr merge")))
+check("merge: bare invocation matches", mod._merge_invocation("gh pr merge"))
+check("merge: with number matches", mod._merge_invocation("gh pr merge 176 --squash"))
+check("merge: after && matches", mod._merge_invocation('(cd "$H" && gh pr merge 5)'))
+check("merge: after leading env-assign matches", mod._merge_invocation("FOO=1 gh pr merge"))
 check("merge: quoted mention does NOT match",
-      not mod._MERGE_RE.search('echo "gh pr merge"'),
+      not mod._merge_invocation('echo "gh pr merge"'),
       "an inert quoted mention would hard-block")
-check("merge: gh pr create does NOT match", not mod._MERGE_RE.search("gh pr create -t x"))
-check("merge: gh pr list does NOT match", not mod._MERGE_RE.search("gh pr list --state open"))
+check("merge: gh pr create does NOT match", not mod._merge_invocation("gh pr create -t x"))
+check("merge: gh pr list does NOT match", not mod._merge_invocation("gh pr list --state open"))
+check("merge: repetitive untrusted command stays non-matching",
+      not mod._merge_invocation(("_= " * 50000) + "echo safe"))
 
 check("auto: --auto detected", bool(mod._AUTO_RE.search("gh pr merge --auto")))
 check("auto: plain merge has no --auto", not mod._AUTO_RE.search("gh pr merge 5 --squash"))

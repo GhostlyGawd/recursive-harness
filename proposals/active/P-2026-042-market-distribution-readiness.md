@@ -60,7 +60,7 @@ reversibility, and sole-maintainer safety. The resulting order is:
 
 ## Acceptance criteria
 
-- [ ] A root license, contributing guide, code of conduct, changelog, and
+- [x] A root license, contributing guide, code of conduct, changelog, and
   support/security/privacy boundaries are easy to find and mutually consistent.
 - [ ] Fresh install, upgrade, rollback, uninstall, release archive, and checksum
   workflows are documented and tested on supported hosts.
@@ -81,3 +81,17 @@ reversibility, and sole-maintainer safety. The resulting order is:
 
 Evidence is appended here as each phase completes. Failed or manual-only checks
 remain visible; they are not converted into marketing claims.
+
+- 2026-07-17 — PR #240 merged the root MIT license, community contracts,
+  changelog, non-destructive uninstall, deterministic archives, embedded
+  manifests, checksums, and distribution regressions. Protected Linux, Windows,
+  and CodeQL checks passed before merge.
+- 2026-07-17 — Security candidate: all pre-existing ReDoS and weak-hash sites
+  were rewritten; reachable session/eval/clone paths were constrained; external
+  repositories were pinned; duplicate executable staging was removed. Focused
+  hook, Cartograph, eval, privacy, proposal, distribution, MCP, and Textual tests
+  pass locally. `pip-audit` reports no known vulnerabilities for either optional
+  requirements snapshot; GitHub reports zero open secret/Dependabot alerts.
+- Pending — protected PR CodeQL result, Linux/macOS/minimum-Git operator journeys,
+  human merge, landing-page evidence, repository metadata, and published-release
+  verification.

@@ -40,7 +40,8 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
     session = data.get("session_id", "?")
-    gate_flag = os.path.join(STATE, f"retro_gate_{session}")  # not `flag`: that name is the feature reader
+    session_file_id = private_state.safe_filename_id(session, "session")
+    gate_flag = os.path.join(STATE, f"retro_gate_{session_file_id}")  # not `flag`: that name is the feature reader
     if os.path.exists(gate_flag):
         return 0
     log = os.path.join(STATE, "corrections.jsonl")

@@ -784,12 +784,34 @@ def cmd_doctor(args) -> int:
     else:
         bad(f"a DIFFERENT brain is pinned ({cfg}) — behavior here comes from that config, not this repo",
             f"relaunch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
-    import re as _re
     tpl = os.path.join(ROOT, "templates", "account-settings.json")
     live = os.path.join(cfg, "settings.json") if cfg else os.path.join(ROOT, "settings.json")
+
+    def hook_names(path):
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        found = set()
+
+        def visit(value):
+            if isinstance(value, dict):
+                for nested in value.values():
+                    visit(nested)
+            elif isinstance(value, list):
+                for nested in value:
+                    visit(nested)
+            elif isinstance(value, str):
+                for token in value.replace("\\", "/").split():
+                    name = token.strip("'\";,&|(){}[]").rsplit("/", 1)[-1]
+                    stem = name[:-3] if name.endswith(".py") else ""
+                    if stem and all(ch.isalnum() or ch == "_" for ch in stem):
+                        found.add(name)
+
+        visit(data)
+        return sorted(found)
+
     try:
-        want = sorted(set(_re.findall(r"[\w_]+\.py", open(tpl, encoding="utf-8").read())))
-        have = sorted(set(_re.findall(r"[\w_]+\.py", open(live, encoding="utf-8").read())))
+        want = hook_names(tpl)
+        have = hook_names(live)
         if want == have:
             good(f"hook wiring matches the canonical template ({len(have)} hook files)")
         else:

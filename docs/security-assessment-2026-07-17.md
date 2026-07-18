@@ -7,11 +7,13 @@ extraction weakness was fixed during this review, new account initialization use
 owner-only permissions where the host filesystem supports them, and custom Git hooks are
 no longer silently replaced.
 
-Secret scanning, push protection, and CodeQL default setup are now enabled. The initial
-CodeQL baseline surfaced 108 high-severity query alerts that require reachability review;
-that count is scanner output, not 108 confirmed vulnerabilities. The most important
-remaining risks are the legacy filesystem/regex alert backlog, sensitive local excerpts,
-public learning artifacts, and unpinned external worktree inputs.
+Secret scanning, push protection, private vulnerability reporting, Dependabot,
+and CodeQL default setup are enabled. The initial CodeQL baseline was 108 alerts;
+the live pre-hardening count fell to 78 as obsolete code and earlier issues were
+removed. P-2026-042 now remediates the 20 flagged regex paths, the weak hash,
+unsafe session-ID filenames, eval-case traversal, mutable worktree inputs, and a
+duplicate executable staging tree. The alert-by-alert boundary review is in
+[codeql-triage-2026-07-17.md](codeql-triage-2026-07-17.md).
 
 ## Scope and method
 
@@ -45,10 +47,11 @@ vulnerabilities without a reachable security impact.
 | RH-03 | Medium | Documented | Correction and heal hooks intentionally record short prompt/failure excerpts. Public, versioned learning artifacts can also contain summaries, quotations, fixtures, and session identifiers. `PRIVACY.md` now makes both boundaries explicit. |
 | RH-04 | Medium | Fixed | GitHub secret scanning, push protection, and CodeQL default setup are enabled. The first Python/Actions analysis completed successfully. |
 | RH-05 | Low | Fixed | GitHub Actions dependencies are pinned to reviewed full commit SHAs with release comments, a regression test rejects floating refs, and weekly Dependabot updates the pins through reviewable PRs. |
-| RH-06 | Low | Open | `worktree-repos.json` can cause configured repositories to be cloned at their current remote default branch. This is convenient but makes each configured source a trusted-code boundary rather than a reproducible pinned input. |
-| RH-07 | Governance | Open | The repository has no root license. `fleet/LICENSE` covers only the extraction scaffold. A repository-wide license choice requires an explicit maintainer decision. |
+| RH-06 | Low | Fixed | Distributed nested repositories are pinned to reviewed full commit SHAs. The hook verifies a detached checkout, contains clone paths/symlink parents, and removes partial clones on verification failure. An explicit `development: true` mode remains intentionally mutable and is documented as non-distribution-safe. |
+| RH-07 | Governance | Fixed | The owner selected a repository-wide MIT license in P-2026-042; `fleet/LICENSE` remains explicit for standalone extraction. |
 | RH-08 | Low | Fixed | `install.sh` installs a managed dispatcher, preserves a pre-existing regular hook byte-for-byte, runs both hooks in lexical order, remains idempotent, and refuses ambiguous/non-regular hook states. |
-| RH-09 | Medium | Triage | The initial CodeQL baseline contains 85 path-injection alerts, 22 regex-denial-of-service alerts, and one weak-hash alert. The weak-hash use is a non-security identity key; regex and path findings still need boundary-by-boundary review. A new ReDoS alert introduced during this work was fixed with bounded string parsing rather than suppressed. |
+| RH-09 | Medium | Fixed / verification pending | The pre-hardening live baseline was 57 path, 20 ReDoS, and one weak-hash alert. All regex and weak-hash findings were changed in code; reachable path issues were fixed, while intentional local-path capabilities and test fixtures are documented individually. The protected PR CodeQL run and post-merge count are the final closure evidence. |
+| RH-10 | Medium | Fixed | Stop/session hooks previously interpolated a hook-provided session ID into state filenames. A centralized safe filename ID, exact cleanup paths, and regression tests remove traversal/glob interpretation. |
 
 ## Validated non-findings
 
@@ -68,7 +71,10 @@ vulnerabilities without a reachable security impact.
 
 - `main` requires the `lint-and-test` status check and requires the branch to be current.
 - Force pushes and branch deletion are disabled; administrator enforcement is enabled.
-- Required approving reviews and required conversation resolution are not configured.
+- The repository has one administrator/collaborator. Required approving reviews
+  would lock out the sole maintainer, so they are not enabled. Conversation
+  resolution and the expanded automated check set are enabled after their first
+  successful protected run.
 - Secret scanning, push protection, CodeQL default setup, Dependabot security updates,
   and private vulnerability reporting are enabled.
 
@@ -77,15 +83,12 @@ without a commit.
 
 ## Recommended next security work
 
-1. Continue CodeQL baseline triage, prioritizing reachable regex and filesystem paths.
-   Validate each path source against an explicit trusted-root or intentional-local-input
-   boundary; fix reachable paths and document only proven false positives.
-2. Pin each `worktree-repos.json` source to an immutable reviewed ref so distribution does
-   not silently follow a changing remote default branch.
-3. Decide on a repository-wide license; keep the current scoped license statement until
-   that explicit governance decision is made.
-4. Consider requiring one approving review and resolved conversations on `main` if the
-   collaborator model can satisfy those rules without locking out the sole maintainer.
+1. Confirm the protected PR and post-merge CodeQL counts, then close remediated
+   alerts by analysis result and record any alert-specific false-positive reasons.
+2. Keep nested-repository ref bumps reviewable and verify the upstream commit
+   before editing `worktree-repos.json`.
+3. Re-run dependency and secret scans for every release and preserve sanitized
+   evidence with the release PR.
 
 ## Limitations
 

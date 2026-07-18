@@ -1,0 +1,2 @@
+# Reproducible optional-surface CI/runtime snapshot. Fleet core remains stdlib-only.
+mcp==1.28.1

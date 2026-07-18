@@ -26,7 +26,7 @@ classifiers = [
 dependencies = []   # core is stdlib-only — the extractability contract
 
 [project.optional-dependencies]
-mcp = ["mcp>=1.0"]  # only the MCP server adapter needs the SDK; the engine never imports it
+mcp = ["mcp>=1.28,<2"]  # v1 stable line; the engine never imports it
 
 [project.scripts]
 agentmail = "fleet.cli:main"

@@ -61,7 +61,7 @@ except Exception:  # never let a config-reader import brick a guard
 # Shared with inject_kernel + guard_worktree_session via _wtpaths (follow-up 3939d8);
 # this guard keeps its own richer _normalize (it takes a `base` and folds glob noise).
 # Hard import: hooks/ ships as a unit so _wtpaths.py always sits beside this guard.
-from _wtpaths import WT_RE as _WT_RE
+from _wtpaths import worktree_root as _shared_worktree_root
 
 
 def _normalize(path: str, base: str = "") -> str:
@@ -114,10 +114,9 @@ def _worktree_id(path: str) -> str | None:
     """
     if not path:
         return None
-    m = _WT_RE.match(path)
-    if not m:
+    root = _shared_worktree_root(path)
+    if not root:
         return None
-    root = m.group(1)
     # Fold separators and case so sibling/own comparisons are robust on Windows.
     return root.replace("\\", "/").lower()
 
@@ -495,8 +494,7 @@ def _worktree_root_path(path: str) -> str | None:
     filesystem check can run against it. None if `path` is not inside a worktree."""
     if not path:
         return None
-    m = _WT_RE.match(path)
-    return m.group(1) if m else None
+    return _shared_worktree_root(path)
 
 
 def _is_live_worktree(wt_root_real: str) -> bool:
@@ -526,10 +524,11 @@ def _is_live_worktree(wt_root_real: str) -> bool:
             return True   # a full repo dir here is unexpected -> protect
         with open(dotgit, "r", encoding="utf-8", errors="replace") as fh:
             head = fh.read(4096)
-        m = re.search(r"gitdir:\s*(.+)", head)
-        if not m:
+        first_line = head.splitlines()[0] if head.splitlines() else ""
+        label, separator, value = first_line.partition(":")
+        if not separator or label.strip().lower() != "gitdir" or not value.strip():
             return True   # unrecognized .git file -> protect
-        admin = m.group(1).strip().strip('"').strip()
+        admin = value.strip().strip('"').strip()
         # Git may write a RELATIVE gitdir pointer (worktree.useRelativePaths /
         # extensions.relativeWorktrees, or after `git worktree move`/`repair`).
         # It is relative to the worktree ROOT (the dir holding this .git file),
