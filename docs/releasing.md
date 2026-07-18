@@ -4,30 +4,41 @@ Releases are maintainer-owned. Automation may verify this checklist; tagging,
 publication, repository-setting changes, and licensing require explicit owner
 approval. Proposal P-2026-042 records that approval for `v0.1.2` readiness work.
 
-## Current readiness snapshot — 2026-07-17
+## Current readiness snapshot — 2026-07-18
 
 - Root `VERSION` is `0.1.2`; the latest repository tag is `v0.1.0`.
 - No GitHub Release is published.
-- The root MIT license is selected and included in the source tree.
-- Deterministic source archives and checksums are built by `scripts/build_release.py`.
+- PR #240 supplied the root MIT license, changelog, deterministic archives,
+  checksums, upgrade/rollback guidance, and non-destructive uninstall.
+- PR #241 supplied the security hardening, immutable nested-repository revisions,
+  cross-platform black-box journeys, exact Git 2.39.0 coverage, macOS coverage,
+  and isolated optional-surface tests.
+- The final release candidate supplies the Claude Code 2.1.200 Doctor gate,
+  product-output evidence, landing page, release notes, and repository metadata.
+- The default-branch security snapshot has zero open secret-scanning alerts, zero
+  open Dependabot vulnerability alerts, and 52 reviewed CodeQL findings before the
+  final Doctor regex fix: 50 path-flow signals and two ReDoS findings.
+- Protected `main` requires the full Linux/Windows/macOS/minimum-Git/optional-surface
+  and Python/Actions CodeQL check set plus conversation resolution.
 
 The remaining version/tag gap makes publication a deliberate final step after
 security, compatibility, documentation, and protected checks are green.
 
 ## 1. Scope and governance
 
-- [ ] Name the release goal and list every included merged PR.
-- [ ] Confirm the supported/optional/experimental classifications in
+- [x] Name the release goal and list the market/distribution work in the
+      [v0.1.2 release notes](releases/v0.1.2.md).
+- [x] Confirm the supported/optional/experimental classifications in
       [product-surface.md](product-surface.md).
 - [x] Record the root MIT license decision explicitly in the approved readiness proposal.
 - [ ] Confirm no locked-layer proposal is being merged by automation.
 
 ## 2. Version and documentation
 
-- [ ] Update root `VERSION` exactly once and make the proposed tag `v<VERSION>`.
+- [x] Update root `VERSION` exactly once and make the proposed tag `v<VERSION>`.
 - [ ] Keep the README status/version, compatibility matrix, setup commands, privacy policy,
       security assessment, examples, and generated Atlas claims aligned with the code.
-- [ ] Produce release notes from merged PRs; separate breaking changes, security/privacy,
+- [x] Produce release notes from merged PRs; separate breaking changes, security/privacy,
       operator changes, fixes, and known limitations.
 - [ ] Validate every Markdown link and command shown on the operator path.
 

@@ -9,10 +9,14 @@
 | Bash | Bash 5.x on Linux; current Git Bash on Windows | Shell scripts use Bash rather than portable POSIX `sh`; current environments are smoke-tested, not every 5.x minor |
 | PowerShell | Windows PowerShell 5.1 and PowerShell 7.x for the native session-sync utility | Both runtimes are reproduced by the distribution suite |
 | Operating system | Current GitHub-hosted Ubuntu, Windows, and macOS images | Distribution/operator journeys run continuously on all three; host filesystem and symlink policies still apply |
-| Claude Code | Settings-driven hooks and commands; release acceptance tested with Claude Code 2.1.200 | No numeric minimum is guaranteed yet; `harness doctor` is the compatibility gate and deterministic CI never invokes a model |
+| Claude Code | 2.1.200 or newer | `harness doctor` reads `claude --version` and rejects an older or unreadable runtime; deterministic CI tests that gate with a local stub and never invokes a model |
 
 The Fleet extraction scaffold has its own `requires-python >=3.8` contract. That does not
 lower the root harness's Python 3.12 requirement.
+
+The Claude Code minimum is the oldest version accepted for the `v0.1.2` operator contract,
+not a claim that the repository can reproduce the external service. Release acceptance
+still includes one real interactive predict → act → score → retro → reviewed-change replay.
 
 ## Dependencies
 

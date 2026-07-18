@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Recursive Harness Doctor, Scorecard, and calibration output</title>
+  <desc id="desc">Sanitized terminal output captured from disposable release-candidate clones at commits f4bde11 and 6b522db on 2026-07-18.</desc>
+  <defs>
+    <linearGradient id="topline" x1="0" x2="1"><stop stop-color="#123CFF"/><stop offset=".5" stop-color="#20D9FF"/><stop offset="1" stop-color="#8A6CFF"/></linearGradient>
+  </defs>
+  <rect width="1400" height="760" rx="24" fill="#020611"/>
+  <rect x="28" y="28" width="1344" height="704" rx="18" fill="#07142B" stroke="#2B6F9F"/>
+  <rect x="28" y="28" width="1344" height="4" rx="2" fill="url(#topline)"/>
+  <g font-family="Arial, system-ui, sans-serif">
+    <text x="64" y="80" fill="#EAFBFF" font-size="25" font-weight="700">Observable proof, not a mockup</text>
+    <text x="64" y="108" fill="#83A8C5" font-size="15">Disposable clones · commits f4bde11 / 6b522db · 2026-07-18 · personal paths removed</text>
+  </g>
+  <g font-family="Consolas, 'Liberation Mono', monospace" font-size="16">
+    <rect x="64" y="142" width="612" height="530" rx="14" fill="#020611" stroke="#20D9FF"/>
+    <circle cx="91" cy="169" r="6" fill="#8A6CFF"/><circle cx="111" cy="169" r="6" fill="#123CFF"/><circle cx="131" cy="169" r="6" fill="#20D9FF"/>
+    <text x="154" y="175" fill="#83A8C5">harness doctor</text>
+    <text x="92" y="222" fill="#EAFBFF" font-weight="700">== Doctor — is this install sane? ==</text>
+    <text x="92" y="258" fill="#20D9FF">ok</text><text x="132" y="258" fill="#EAFBFF">account 'demo' is pinned in this harness</text>
+    <text x="92" y="290" fill="#20D9FF">ok</text><text x="132" y="290" fill="#EAFBFF">canonical wiring · 18 hook files</text>
+    <text x="92" y="322" fill="#20D9FF">ok</text><text x="132" y="322" fill="#EAFBFF">all hooks compile</text>
+    <text x="92" y="354" fill="#20D9FF">ok</text><text x="132" y="354" fill="#EAFBFF">Claude Code 2.1.200 meets minimum</text>
+    <text x="92" y="386" fill="#20D9FF">ok</text><text x="132" y="386" fill="#EAFBFF">state ledgers are writable</text>
+    <text x="92" y="418" fill="#20D9FF">ok</text><text x="132" y="418" fill="#EAFBFF">main checkout is on trunk</text>
+    <text x="92" y="450" fill="#20D9FF">ok</text><text x="132" y="450" fill="#EAFBFF">last replay · 12/12 passed</text>
+    <text x="92" y="488" fill="#20D9FF" font-weight="700">everything looks healthy.</text>
+    <line x1="92" y1="520" x2="648" y2="520" stroke="#2B6F9F"/>
+    <text x="92" y="558" fill="#83A8C5">What this proves</text>
+    <text x="92" y="592" fill="#EAFBFF">brain · wiring · syntax · runtime</text>
+    <text x="92" y="624" fill="#EAFBFF">storage · branch · eval receipt</text>
+
+    <rect x="724" y="142" width="612" height="530" rx="14" fill="#020611" stroke="#8A6CFF"/>
+    <circle cx="751" cy="169" r="6" fill="#8A6CFF"/><circle cx="771" cy="169" r="6" fill="#123CFF"/><circle cx="791" cy="169" r="6" fill="#20D9FF"/>
+    <text x="814" y="175" fill="#83A8C5">harness scorecard + stats</text>
+    <text x="752" y="222" fill="#EAFBFF" font-weight="700">== Scorecard — the proof, in plain words ==</text>
+    <text x="752" y="258" fill="#EAFBFF">predictions: right 100% of 1 checked</text>
+    <text x="752" y="290" fill="#EAFBFF">regression tests: 12/12 passed</text>
+    <text x="752" y="322" fill="#EAFBFF">skills: no value tags yet</text>
+    <text x="752" y="354" fill="#EAFBFF">bug memory: nothing awaiting review</text>
+    <line x1="752" y1="390" x2="1308" y2="390" stroke="#2B6F9F"/>
+    <text x="752" y="430" fill="#83A8C5">Calibration from the same disposable run</text>
+    <text x="752" y="466" fill="#20D9FF">scored: 1</text><text x="866" y="466" fill="#EAFBFF">hit-rate: 100%</text>
+    <text x="752" y="500" fill="#EAFBFF">brier: 0.023 · pending: 0</text>
+    <text x="752" y="534" fill="#EAFBFF">claimed 85% · actual 100%</text>
+    <text x="752" y="582" fill="#83A8C5">One verification observation is not a quality</text>
+    <text x="752" y="612" fill="#83A8C5">claim; the ledger makes the sample size visible.</text>
+  </g>
+</svg>

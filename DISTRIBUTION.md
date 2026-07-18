@@ -89,6 +89,22 @@ stock Windows PowerShell).
 
 ## Release archives and removal
 
+GitHub Releases are the supported versioned distribution channel. Each release publishes
+both archive formats and one checksum sidecar; clone-from-`main` remains the development
+channel. Homebrew, Scoop, Winget, and other package-manager channels are not currently
+published.
+
+```bash
+gh release download v0.1.2 -R GhostlyGawd/recursive-harness \
+  -p "recursive-harness-v0.1.2.tar.gz" \
+  -p "recursive-harness-v0.1.2.zip" \
+  -p "recursive-harness-v0.1.2.sha256"
+sha256sum -c recursive-harness-v0.1.2.sha256
+```
+
+The sidecar covers both archives. Use `shasum -a 256 -c` on macOS or compare
+`Get-FileHash -Algorithm SHA256` output with each sidecar line on Windows.
+
 `python3 scripts/build_release.py` packages the exact committed `HEAD` into
 deterministic `.tar.gz` and `.zip` archives. Each archive includes a manifest of
 the revision, file modes, sizes, and hashes; the builder also writes a SHA-256

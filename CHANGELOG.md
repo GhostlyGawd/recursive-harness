@@ -6,9 +6,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 ### Changed
 
-- Preparing a governed market/distribution-readiness release.
+- No changes yet.
 
-## [0.1.2] - 2026-07-17
+## [0.1.2] - 2026-07-18
 
 ### Added
 
@@ -19,9 +19,12 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Harness Doctor, Scorecard, Atlas, Cartograph, Mission Control, Fleet/Agent
   Mail, standing approvals, feature flags, proposal lifecycle enforcement, and
   the reviewed prediction/evaluation/retrospective loop.
-- Linux and Windows distribution tests, CodeQL, Dependabot, secret scanning,
-  push protection, and private vulnerability reporting.
-- Append-Only Strata brand assets and a product-oriented documentation set.
+- Linux, Windows, macOS, exact Git 2.39.0, optional-surface, CodeQL, and
+  black-box distribution/operator verification.
+- Repository-wide MIT licensing, deterministic ZIP and tar.gz release bundles,
+  an embedded source manifest, SHA-256 checksums, and non-destructive uninstall.
+- Profile-aligned Signal Loop brand assets, real product-output evidence, and a
+  complete product landing page.
 
 ### Changed
 
@@ -29,6 +32,10 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Normalized proposal IDs, status, state transitions, and generated indexing.
 - Hardened shell, hook, worktree, privacy, and supply-chain boundaries found by
   the 2026-07-17 readiness review.
+- Pinned the supported Claude Code minimum to 2.1.200 and made Doctor verify it.
+- Pinned distributed companion repositories to reviewed immutable commits.
+- Strengthened protected `main` with the full release check set and required
+  conversation resolution.
 
 ### Known limitations
 
@@ -36,6 +43,8 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Claude Code still provides the model runtime; deterministic CI does not run a
   model-backed session.
 - Optional Mission Control and MCP surfaces have separate dependencies.
+- GitHub Releases are the supported packaged channel; package-manager channels
+  are not published yet.
 
 ## [0.1.0] - 2026-06-13
 

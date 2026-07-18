@@ -8,7 +8,7 @@ compatibility promise.
 
 | Class | Surface | Promise |
 | --- | --- | --- |
-| Supported beta | Siloed installation with `install.sh`, `account-init.sh`, and `project-init.sh` | Maintained on the latest `main`; destructive or out-of-silo behavior is treated as a bug |
+| Supported beta | Checksummed GitHub Release bundles plus siloed installation with `install.sh`, `account-init.sh`, and `project-init.sh` | Maintained on the latest release and `main`; destructive or out-of-silo behavior is treated as a bug |
 | Supported beta | Prediction, outcome, calibration, correction, follow-up, retro, GC, scorecard, doctor, feature, health, map, ask, and explain interfaces exposed by `bin/harness` | Changes require operator docs and regression evidence; coverage gaps and flags/JSON stability remain beta work |
 | Supported beta | Claude Code lifecycle wiring, worktree/session guards, review gates, lint, eval structure, and Cartograph's structural gate | Safety regressions receive priority; enforcement changes remain human-reviewed |
 | Optional | Fleet's core CLI/event log and Mission Control | Useful but not required for the core feedback loop; Mission Control needs its separate Textual dependency |
@@ -21,7 +21,8 @@ file layout a public API. Their observable outcome is the contract.
 
 ## What “supported beta” means
 
-- The latest commit of `main` is the only supported line; there are no LTS branches.
+- The latest GitHub Release and latest commit of `main` are the supported lines; there are
+  no LTS branches or older-minor support promises.
 - Reproducible bug reports on supported surfaces are accepted and fixed forward.
 - Safety, privacy, data-loss, and upgrade regressions take precedence over new features.
 - A breaking operator-visible change must update `VERSION`, operator docs, and release notes
