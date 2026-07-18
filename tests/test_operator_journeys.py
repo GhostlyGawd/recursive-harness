@@ -43,8 +43,11 @@ def main() -> int:
         check("fresh consumer clone succeeds", cloned.returncode == 0, cloned.stderr)
         if cloned.returncode != 0:
             return 1
-        switched = run(["git", "checkout", "--quiet", "--detach", revision], cwd=checkout)
-        check("consumer clone uses the exact reviewed revision", switched.returncode == 0, switched.stderr)
+        switched = run(["git", "checkout", "--quiet", "-B", "main", revision], cwd=checkout)
+        actual_revision = run(["git", "rev-parse", "HEAD"], cwd=checkout).stdout.strip()
+        check("consumer clone uses the exact reviewed revision",
+              switched.returncode == 0 and actual_revision == revision,
+              switched.stderr)
 
         env = os.environ.copy()
         env["HOME"] = str(tmp / "home")
@@ -92,7 +95,9 @@ def main() -> int:
             check("prediction outcome is scored", scored.returncode == 0, scored.stdout + scored.stderr)
         scorecard = run([sys.executable, "bin/harness", "scorecard"], cwd=checkout, env=env)
         check("scorecard renders verified local evidence",
-              scorecard.returncode == 0 and "calibration" in scorecard.stdout.lower(),
+              scorecard.returncode == 0
+              and "predictions: right 100%" in scorecard.stdout.lower()
+              and "regression tests:" in scorecard.stdout.lower(),
               scorecard.stdout + scorecard.stderr)
 
         refreshed = run([BASH, "./account-init.sh", "audit", "--sync-settings"], cwd=checkout, env=env)
