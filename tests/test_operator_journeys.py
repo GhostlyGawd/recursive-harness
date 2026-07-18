@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -53,6 +54,12 @@ def main() -> int:
         home = tmp / "home"
         home.mkdir()
         env["HOME"] = str(home)
+        fake_bin = tmp / "fake-bin"
+        fake_bin.mkdir()
+        claude = fake_bin / "claude"
+        claude.write_text("#!/bin/sh\nprintf '2.1.200 (Claude Code)\\n'\n", encoding="utf-8")
+        claude.chmod(claude.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
         installed = run([BASH, "./install.sh"], cwd=checkout, env=env)
         check("fresh install succeeds", installed.returncode == 0, installed.stderr)
         initialized = run(
@@ -65,6 +72,9 @@ def main() -> int:
         env["CLAUDE_CONFIG_DIR"] = str(config)
         doctor = run([sys.executable, "bin/harness", "doctor"], cwd=checkout, env=env)
         check("doctor accepts the fresh account", doctor.returncode == 0, doctor.stdout + doctor.stderr)
+        check("doctor verifies the supported Claude Code minimum",
+              "Claude Code 2.1.200 meets the supported minimum 2.1.200" in doctor.stdout,
+              doctor.stdout + doctor.stderr)
 
         target = tmp / "consumer-project"
         target.mkdir()

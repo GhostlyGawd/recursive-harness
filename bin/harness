@@ -44,6 +44,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import shutil
 import subprocess
 import sys
 import uuid
@@ -102,6 +103,7 @@ SKILL_USAGE = os.path.join(STATE, "skill_usage.jsonl")
 FOLLOWUPS = os.path.join(STATE, "followups.jsonl")
 FOLLOWUP_TTL_DAYS = 30  # open follow-ups older than this drop out of the active view (decay)
 STANDING_TTL_DAYS = 30  # standing approvals older than this stop covering re-asks (decay)
+MIN_CLAUDE_CODE = (2, 1, 200)
 APPROVALS = os.path.join(STATE, "approvals.jsonl")
 # Durable retro-completion ledger: which sessions have been retro'd. PERSISTS (it is
 # NOT a retro_gate_* name, so hooks/session_end.py's per-session cleanup never deletes
@@ -150,6 +152,31 @@ def _load_json(path: str) -> dict:
         return d if isinstance(d, dict) else {}
     except (OSError, ValueError):
         return {}
+
+
+def _version_tuple(text: str):
+    """Return the first dotted numeric version without regex backtracking."""
+    for token in text.replace("(", " ").replace(")", " ").replace(",", " ").split():
+        candidate = token.strip("vV;:")
+        parts = candidate.split(".")
+        if len(parts) >= 3 and all(part.isdigit() for part in parts[:3]):
+            return tuple(int(part) for part in parts[:3])
+    return None
+
+
+def _hook_names(text: str):
+    """Extract configured Python hook basenames with a bounded character scan."""
+    found = set()
+    for dot in range(len(text) - 2):
+        if text[dot:dot + 3].lower() != ".py":
+            continue
+        start = dot - 1
+        if start < 0 or not (text[start].isalnum() or text[start] == "_"):
+            continue
+        while start >= 0 and (text[start].isalnum() or text[start] == "_"):
+            start -= 1
+        found.add(text[start + 1:dot + 3])
+    return sorted(found)
 
 
 def _flatten_features(d: dict, prefix: str = "") -> dict:
@@ -784,12 +811,11 @@ def cmd_doctor(args) -> int:
     else:
         bad(f"a DIFFERENT brain is pinned ({cfg}) — behavior here comes from that config, not this repo",
             f"relaunch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
-    import re as _re
     tpl = os.path.join(ROOT, "templates", "account-settings.json")
     live = os.path.join(cfg, "settings.json") if cfg else os.path.join(ROOT, "settings.json")
     try:
-        want = sorted(set(_re.findall(r"[\w_]+\.py", open(tpl, encoding="utf-8").read())))
-        have = sorted(set(_re.findall(r"[\w_]+\.py", open(live, encoding="utf-8").read())))
+        want = _hook_names(open(tpl, encoding="utf-8").read())
+        have = _hook_names(open(live, encoding="utf-8").read())
         if want == have:
             good(f"hook wiring matches the canonical template ({len(have)} hook files)")
         else:
@@ -814,6 +840,30 @@ def cmd_doctor(args) -> int:
             "python3 lint/lint_harness.py for details; restore from git")
     else:
         good("all hooks compile")
+    try:
+        claude_executable = shutil.which("claude")
+        if not claude_executable:
+            raise FileNotFoundError("claude is not on PATH")
+        version_result = subprocess.run(
+            [claude_executable, "--version"], capture_output=True, text=True, timeout=5,
+        )
+        version_text = (version_result.stdout + " " + version_result.stderr).strip()
+        version = _version_tuple(version_text)
+        minimum_text = ".".join(str(part) for part in MIN_CLAUDE_CODE)
+        if version_result.returncode != 0 or version is None:
+            bad("Claude Code is unavailable or its version could not be read",
+                f"install Claude Code {minimum_text} or newer, then rerun harness doctor")
+        elif version < MIN_CLAUDE_CODE:
+            found = ".".join(str(part) for part in version)
+            bad(f"Claude Code {found} is older than the supported minimum {minimum_text}",
+                "upgrade Claude Code, restart the session, then rerun harness doctor")
+        else:
+            found = ".".join(str(part) for part in version)
+            good(f"Claude Code {found} meets the supported minimum {minimum_text}")
+    except (OSError, subprocess.SubprocessError):
+        minimum_text = ".".join(str(part) for part in MIN_CLAUDE_CODE)
+        bad("Claude Code is not available on PATH",
+            f"install Claude Code {minimum_text} or newer, then rerun harness doctor")
     probe = os.path.join(STATE, ".doctor-probe")
     try:
         os.makedirs(STATE, exist_ok=True)

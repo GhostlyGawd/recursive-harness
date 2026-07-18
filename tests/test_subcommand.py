@@ -140,6 +140,13 @@ check("doctor never prints raw jargon labels (plain-language rule)",
       "TIER" not in out and "exit-2" not in out)
 
 _H = _load_harness_cli()
+check("Claude Code version parser accepts the supported baseline",
+      _H._version_tuple("2.1.200 (Claude Code)") == (2, 1, 200))
+check("Claude Code version parser rejects non-version output",
+      _H._version_tuple("Claude Code unknown") is None)
+check("Doctor hook parser survives JSON quoting and space-containing paths",
+      _H._hook_names(r'{"command":"python C:\\repo with spaces\\hooks\\guard_one.py --then hook_two.py"}')
+      == ["guard_one.py", "hook_two.py"])
 import tempfile as _tf
 import types as _t
 _tmp = _tf.mkdtemp(prefix="standing_")
