@@ -25,7 +25,7 @@ Do not open a public support issue for a suspected vulnerability or exposed cred
 the private process in [SECURITY.md](SECURITY.md). Revoke leaked credentials immediately and
 sanitize every attachment.
 
-Support classification is not a license grant. This public repository currently has no
-repository-wide license; the maintainer must resolve that separately.
+The project is distributed under the repository-wide [MIT License](LICENSE). Licensing does
+not create a support warranty or response-time commitment.
 
 <!-- provenance: 2026-07-17 public-product documentation review. -->

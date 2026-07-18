@@ -34,8 +34,9 @@ artifacts can include summarized learnings, quotations, session identifiers, or 
 inputs. Sanitize them before staging, and inspect the staged diff rather than relying on
 `.gitignore`.
 
-Repository-wide licensing has not yet been selected. The MIT license in `fleet/LICENSE`
-applies to that extraction scaffold only; it is not a license for the whole repository.
+The repository is distributed under the root [MIT License](LICENSE). The separate
+`fleet/LICENSE` preserves an explicit license when Fleet is extracted on its own; neither
+license changes the data-handling boundary described here.
 
 ## Network boundary
 

@@ -2,7 +2,7 @@
 
 ## Identity
 
-A virtual department: eight root-level scripts (no directory of their own) that
+A virtual department: ten root-level scripts (no directory of their own) that
 install, wire, and synchronize the harness. `install.sh` (installer; the
 global `~/.claude` path is demoted to `--global-legacy`), `account-init.sh`
 (makes a fleet account's CLAUDE_CONFIG_DIR a complete, siloed view of this
@@ -12,8 +12,9 @@ CONSUME the harness via a thin CLAUDE.md contract — never forking the brain),
 `launch.sh` / `launch.ps1` (validate and visibly select one account before
 starting Claude Code without changing the working directory),
 `statusline-command.sh` (the fleet HUD: context % + 5h/7d rate-limit usage),
-and `sync-account-sessions.sh` / `.ps1` (one-time lossless cutover that
-consolidates a silo's session store into the shared canonical one).
+`sync-account-sessions.sh` / `.ps1` (one-time lossless cutover that consolidates
+a silo's session store into the shared canonical one), and `uninstall.sh` /
+`.ps1` (removes harness-owned wiring while preserving local data and user hooks).
 
 ## Why (provenance)
 
@@ -85,6 +86,28 @@ stock Windows PowerShell).
   `.forked.<ts>`, never merged silently.
 - Topology learnings amend ADR 0004; script bugs are heal-ledger material;
   structural changes to the silo model warrant a proposal first.
+
+## Release archives and removal
+
+`python3 scripts/build_release.py` packages the exact committed `HEAD` into
+deterministic `.tar.gz` and `.zip` archives. Each archive includes a manifest of
+the revision, file modes, sizes, and hashes; the builder also writes a SHA-256
+sidecar. It refuses a dirty worktree by default so local edits cannot be mistaken
+for the reviewed release.
+
+Removal is intentionally non-destructive:
+
+```bash
+./uninstall.sh --account dev       # one silo
+./uninstall.sh --all-accounts      # every local silo
+./uninstall.sh --global-legacy     # only if ~/.claude links to this checkout
+```
+
+On Windows, the equivalent native entry point is
+`.\uninstall.ps1 -Account dev`. The script removes repository-owned Git-hook and
+account-link wiring. It does not delete the checkout, settings, overrides,
+transcripts, backups, or ignored state; the operator decides when retained data
+is safe to remove.
 
 <!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 19
 (criterion 1): virtual-department doc for the six root distribution scripts,

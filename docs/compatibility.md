@@ -54,6 +54,20 @@ Installing an optional dependency does not make that subsystem part of the core 
 
 6. Inspect warnings and the generated settings backups before resuming sensitive work.
 
+## Rollback and removal
+
+If an upgrade fails, stop active sessions, preserve `.claude-private/` and
+`state/`, then check out the last reviewed tag and rerun `install.sh` plus account
+settings synchronization. Restore a `settings.json.pre-sync.*` backup only when
+the older template is incompatible. Published tags are immutable; fix forward
+instead of moving a tag.
+
+`./uninstall.sh --account <name>` (or `.\uninstall.ps1 -Account <name>` on
+Windows) removes harness-managed links and Git-hook wiring without deleting
+settings, overrides, transcripts, backups, state, or the checkout. This allows a
+safe trial removal before the operator separately decides whether retained data
+should be deleted.
+
 Do not repair an upgrade by editing generated account `settings.json` files. Change the
 canonical template or ignored per-account `overrides.json`, then regenerate.
 

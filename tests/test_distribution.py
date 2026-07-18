@@ -7,11 +7,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import hashlib
+import json
 import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -105,6 +109,101 @@ def test_hook_installation() -> None:
         check("dispatcher runs the preserved custom hook", "custom-hook" in dispatched.stdout, dispatched.stdout)
         check("dispatcher continues to the managed hook", "managed-sync" in dispatched.stdout, dispatched.stdout)
         check("dispatcher preserves custom hook failure semantics", dispatched.returncode == 7, dispatched.stderr)
+
+
+def test_uninstall() -> None:
+    with tempfile.TemporaryDirectory(prefix="harness-uninstall-") as raw_tmp:
+        repo = Path(raw_tmp)
+        shutil.copy2(ROOT / "install.sh", repo / "install.sh")
+        shutil.copy2(ROOT / "uninstall.sh", repo / "uninstall.sh")
+        (repo / "lint").mkdir()
+        (repo / "lint" / "lint_harness.py").write_text("print('stub lint')\n", encoding="utf-8")
+        write_executable(repo / "account-init.sh", "#!/usr/bin/env bash\necho managed-sync\n")
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        hooks_raw = subprocess.run(["git", "rev-parse", "--git-path", "hooks"], cwd=repo, **CAPTURE)
+        hooks_dir = Path(hooks_raw.stdout.strip())
+        if not hooks_dir.is_absolute():
+            hooks_dir = repo / hooks_dir
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+        custom = "#!/usr/bin/env bash\necho user-hook\n"
+        write_executable(hooks_dir / "post-merge", custom)
+
+        installed = subprocess.run([BASH_COMMAND, str(repo / "install.sh")], cwd=repo, **CAPTURE)
+        check("uninstall fixture installs managed wiring", installed.returncode == 0, installed.stderr)
+        removed = subprocess.run([BASH_COMMAND, str(repo / "uninstall.sh")], cwd=repo, **CAPTURE)
+        check("uninstall exits successfully", removed.returncode == 0, removed.stderr)
+        check("uninstall restores the user-owned post-merge hook", (hooks_dir / "post-merge").read_text(encoding="utf-8") == custom)
+        check("uninstall removes its managed task directory", not (hooks_dir / "post-merge.d").exists())
+
+        if os.name != "nt":
+            account = repo / ".claude-private" / "accounts" / "dev"
+            account.mkdir(parents=True)
+            (account / "settings.json").write_text("{}\n", encoding="utf-8")
+            (repo / "skills").mkdir()
+            (account / "skills").symlink_to(repo / "skills", target_is_directory=True)
+            account_removed = subprocess.run(
+                [BASH_COMMAND, str(repo / "uninstall.sh"), "--account", "dev"], cwd=repo, **CAPTURE
+            )
+            check("account uninstall exits successfully", account_removed.returncode == 0, account_removed.stderr)
+            check("account uninstall removes managed links", not (account / "skills").exists())
+            check("account uninstall preserves settings", (account / "settings.json").read_text(encoding="utf-8") == "{}\n")
+
+
+def test_release_archives() -> None:
+    with tempfile.TemporaryDirectory(prefix="harness-release-") as raw_tmp:
+        workspace = Path(raw_tmp)
+        repo = workspace / "repo"
+        repo.mkdir()
+        (repo / "VERSION").write_text("9.8.7\n", encoding="utf-8")
+        (repo / "LICENSE").write_text("fixture license\n", encoding="utf-8")
+        (repo / "run.sh").write_text("#!/usr/bin/env bash\necho ok\n", encoding="utf-8")
+        (repo / "run.sh").chmod(0o755)
+        env = os.environ.copy()
+        env.update(
+            {
+                "GIT_AUTHOR_NAME": "Harness Test",
+                "GIT_AUTHOR_EMAIL": "harness@example.invalid",
+                "GIT_COMMITTER_NAME": "Harness Test",
+                "GIT_COMMITTER_EMAIL": "harness@example.invalid",
+                "GIT_AUTHOR_DATE": "2026-01-02T03:04:05Z",
+                "GIT_COMMITTER_DATE": "2026-01-02T03:04:05Z",
+            }
+        )
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
+        subprocess.run(["git", "add", "."], cwd=repo, check=True, env=env)
+        subprocess.run(["git", "commit", "-q", "-m", "fixture"], cwd=repo, check=True, env=env)
+
+        outputs = []
+        for name in ("one", "two"):
+            output = workspace / name
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "build_release.py"), "--repo", str(repo), "--output", str(output)],
+                cwd=repo,
+                **CAPTURE,
+            )
+            check(f"release builder creates {name} archive set", result.returncode == 0, result.stderr)
+            outputs.append(output)
+
+        names = ["recursive-harness-v9.8.7.tar.gz", "recursive-harness-v9.8.7.zip"]
+        for artifact_name in names:
+            first = (outputs[0] / artifact_name).read_bytes()
+            second = (outputs[1] / artifact_name).read_bytes()
+            check(f"release artifact is reproducible: {artifact_name}", hashlib.sha256(first).digest() == hashlib.sha256(second).digest())
+
+        zip_path = outputs[0] / names[1]
+        with zipfile.ZipFile(zip_path) as archive:
+            archive_names = set(archive.namelist())
+            manifest_data = json.loads(archive.read("recursive-harness-v9.8.7/RELEASE-MANIFEST.json"))
+        check("release ZIP contains the root license", "recursive-harness-v9.8.7/LICENSE" in archive_names)
+        check("release manifest records the exact committed revision", manifest_data["revision"] == subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, text=True, capture_output=True, check=True).stdout.strip())
+
+        tar_path = outputs[0] / names[0]
+        with tarfile.open(tar_path, "r:gz") as archive:
+            tar_names = set(archive.getnames())
+        check("release tarball contains the root license", "recursive-harness-v9.8.7/LICENSE" in tar_names)
+
+        checksum_lines = (outputs[0] / "recursive-harness-v9.8.7.sha256").read_text(encoding="ascii").splitlines()
+        check("release bundle publishes one checksum per archive", len(checksum_lines) == 2)
 
 
 def test_account_initialization() -> None:
@@ -234,6 +333,8 @@ def main() -> int:
         return 1
     test_bash_launcher()
     test_hook_installation()
+    test_uninstall()
+    test_release_archives()
     test_account_initialization()
     test_powershell_launcher()
     if FAILURES:

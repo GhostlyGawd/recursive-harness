@@ -135,7 +135,7 @@ hidden by this README.
 - Correction and failure capture are heuristic and require review before promotion.
 - The supported setup is source-based and Bash-oriented; macOS remains best-effort.
 - Configured worktree sources follow trusted remote inputs unless separately pinned.
-- The repository has no root license. `fleet/LICENSE` applies only to the Fleet scaffold.
+- The repository is distributed under the root [MIT License](LICENSE).
 
 For what to tackle next, use the [evidence-backed roadmap](docs/roadmap.md). For the visual
 system and asset provenance, see [brand/README.md](brand/README.md).
