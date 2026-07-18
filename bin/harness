@@ -179,6 +179,31 @@ def _hook_names(text: str):
     return sorted(found)
 
 
+def _silo_account_settings(config_dir: str, silo: str):
+    """Map a config path to a directory discovered beneath this harness's account silo."""
+    accounts = os.path.join(silo, "accounts")
+    accounts_root = os.path.normcase(os.path.realpath(accounts))
+    requested = os.path.normcase(os.path.realpath(config_dir))
+    try:
+        with os.scandir(accounts) as entries:
+            for entry in entries:
+                if os.path.islink(entry.path) or os.path.isjunction(entry.path):
+                    continue
+                if not entry.is_dir(follow_symlinks=False):
+                    continue
+                resolved = os.path.normcase(os.path.realpath(entry.path))
+                try:
+                    if os.path.commonpath((accounts_root, resolved)) != accounts_root:
+                        continue
+                except ValueError:
+                    continue
+                if resolved == requested:
+                    return entry.name, os.path.join(entry.path, "settings.json")
+    except OSError:
+        pass
+    return None, None
+
+
 def _flatten_features(d: dict, prefix: str = "") -> dict:
     out: dict = {}
     for k, v in d.items():
@@ -802,31 +827,37 @@ def cmd_doctor(args) -> int:
     print("== Doctor — is this install sane? ==")
     cfg = os.environ.get("CLAUDE_CONFIG_DIR", "")
     silo = os.path.join(ROOT, ".claude-private")
+    acct = None
+    live = None
     if not cfg:
         bad("no brain is pinned: sessions in this shell load the OS-global ~/.claude, NOT this harness",
             f"launch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
-    elif os.path.realpath(cfg).startswith(os.path.realpath(silo)):
-        acct = os.path.basename(cfg.rstrip("/\\"))
-        good(f"this shell's brain: account '{acct}' in this harness")
+        live = os.path.join(ROOT, "settings.json")
     else:
+        acct, live = _silo_account_settings(cfg, silo)
+    if acct:
+        good(f"this shell's brain: account '{acct}' in this harness")
+    elif cfg:
         bad(f"a DIFFERENT brain is pinned ({cfg}) — behavior here comes from that config, not this repo",
             f"relaunch with CLAUDE_CONFIG_DIR={silo}/accounts/<name> claude")
     tpl = os.path.join(ROOT, "templates", "account-settings.json")
-    live = os.path.join(cfg, "settings.json") if cfg else os.path.join(ROOT, "settings.json")
-    try:
-        want = _hook_names(open(tpl, encoding="utf-8").read())
-        have = _hook_names(open(live, encoding="utf-8").read())
-        if want == have:
-            good(f"hook wiring matches the canonical template ({len(have)} hook files)")
-        else:
-            missing = [h for h in want if h not in have]
-            extra = [h for h in have if h not in want]
-            bad("deployed hook wiring differs from the canonical template"
-                + (f" (missing: {', '.join(missing)})" if missing else "")
-                + (f" (extra: {', '.join(extra)})" if extra else ""),
-                "./account-init.sh --sync-settings")
-    except OSError as e:
-        bad(f"could not compare settings ({e})", "check templates/account-settings.json + your settings.json exist")
+    if live:
+        try:
+            want = _hook_names(open(tpl, encoding="utf-8").read())
+            have = _hook_names(open(live, encoding="utf-8").read())
+            if want == have:
+                good(f"hook wiring matches the canonical template ({len(have)} hook files)")
+            else:
+                missing = [h for h in want if h not in have]
+                extra = [h for h in have if h not in want]
+                bad("deployed hook wiring differs from the canonical template"
+                    + (f" (missing: {', '.join(missing)})" if missing else "")
+                    + (f" (extra: {', '.join(extra)})" if extra else ""),
+                    "./account-init.sh --sync-settings")
+        except OSError as e:
+            bad(f"could not compare settings ({e})", "check templates/account-settings.json + your settings.json exist")
+    else:
+        print("  skipped hook wiring check for the different brain above")
     hooks_dir = os.path.join(ROOT, "hooks")
     broken = []
     for fn in sorted(os.listdir(hooks_dir)) if os.path.isdir(hooks_dir) else []:
