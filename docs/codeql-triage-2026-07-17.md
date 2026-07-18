@@ -34,7 +34,7 @@ default-branch CodeQL rerun confirms which flows its model still reports.
 | Alert(s) | Boundary | Review result |
 | --- | --- | --- |
 | 89–92, 87–88 | Explicit Cartograph `--audit`, `--json`, and `--html` destinations | The local operator deliberately chooses the output path. This is a CLI file-output capability, not traversal across a server-owned root. |
-| 62–65, 67–80, 84–86 | Cartograph selected `--root` and files enumerated beneath it | `--root` intentionally analyzes a local checkout. Reads now reject symlink/resolution escapes outside that chosen root; no network input selects it. |
+| 62–65, 67–80, 84–86 | Cartograph selected `--root` and files enumerated beneath it | `--root` intentionally analyzes an operator-selected local checkout; no network input selects it. Treat that checkout as trusted input and review generated exports before sharing because readable repository content is intentionally included. |
 | 66 | `CLAUDE_CONFIG_DIR/settings.json` in Doctor | The environment variable intentionally selects the account configuration to inspect. The command parses JSON read-only and reports the selected brain. |
 | 24, 39, 44, 52–59 | Worktree/session safety inspectors | These paths come from the active local Claude/Git session and are read-only probes used to block unsafe writes. Registry writes use the confined private-state primitive. Failing an inspection is fail-safe or fail-open as documented; it does not create an arbitrary file. |
 | 25–28, 103–104, 151 | Eval/test fixtures | Test-only temporary directories and synthetic hook inputs; not installed runtime entry points. They specifically verify containment and coordination behavior. |

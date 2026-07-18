@@ -41,19 +41,14 @@ def discover() -> list[str]:
 
 
 def case_dir(slug: str) -> str | None:
-    """Resolve one declared corpus slug without traversal or symlink escape."""
+    """Resolve only a case discovered from the trusted corpus directory."""
     if (not slug or slug in {".", ".."} or "/" in slug or "\\" in slug or
             not all(char.isalnum() or char in "-_" for char in slug)):
         return None
-    case = os.path.join(CORPUS, slug)
-    if not os.path.isdir(case) or os.path.islink(case):
-        return None
-    try:
-        if os.path.commonpath((os.path.realpath(CORPUS), os.path.realpath(case))) != os.path.realpath(CORPUS):
-            return None
-    except ValueError:
-        return None
-    return case
+    for discovered_slug in discover():
+        if discovered_slug == slug:
+            return os.path.join(CORPUS, discovered_slug)
+    return None
 
 
 def validate(slug: str) -> list[str]:

@@ -52,9 +52,6 @@ _REPLACE_RETRIES = 5
 def safe_filename_id(value, prefix="id"):
     """Map an external identifier to one path-component-safe, stable value."""
     text = value if isinstance(value, str) else ""
-    if (1 <= len(text) <= 128 and text not in {".", ".."} and
-            all(char.isalnum() or char in "._-" for char in text)):
-        return text
     digest = hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()
     safe_prefix = "".join(char for char in str(prefix) if char.isalnum() or char in "_-") or "id"
     return f"{safe_prefix}-{digest}"

@@ -50,8 +50,9 @@ def main() -> int:
               switched.stderr)
 
         env = os.environ.copy()
-        env["HOME"] = str(tmp / "home")
-        Path(env["HOME"]).mkdir()
+        home = tmp / "home"
+        home.mkdir()
+        env["HOME"] = str(home)
         installed = run([BASH, "./install.sh"], cwd=checkout, env=env)
         check("fresh install succeeds", installed.returncode == 0, installed.stderr)
         initialized = run(

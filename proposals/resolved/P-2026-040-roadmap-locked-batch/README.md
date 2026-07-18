@@ -4,7 +4,7 @@ title: Roadmap items 2–10 — locked-path batch
 status: approved
 implementation: landed
 created: 2026-07-05
-updated: 2026-07-17
+updated: 2026-07-18
 owner: GhostlyGawd
 resolution: "PR #225"
 ---
@@ -15,6 +15,7 @@ resolution: "PR #225"
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
 | 2026-07-17 | approved | landed | PR #225; byte-identical staged application and green verification recorded at merge |
+| 2026-07-18 | approved | landed | P-2026-042 removed obsolete executable staging duplicates; PR #225 and Git history retain evidence |
 <!-- proposal-history:end -->
 
 ## Resolution

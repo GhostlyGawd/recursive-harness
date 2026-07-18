@@ -4,7 +4,7 @@ title: Market and distribution readiness
 status: approved
 implementation: in-progress
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-18
 owner: GhostlyGawd
 resolution: ""
 ---
@@ -15,6 +15,7 @@ resolution: ""
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
 | 2026-07-17 | approved | in-progress | Owner requested the readiness plan, review, ordered implementation, and verification |
+| 2026-07-18 | approved | in-progress | PR #241 security and compatibility candidate; protected verification in progress |
 <!-- proposal-history:end -->
 
 ## Outcome

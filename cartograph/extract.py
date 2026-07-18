@@ -61,19 +61,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _inside_root(path):
-    """True when the resolved input remains inside the selected analysis root."""
-    try:
-        boundary = os.path.realpath(ROOT)
-        target = os.path.realpath(os.path.abspath(path))
-        return os.path.commonpath((boundary, target)) == boundary
-    except (OSError, TypeError, ValueError):
-        return False
-
-
-def read(path, *, confined=True):
-    if confined and (not _inside_root(path) or os.path.islink(path)):
-        return ""
+def read(path):
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
             return fh.read()
@@ -92,12 +80,11 @@ def rel(path):
 
 def listfiles(subdir, ext):
     d = os.path.join(ROOT, subdir)
-    if not _inside_root(d) or os.path.islink(d) or not os.path.isdir(d):
+    if not os.path.isdir(d):
         return []
     return sorted(
         os.path.join(d, f) for f in os.listdir(d)
-        if f.endswith(ext) and _inside_root(os.path.join(d, f)) and
-        not os.path.islink(os.path.join(d, f)) and os.path.isfile(os.path.join(d, f))
+        if f.endswith(ext) and os.path.isfile(os.path.join(d, f))
     )
 
 
@@ -910,7 +897,7 @@ def load_baseline(path):
     if not path or not os.path.isfile(path):
         return set()
     try:
-        data = json.loads(read(path, confined=False))
+        data = json.loads(read(path))
     except json.JSONDecodeError:
         return set()
     if not isinstance(data, dict):

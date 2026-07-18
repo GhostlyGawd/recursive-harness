@@ -33,6 +33,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 
 
 def _git(cwd, *args):
@@ -57,41 +58,53 @@ def _commit_ref(value):
             all(char in "0123456789abcdefABCDEF" for char in value) else None)
 
 
-def _remove_new_clone(root, target):
-    """Remove only a newly-created, still-contained clone after verification fails."""
+def _remove_staging(path):
+    """Remove a harness-created temporary clone, including read-only Git objects."""
     def make_writable(function, path, _exc_info):
         os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
         function(path)
 
-    if os.path.lexists(target) and _contained(root, target):
-        shutil.rmtree(target, onerror=make_writable)
+    shutil.rmtree(path, onerror=make_writable)
 
 
-def _clone_at(root, source, target, ref):
-    clone_args = ["git", "clone", "--quiet"]
-    if ref:
-        clone_args.append("--no-checkout")
-    clone_args.extend(["--", source, target])
-    result = subprocess.run(clone_args, capture_output=True, text=True)
-    if result.returncode != 0:
-        _remove_new_clone(root, target)
-        return result
-    if ref:
+def _clone_at(source, target, ref):
+    if not ref:
+        return subprocess.run(
+            ["git", "clone", "--quiet", "--", source, target],
+            capture_output=True, text=True,
+        )
+
+    # Validate mutable/local sources in a harness-owned staging directory before
+    # creating the declared destination. A missing/wrong ref therefore leaves no
+    # user-selected partial target to clean up.
+    staging_root = tempfile.mkdtemp(prefix="recursive-harness-materialize-")
+    staged_repo = os.path.join(staging_root, "repository")
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--quiet", "--no-checkout", "--", source, staged_repo],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            return result
         resolved = subprocess.run(
-            ["git", "-C", target, "rev-parse", "--verify", f"{ref}^{{commit}}"],
+            ["git", "-C", staged_repo, "rev-parse", "--verify", f"{ref}^{{commit}}"],
             capture_output=True, text=True,
         )
         if resolved.returncode != 0 or resolved.stdout.strip().lower() != ref.lower():
-            _remove_new_clone(root, target)
-            return subprocess.CompletedProcess(clone_args, 1, "", "immutable ref unavailable")
+            return subprocess.CompletedProcess(result.args, 1, "", "immutable ref unavailable")
+        result = subprocess.run(
+            ["git", "clone", "--quiet", "--no-checkout", "--", staged_repo, target],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            return result
         checkout = subprocess.run(
             ["git", "-C", target, "checkout", "--quiet", "--detach", ref, "--"],
             capture_output=True, text=True,
         )
-        if checkout.returncode != 0:
-            _remove_new_clone(root, target)
-            return checkout
-    return result
+        return checkout
+    finally:
+        _remove_staging(staging_root)
 
 
 def materialize(cwd):
@@ -162,10 +175,10 @@ def materialize(cwd):
             if not _contained(worktree_root, os.path.dirname(target)):
                 sys.stderr.write(f"[materialize] refusing symlink escape: {rel!r}\n")
                 continue
-            r = _clone_at(worktree_root, source, target, ref)
+            r = _clone_at(source, target, ref)
             if r.returncode != 0 and source == local_src and remote:
                 # local clone failed -> fall back to the declared remote
-                r = _clone_at(worktree_root, remote, target, ref)
+                r = _clone_at(remote, target, ref)
             if r.returncode != 0:
                 sys.stderr.write(f"[materialize] could not clone {rel}: "
                                  f"{r.stderr.strip()[:200]}\n")

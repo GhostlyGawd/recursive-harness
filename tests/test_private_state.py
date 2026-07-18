@@ -26,7 +26,8 @@ import privacy_state as privacy  # noqa: E402
 
 
 def test_external_ids_are_safe_stable_filename_components():
-    assert ps.safe_filename_id("session-123") == "session-123"
+    benign = ps.safe_filename_id("session-123", "session")
+    assert benign.startswith("session-") and benign != "session-123"
     hostile = ps.safe_filename_id("../../outside/*", "session")
     assert hostile == ps.safe_filename_id("../../outside/*", "session")
     assert hostile.startswith("session-")
