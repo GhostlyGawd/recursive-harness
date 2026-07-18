@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Durable state. Observable agents. Evidence-backed improvement.</strong></p>
 
-<p align="center">A local-first control plane that turns Claude Code work into scored outcomes, safety gates, and reviewed repository memory.</p>
+<p align="center">A local-first control plane that turns coding-agent work into scored outcomes, safety gates, and reviewed repository memory.</p>
 
 <p align="center">
   <a href="https://github.com/GhostlyGawd/recursive-harness/actions/workflows/ci.yml"><img alt="Harness CI" src="https://github.com/GhostlyGawd/recursive-harness/actions/workflows/ci.yml/badge.svg"></a>
@@ -29,6 +29,12 @@ measurable: predictions are scored, corrections stay visible, concurrent work is
 and accepted lessons become reviewed skills, commands, decisions, evaluations, or policy.
 The result is an improvement loop you can inspect instead of a growing prompt file you have
 to trust on faith.
+
+The canonical capability model is provider-neutral, but the production integration today
+is Claude Code. OpenAI/Codex support is a planned adapter and plugin, not a separately
+maintained harness. See the [architecture](docs/architecture.md) and
+[Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
+migration status.
 
 ## What you get
 

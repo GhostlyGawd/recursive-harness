@@ -1,74 +1,89 @@
-# Recursive Harness vs. Agentic Dev OS
+# Agentic Dev OS consolidation map
 
-**Observed:** 2026-07-17
+**Decision:** 2026-07-18
 
-**Recursive Harness:** `d8939b3b4aa5fe9be4c1502893578bbdb86d9fbe`
+**Recursive Harness:** `7a720cb8beed2c7364dd7370150ab0480ef65290`
 
-**Agentic Dev OS:** `22523bc78b7d65a4a90b9b01d08b681591fc662f`
+**Agentic Dev OS:** `8c053b2be85c5e69f65c6e37f2368e9e476e64c7`
 
-This is a point-in-time product comparison, not a portfolio reclassification. Live GitHub
-settings, repository contents, and the governed `repo-audit` inventory were checked at the
-commits above.
+Recursive Harness is the canonical harness target. Agentic Dev OS is a capability donor
+and historical governance reference, not a second harness to keep evolving in parallel.
+Master Harness remains a retired consolidation spike. This decision changes product
+ownership; it does not claim that Recursive Harness already supports every agent host.
+Claude Code is the shipped integration, and other hosts must enter through reviewed
+provider adapters.
 
-## Verdict
+## Why one harness
 
-**Recursive Harness is the better operational harness today.** It has an installed Claude
-Code runtime, lifecycle hooks, private state ledgers, prediction calibration, corrections,
-evaluations, concurrency guards, tests, and an operator surface. It is a beta product used
-as a working control plane rather than only a contract.
+The two repositories were solving adjacent parts of the same problem. Recursive Harness
+has the live runtime, safety boundary, learning loop, installer, release path, tests, and
+operator surfaces. Agentic Dev OS has a smaller formal governance model but no comparable
+installed runtime or independent adoption proof. Keeping both active would leave users and
+agents unable to know which repository owns reusable behavior and would make fixes drift.
 
-**Agentic Dev OS is the better formal governance reference.** Its explicit chain from
-outcome through opportunity, bet, PRD, specification, ticket, code, test, event, metric,
-and review is stronger for team traceability. It also has stable IDs, bidirectional links,
-risk tiers, digest-bound approvals, scoped changes, archival rules, telemetry contracts,
-and a repository-wide MIT license.
+The consolidation rule is therefore:
 
-There is no useful universal winner: Recursive Harness wins the job of operating and
-improving a Claude Code environment; Agentic Dev OS wins the job of specifying a formal,
-portable product-delivery governance model.
+- reusable harness behavior is designed and proven in Recursive Harness;
+- provider-specific wiring is an adapter or distribution package, not a fork of the core;
+- product-local behavior stays in the consuming product;
+- Agentic Dev OS remains readable as provenance until its useful capabilities are either
+  adopted, explicitly rejected, or deferred here.
 
-## Evidence matrix
+## Capability disposition
 
-| Dimension | Recursive Harness | Agentic Dev OS | Better fit |
+| Agentic Dev OS capability | Recursive Harness evidence | Disposition | Next action |
 | --- | --- | --- | --- |
-| Live agent runtime | Hooks, commands, skills, ledgers, Fleet, Mission Control | Primarily contracts and CLI-backed governance records | Recursive Harness |
-| Feedback learning | Prediction scoring, correction capture, retrospectives, eval replay | Metrics and review chain, but less runtime calibration depth | Recursive Harness |
-| Safety boundaries | Protected enforcement layer, guarded worktrees/sessions, required CI | Risk and scope policy are formalized; live branch protection was absent when observed | Split |
-| Product traceability | Decisions, proposals, provenance, tests | Stable cross-artifact IDs and bidirectional product chain | Agentic Dev OS |
-| Portability proof | Source install and real Claude Code integration | Portable contract exists, but no independent installer/adoption proof was observed | Recursive Harness today |
-| Repository hygiene | Public beta, protected main, security tooling; no root license | Public lab, MIT license, pinned workflows, clean observed alert state | Split |
-| Complexity cost | Large operational surface with accumulated history | Cleaner formal model, but the full product chain is heavyweight for small harness changes | Context-dependent |
+| Stable IDs that survive title and file moves | `proposals/manage.py`, `proposals/README.md`, `tests/test_proposals.py` | Already native | Keep the tested `P-YYYY-NNN` contract |
+| Separate decision and implementation state | Proposal `status` and `implementation` axes | Already native | No duplicate system |
+| Evidence-backed terminal transitions and append-only history | Validated status history and terminal resolution evidence | Already native | Continue enforcing in proposal CI |
+| Active/resolved separation and generated current index | `proposals/active/`, `proposals/resolved/`, `proposals/INDEX.md` | Already native | No migration needed |
+| Bounded retries and explicit handoff | `skills/build-loop`, `skills/loop-prompt-architect`, Fleet handoffs and acknowledgements | Already native in separate layers | Document which layer owns execution budgets versus coordination |
+| Reproducible verification as evidence, not product proof | Harness lint/tests/evals, Cartograph, release journeys, reviewed PRs | Already native | Preserve layered verification language |
+| Risk tiers with unknown risk promoted upward | No single repository-wide risk vocabulary | Adapt | Add a small R0-R3 vocabulary to proposal/change planning without weakening existing guards |
+| Allowed-path and scope contracts | Worktree and enforcement guards scope writes; proposals do not name an allowed-path contract | Adapt selectively | Start with high-risk or delegated work; do not force it onto every correction |
+| Digest-bound action approvals | Approval markers plus human-reviewed PRs are the current binding gate | Defer | Design separately if threat evidence shows markers and protected review are insufficient |
+| Full outcome → opportunity → bet → PRD → spec → ticket chain | Proposals, Cartograph traces, spec-driven development, and product-local plans cover parts of the chain | Reject wholesale | Borrow links where they improve traceability; avoid mandatory bureaucracy for small learning-loop changes |
+| Governance event/telemetry contracts | Private ledgers, Fleet event log, calibration, and reviewed rollups | Adapt, do not duplicate | Define a provider-neutral event envelope only when a second adapter proves the need |
+| Portable multi-agent distribution | Core behavior is substantial, but installation and lifecycle wiring are Claude-specific | Priority gap | Extract a provider contract, then ship one OpenAI/Codex adapter as the portability proof |
 
-## Recommended adoption map
+“Already native” means the capability exists in the current Recursive implementation and
+has local verification; it does not imply source-code lineage from Agentic Dev OS. “Adapt”
+requires a Recursive proposal and acceptance evidence. “Reject” preserves the reasoning so
+the same hierarchy is not reintroduced under another name.
 
-Adopt into Recursive Harness:
+## Provider and plugin boundary
 
-1. Stable proposal IDs that survive file moves and title changes.
-2. Separate decision state from implementation state.
-3. Require evidence for terminal transitions and keep an append-only status history.
-4. Separate active work from resolved history and generate a current index.
-5. Borrow risk/scope language only for changes where it improves review clarity.
+A plugin is a distribution adapter, not the owner of the capability. For example, the
+specialization workflow stays canonical under `skills/specialization/` in Recursive
+Harness. A Claude installation can expose it through Claude commands and hooks; an
+OpenAI/Codex plugin can package the same skill plus Codex-specific metadata and tool wiring.
+Neither adapter gets an independent copy that can silently drift.
 
-Do **not** import the entire PRD/spec/ticket hierarchy. Recursive Harness already has a
-smaller learning loop; forcing every correction or harness proposal through a full product
-chain would add friction without improving its core evidence.
+The intended dependency direction is:
 
-Potential future learnings for Agentic Dev OS—prediction calibration, correction-to-
-guardrail promotion, and interactive evaluation replay—should be proposed there only with
-an acceptance test and validation in at least two consumers. This comparison makes no such
-cross-repository change.
+```text
+Recursive capability source
+        ↓
+provider-neutral contract and fixtures
+        ↓
+Claude adapter (shipped) · OpenAI/Codex adapter (planned) · future adapters
+```
 
-## Gaps that affect the verdict
+An adapter is complete only when it names the upstream capability version, passes shared
+fixtures, documents unsupported lifecycle events, and has an install/upgrade/removal path.
 
-- Recursive Harness has no repository-wide license and retains a static-analysis triage
-  backlog. Its security assessment documents these limitations.
-- Agentic Dev OS was classified as an active lab and candidate-not-canonical in the observed
-  governance registry. Its portable-contract ambition lacks release, package, independent
-  five-minute proof, migration, and production adoption evidence at the observed commit.
-- Live controls can change without a commit. At observation time, Recursive Harness main
-  required current `lint-and-test` with administrator enforcement; Agentic Dev OS main was
-  not protected.
+## Migration gates
 
-The practical recommendation is therefore to continue building Recursive Harness as the
-working product while selectively adapting Agentic Dev OS's governance strengths through
-reviewed, locally proven changes.
+1. Record this ownership decision in `repo-audit` and stop routing new reusable behavior to
+   Agentic Dev OS.
+2. Keep the proposal-lifecycle capabilities above as the first verified native adoption;
+   their existing tests are the receipt.
+3. Add risk/scope vocabulary as the first new governance slice, behind its own reviewed
+   proposal and without changing enforcement semantics accidentally.
+4. Define the minimum provider contract from capabilities actually needed by a second host.
+5. Build and test one OpenAI/Codex adapter from the canonical skill sources.
+6. Mark each remaining Agentic Dev OS capability adopted, rejected, or deferred before
+   treating that repository as fully drained.
+
+The former point-in-time comparison remains recoverable in Git history. This document is
+the current ownership and migration decision.

@@ -1,7 +1,7 @@
 # Proposals — durable decisions with enforced state
 
 Proposals hold changes that need an explicit decision, implementation trail, or durable
-resolution. The authoritative queue is [INDEX.md](INDEX.md): five active records and the
+resolution. The authoritative queue is [INDEX.md](INDEX.md): six active records and the
 resolved history migrated on 2026-07-17.
 
 ## Layout
