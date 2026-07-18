@@ -40,6 +40,11 @@ promotion into public memory or eval fixtures review-only.
 
 ### 3. Turn on repository security services
 
+**Delivered in part:** secret scanning, push protection, private vulnerability
+reporting, Dependabot security updates, pinned Actions, and CodeQL are enabled.
+Alert remediation, immutable worktree inputs, and safe branch-rule strengthening
+remain active release work under P-2026-042.
+
 Enable GitHub secret scanning, push protection, and CodeQL if the repository plan supports
 them. Pin `actions/checkout` and `actions/setup-python` to reviewed commit SHAs, then add a
 controlled update mechanism. Consider requiring one approving review and resolved
@@ -52,6 +57,10 @@ before/after record.
 
 ### 4. Test the distribution scripts in CI
 
+**Delivered:** hermetic installer/account/launcher tests run on Linux and Windows;
+the installer preserves user-owned hooks through a managed dispatcher. Release
+archive and non-destructive uninstall tests now extend that contract.
+
 Add hermetic Bash tests for `install.sh`, `account-init.sh`, settings backups, permission
 modes, out-of-silo refusal, and idempotency. Add a Windows job for
 `sync-account-sessions.ps1` so PowerShell 5.1/7 behavior is continuously checked instead of
@@ -61,6 +70,10 @@ silently replaced.
 
 ### 5. Provide a first-class launcher
 
+**Delivered:** Bash and PowerShell launchers select and display the account,
+validate the checkout, preserve the working directory, and forward arguments.
+The session-store owner is explicit and persisted.
+
 Replace copy-pasted environment pins with a small cross-platform launcher that selects an
 account, validates the checkout, exports `CLAUDE_CONFIG_DIR`, and starts Claude Code. It
 should print the selected account and checkout before launch so “wrong brain” failures are
@@ -68,6 +81,10 @@ obvious. Make the shared session-store owner configurable instead of hard-coding
 maintainer-specific `rhen` account name.
 
 ### 6. Define compatibility and upgrades
+
+**Delivered in documentation:** [compatibility.md](compatibility.md) defines the
+runtime and host baselines plus upgrade, rollback, and removal behavior. Minimum-
+Git and macOS CI remain P-2026-042 verification work.
 
 Document the supported Python, Git, Claude Code, Bash, and Windows versions. Add an upgrade
 check that compares generated account settings with the canonical template and reports
@@ -77,10 +94,12 @@ breaking migrations before applying them.
 
 ### 7. Choose a repository-wide license
 
-The public repository currently has no root license; `fleet/LICENSE` is scoped only to the
-Fleet extraction scaffold. The maintainer should explicitly choose whether and how the
-whole project may be used, modified, and redistributed. Do not infer that choice from the
-existing public visibility.
+**Delivered:** the owner approved an MIT license for the repository in
+P-2026-042. The root `LICENSE` now grants use, modification, and redistribution;
+Fleet keeps its scoped license for standalone extraction.
+
+The prior public-without-a-license ambiguity is closed. License changes remain a
+deliberate owner decision and are never inferred from repository visibility.
 
 ### 8. Define the supported product surface
 
@@ -98,8 +117,9 @@ Automate version consistency, docs links, changelog/release notes, security scan
 fresh-install smoke tests, and upgrade tests. Keep publication manual until the checklist is
 proven across several releases.
 
-**Manual contract delivered:** [releasing.md](releasing.md) records the checklist and the
-current `VERSION`/tag/license gaps. Mechanical checks and repeated release evidence remain.
+**In progress:** [releasing.md](releasing.md) records the checklist, while the
+deterministic archive builder supplies manifests and checksums. Publication and
+repeated release evidence remain gated on the rest of P-2026-042.
 
 ## P2 — improve maintainability with existing evidence
 

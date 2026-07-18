@@ -7,6 +7,7 @@ evals/results/*
 !evals/results/last-replay.json
 __pycache__/
 *.pyc
+/dist/
 HUMAN_APPROVED
 .claude-private/
 # Worktrees materialize under .claude/worktrees/<name>; never commit their

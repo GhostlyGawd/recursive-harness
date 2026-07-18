@@ -126,6 +126,23 @@ This symlinks the checkout to `~/.claude`. It refuses to run when
 model is the supported default because it makes the loaded configuration explicit and
 keeps account state inside the ignored checkout boundary.
 
+## Upgrade, rollback, and uninstall
+
+Use the fast-forward and settings-backup procedure in
+[Compatibility and upgrades](compatibility.md). Rollback means returning the
+checkout to a previously reviewed tag and restoring a generated settings backup;
+never move a published tag or discard ignored state to force the downgrade.
+
+To remove harness wiring while keeping recoverable local data:
+
+```bash
+./uninstall.sh --account dev
+```
+
+On Windows, run `.\uninstall.ps1 -Account dev`. Both entry points preserve the
+checkout, settings, overrides, transcripts, backups, and `state/`. Inspect and
+remove retained data separately only after confirming it is no longer needed.
+
 ## Common setup failures
 
 | Symptom | Likely cause | Resolution |

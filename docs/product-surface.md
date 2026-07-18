@@ -29,9 +29,9 @@ file layout a public API. Their observable outcome is the contract.
 - Beta status permits breaking changes before 1.0. It does not permit silent changes to data
   handling, guard behavior, or setup requirements.
 
-Support classification is an engineering promise, not a license grant. The public repository
-still has no repository-wide license; `fleet/LICENSE` applies only to the Fleet extraction
-scaffold until the maintainer makes an explicit root-license decision.
+Support classification is an engineering promise, not a warranty. The root
+[MIT License](../LICENSE) covers the repository; `fleet/LICENSE` keeps Fleet's license
+explicit when that scaffold is extracted independently.
 
 ## Promotion and retirement
 
