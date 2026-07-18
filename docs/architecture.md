@@ -1,18 +1,24 @@
 # Architecture
 
-Recursive Harness is a repository-backed control plane around an interactive Claude Code
-session. It does not train or proxy the model. It controls which instructions load, reacts
-to lifecycle events, records selected evidence, routes learnings into versioned artifacts,
-and verifies the resulting changes.
+Recursive Harness is a repository-backed control plane for interactive coding agents. It
+does not train or proxy the model. It controls which instructions load, reacts to lifecycle
+events, records selected evidence, routes learnings into versioned artifacts, and verifies
+the resulting changes.
+
+Claude Code is the only fully shipped provider integration today. The kernel, procedures,
+and evidence model are the canonical product; provider lifecycle events, installation
+metadata, and host-specific commands belong in adapters. OpenAI/Codex and other adapters
+must prove this boundary before the product claims general multi-agent compatibility.
 
 ## System boundaries
 
 ```mermaid
 flowchart TB
-    Operator --> Claude[Interactive Claude Code]
-    Config[Account settings] --> Claude
-    Claude --> Procedures[Skills · commands · agents]
-    Claude --> Hooks[Lifecycle hooks]
+    Operator --> Host[Interactive coding agent]
+    Provider[Provider adapter] --> Host
+    Config[Account settings] --> Provider
+    Host --> Procedures[Skills · commands · agents]
+    Host --> Hooks[Lifecycle hooks]
     Hooks --> Hot[Local state/ ledgers]
     Hot --> Retro[Retro and calibration]
     Procedures --> Change[Versioned change]
@@ -23,11 +29,12 @@ flowchart TB
     Main --> Config
 ```
 
-There are four functional planes.
+There are five functional planes.
 
 | Plane | Main artifacts | Responsibility |
 | --- | --- | --- |
 | Kernel | `CLAUDE.md`, `memory/decisions/`, `autonomy.json` | Small invariants, architecture, and earned automation policy |
+| Adapter | `settings.json`, `templates/`, provider packages | Translate host lifecycle, tool, and installation contracts without owning reusable behavior |
 | Runtime | `settings.json`, `templates/`, `hooks/` | Lifecycle wiring, safety gates, local signal capture, and session coordination |
 | Procedure | `skills/`, `commands/`, `agents/` | Triggered workflows, routing, review, and task-specific behavior |
 | Evidence | `lint/`, `tests/`, `evals/`, `cartograph/` | Governance checks, behavior tests, regression cases, and structural truth |
@@ -56,11 +63,27 @@ request.
 acceptance history. It can propose pruning or wider autonomy, but it cannot silently edit
 the enforcement layer or approve its own measuring rules.
 
+## Capability ownership and adapters
+
+Reusable skills, governance, ledgers, tests, and safety semantics have one source in this
+repository. A provider package may expose those capabilities in the format a host expects,
+but it must not become an independently edited second harness. Each adapter must declare:
+
+- which canonical capabilities and version it packages;
+- how host events map to the runtime lifecycle, including unsupported events;
+- which shared fixtures it passes;
+- how installation, upgrade, rollback, and removal work; and
+- which safety guarantees remain provider-specific.
+
+The detailed Agentic Dev OS adoption and rejection decisions live in the
+[consolidation map](comparisons/agentic-dev-os.md). It is the drain checklist for that
+repository, not a reason to preserve two active control planes.
+
 ## Runtime lifecycle
 
-`settings.json` and `templates/account-settings.json` wire six Claude Code lifecycle events.
-The generated account settings use absolute checkout paths, while hook code remains linked
-to the current checkout.
+The shipped Claude adapter uses `settings.json` and `templates/account-settings.json` to
+wire six Claude Code lifecycle events. The generated account settings use absolute checkout
+paths, while hook code remains linked to the current checkout.
 
 | Event | Representative behavior |
 | --- | --- |

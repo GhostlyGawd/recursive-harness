@@ -14,8 +14,35 @@ their normal explicit decisions and reviews.
   checksummed GitHub Release channel, cross-platform black-box journeys, explicit stability
   labels, and a product landing page; native package-manager channels and repeated external
   release validation remain future work.
-- The strongest near-term opportunity is hardening the operational boundary rather than
-  adding another large subsystem.
+- Recursive Harness is the selected canonical harness target. Agentic Dev OS is a
+  capability donor and Master Harness is a retired consolidation spike; the companion
+  `repo-audit` governance change aligns the portfolio records with that decision.
+- The strongest near-term opportunity is defining a provider boundary around the working
+  product, not adding another parallel harness.
+
+## P0 — consolidate ownership without duplicating the runtime
+
+### 0. Drain Agentic Dev OS into one governed capability map
+
+Use the [Agentic Dev OS consolidation map](comparisons/agentic-dev-os.md) as the explicit
+adopt/reject/defer ledger. Stable proposal IDs, dual-axis lifecycle state, append-only
+history, active/resolved storage, generated indexing, bounded loops, handoffs, and layered
+verification already have native Recursive implementations. Do not rebuild them.
+
+Next, adapt the useful R0-R3 risk and allowed-scope vocabulary through a narrow proposal.
+Universal digest-bound approvals and the complete PRD/spec/ticket hierarchy remain deferred
+unless concrete threat or consumer evidence justifies their cost.
+
+### 0.1 Define and prove the provider adapter contract
+
+Extract the smallest contract needed to expose canonical capabilities without copying them:
+capability/version metadata, lifecycle mapping, shared fixtures, unsupported-event
+disclosure, and install/upgrade/removal behavior. The existing Claude integration is the
+first adapter in substance even where its files predate the abstraction.
+
+Use one OpenAI/Codex plugin or adapter as the second-provider proof. Specialization remains
+a canonical Recursive capability; the provider package only exposes and wires it. Do not
+claim broad agent support until the adapter passes shared acceptance fixtures.
 
 ## P0 — protect the evidence and data boundary
 
