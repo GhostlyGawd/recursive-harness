@@ -10,9 +10,10 @@ no longer silently replaced.
 Secret scanning, push protection, private vulnerability reporting, Dependabot,
 and CodeQL default setup are enabled. The initial CodeQL baseline was 108 alerts;
 the live pre-hardening count fell to 78 as obsolete code and earlier issues were
-removed. P-2026-042 now remediates the 20 flagged regex paths, the weak hash,
-unsafe session-ID filenames, eval-case traversal, mutable worktree inputs, and a
-duplicate executable staging tree. The alert-by-alert boundary review is in
+removed. After PR #241 merged, default-branch analysis reported 52 open alerts:
+50 path-flow signals and two Doctor regex findings. The `v0.1.2` candidate replaces
+those last two regexes with a bounded linear parser. All 50 path findings are mapped
+to fixed, trusted-local, or synthetic-test boundaries in the alert-by-alert review:
 [codeql-triage-2026-07-17.md](codeql-triage-2026-07-17.md).
 
 ## Scope and method
@@ -50,7 +51,7 @@ vulnerabilities without a reachable security impact.
 | RH-06 | Low | Fixed | Distributed nested repositories are pinned to reviewed full commit SHAs. The hook verifies a detached checkout, contains clone paths/symlink parents, and removes partial clones on verification failure. An explicit `development: true` mode remains intentionally mutable and is documented as non-distribution-safe. |
 | RH-07 | Governance | Fixed | The owner selected a repository-wide MIT license in P-2026-042; `fleet/LICENSE` remains explicit for standalone extraction. |
 | RH-08 | Low | Fixed | `install.sh` installs a managed dispatcher, preserves a pre-existing regular hook byte-for-byte, runs both hooks in lexical order, remains idempotent, and refuses ambiguous/non-regular hook states. |
-| RH-09 | Medium | Fixed / verification pending | The pre-hardening live baseline was 57 path, 20 ReDoS, and one weak-hash alert. All regex and weak-hash findings were changed in code; reachable path issues were fixed, while intentional local-path capabilities and test fixtures are documented individually. The protected PR CodeQL run and post-merge count are the final closure evidence. |
+| RH-09 | Medium | Fixed / final default-branch verification pending | The pre-hardening live baseline was 57 path, 20 ReDoS, and one weak-hash alert. PR #241 removed 18 regex alerts, the weak hash, and reachable unsafe path flows; the release candidate removes the final two Doctor regexes. The 50 remaining path signals are intentional local-path capabilities or tests with alert-specific boundary analysis. Protected PR and post-merge CodeQL are the closure evidence. |
 | RH-10 | Medium | Fixed | Stop/session hooks previously interpolated a hook-provided session ID into state filenames. A centralized safe filename ID, exact cleanup paths, and regression tests remove traversal/glob interpretation. |
 
 ## Validated non-findings
@@ -69,12 +70,13 @@ vulnerabilities without a reachable security impact.
 
 ## Repository controls observed
 
-- `main` requires the `lint-and-test` status check and requires the branch to be current.
+- `main` requires the branch to be current and requires `lint-and-test`,
+  `windows-distribution`, `macos-distribution`, `minimum-git`, `optional-surfaces`,
+  `Analyze (python)`, and `Analyze (actions)`.
 - Force pushes and branch deletion are disabled; administrator enforcement is enabled.
 - The repository has one administrator/collaborator. Required approving reviews
   would lock out the sole maintainer, so they are not enabled. Conversation
-  resolution and the expanded automated check set are enabled after their first
-  successful protected run.
+  resolution and the expanded automated check set are enabled.
 - Secret scanning, push protection, CodeQL default setup, Dependabot security updates,
   and private vulnerability reporting are enabled.
 
@@ -83,8 +85,9 @@ without a commit.
 
 ## Recommended next security work
 
-1. Confirm the protected PR and post-merge CodeQL counts, then close remediated
-   alerts by analysis result and record any alert-specific false-positive reasons.
+1. Confirm the release-candidate protected PR and post-merge CodeQL counts. Close
+   remediated alerts by analysis result, then disposition each remaining intentional
+   alert individually with the reviewed boundary and no bulk dismissal.
 2. Keep nested-repository ref bumps reviewable and verify the upstream commit
    before editing `worktree-repos.json`.
 3. Re-run dependency and secret scans for every release and preserve sanitized

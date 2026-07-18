@@ -10,11 +10,13 @@ Start with the page that matches the job you are doing.
 | [Product surface](product-surface.md) | Distinguish supported beta interfaces from optional, experimental, internal, and legacy surfaces |
 | [Compatibility and upgrades](compatibility.md) | Check supported runtimes, optional dependencies, and the safe upgrade procedure |
 | [Release checklist](releasing.md) | Evaluate version, security, install, upgrade, publication, and rollback readiness |
+| [v0.1.2 release notes](releases/v0.1.2.md) | Review the first governed distribution release, upgrade guidance, and known limits |
 | [Support](../SUPPORT.md) | Prepare a useful sanitized issue or route a sensitive report privately |
 | [Recommended next steps](roadmap.md) | Choose the next product, security, portability, or maintainability investment |
 | [Security policy](../SECURITY.md) | Report a vulnerability privately and understand the security model |
 | [Privacy and local data](../PRIVACY.md) | Understand what is local, what can become public, and how to protect the workspace |
 | [2026-07-17 security assessment](security-assessment-2026-07-17.md) | Review scan coverage, validated findings, non-findings, and residual risks |
+| [CodeQL alert triage](codeql-triage-2026-07-17.md) | Review alert-by-alert remediations and intentional trusted-local path boundaries |
 | [Distribution](../DISTRIBUTION.md) | Understand account initialization, project initialization, session-store synchronization, and legacy install topology |
 
 ## Generated and subsystem references

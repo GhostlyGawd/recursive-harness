@@ -94,10 +94,9 @@ the extraction payload.
 - **Operations.** Build-process state lives in `fleet/pm/` (BOARD, BACKLOG,
   ROADMAP, BUGS, TOOLING + specs/ incl. TESTPLAN — the SPEC-first discipline;
   spec numbers mirror roadmap R-numbers, 04 skipped because R4 was the
-  dogfooding gate, not a feature spec). Extend by spec + test: all eight
-  `fleet/test_*.py` are wired-or-excused — seven run in ci.yml; `test_mcp.py`
-  is excused (needs the `mcp` SDK CI lacks — INTENTIONALLY_UNWIRED in
-  tests/test_ci_coverage.py), run it locally when touching the adapter. The
+  dogfooding gate, not a feature spec). Extend by spec + test: the stdlib suite
+  runs in the core CI job, while `test_mcp.py` runs in the isolated optional-
+  surfaces job against the reviewed MCP dependency snapshot. The
   stdlib-only import contract and the
   standalone-extraction test are the two invariants a change must not break.
 - **Failure & learning.** The failure mode the package kills is the hand-rolled

@@ -2,19 +2,40 @@
 
 ## Prerequisites
 
-- Git
+- Git 2.39.0 or newer
 - Python 3.12, matching the CI runtime
 - Bash for `install.sh`, `account-init.sh`, and `project-init.sh`
-- Claude Code
+- Claude Code 2.1.200 or newer
 
 On Windows, use Git Bash for the shell scripts. Enable Windows Developer Mode so
 `account-init.sh` can create native symlinks; the script intentionally fails instead of
 silently copying the harness directories. Use the PowerShell session-sync helper when a
 later migration requires it.
 
-## 1. Clone and initialize the checkout
+## Choose a source
+
+For a versioned install, download the checksummed bundle from the
+[latest GitHub Release](https://github.com/GhostlyGawd/recursive-harness/releases/latest):
 
 ```bash
+gh release download v0.1.2 -R GhostlyGawd/recursive-harness \
+  -p "recursive-harness-v0.1.2.tar.gz" \
+  -p "recursive-harness-v0.1.2.zip" \
+  -p "recursive-harness-v0.1.2.sha256"
+sha256sum -c recursive-harness-v0.1.2.sha256
+tar -xzf recursive-harness-v0.1.2.tar.gz
+cd recursive-harness-v0.1.2
+```
+
+The sidecar verifies both downloaded archives. On macOS replace `sha256sum` with
+`shasum -a 256`; on Windows compare `Get-FileHash -Algorithm SHA256` for each archive with
+its sidecar line. To follow current development instead, clone
+`https://github.com/GhostlyGawd/recursive-harness.git` and continue below.
+
+## 1. Initialize the checkout
+
+```bash
+# Skip these two lines when you already extracted a release bundle.
 git clone https://github.com/GhostlyGawd/recursive-harness.git
 cd recursive-harness
 ./install.sh
@@ -70,9 +91,10 @@ python .\bin\harness doctor
 .\launch.ps1 dev
 ```
 
-`doctor` verifies the loaded config directory, hook parity, Python compilation, ledger
-writability, branch position, and recent eval replay. A different pinned config directory
-means a different brain; fix the launcher rather than editing the generated account files.
+`doctor` verifies the loaded config directory, hook parity, Python compilation, Claude Code
+minimum, ledger writability, branch position, and recent eval replay. A different pinned
+config directory means a different brain; fix the launcher rather than editing the generated
+account files.
 
 The launchers validate that the account has settings, export `CLAUDE_CONFIG_DIR`, print the
 selected account/config/checkout to stderr, forward Claude Code arguments, and preserve the

@@ -2,8 +2,8 @@
 
 ## Supported version
 
-Security fixes are made on the latest commit of `main`. This repository does not
-currently maintain long-term support branches.
+Security fixes are made on the latest GitHub Release and current `main`. This repository
+does not maintain long-term support branches or older-minor security lines.
 
 ## Report a vulnerability privately
 

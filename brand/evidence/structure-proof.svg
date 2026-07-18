@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 690" role="img" aria-labelledby="title desc">
+  <title id="title">Recursive Harness live structural health and query output</title>
+  <desc id="desc">Sanitized output from harness health and structural ask at commit 6b522db on 2026-07-18.</desc>
+  <rect width="1400" height="690" rx="24" fill="#020611"/>
+  <g font-family="Arial, system-ui, sans-serif">
+    <text x="58" y="68" fill="#EAFBFF" font-size="26" font-weight="700">The repository can inspect its own operating structure</text>
+    <text x="58" y="98" fill="#83A8C5" font-size="15">Live Cartograph output · 161 nodes · 329 edges · zero structural-rot warnings</text>
+  </g>
+  <g font-family="Consolas, 'Liberation Mono', monospace" font-size="16">
+    <rect x="58" y="132" width="610" height="494" rx="14" fill="#07142B" stroke="#20D9FF"/>
+    <text x="88" y="176" fill="#83A8C5">$ harness health</text>
+    <text x="88" y="218" fill="#EAFBFF" font-size="20" font-weight="700">harness health: 75.0/100</text>
+    <text x="88" y="258" fill="#20D9FF">rot_free</text><text x="278" y="258" fill="#EAFBFF">1.000</text><text x="382" y="258" fill="#83A8C5">weight 0.4</text>
+    <text x="88" y="294" fill="#20D9FF">connectedness</text><text x="278" y="294" fill="#EAFBFF">0.702</text><text x="382" y="294" fill="#83A8C5">weight 0.2</text>
+    <text x="88" y="330" fill="#20D9FF">provenance</text><text x="278" y="330" fill="#EAFBFF">0.463</text><text x="382" y="330" fill="#83A8C5">weight 0.2</text>
+    <text x="88" y="366" fill="#20D9FF">adr_load_bearing</text><text x="278" y="366" fill="#EAFBFF">0.583</text><text x="382" y="366" fill="#83A8C5">weight 0.2</text>
+    <line x1="88" y1="404" x2="638" y2="404" stroke="#2B6F9F"/>
+    <text x="88" y="444" fill="#EAFBFF">0 rot · 14/47 orphan artifacts</text>
+    <text x="88" y="478" fill="#EAFBFF">38/82 provenanced · 7/12 ADRs referenced</text>
+    <text x="88" y="536" fill="#83A8C5">The score exposes debt; it does not hide it.</text>
+
+    <rect x="732" y="132" width="610" height="494" rx="14" fill="#07142B" stroke="#8A6CFF"/>
+    <text x="762" y="176" fill="#83A8C5">$ harness ask --context cli:doctor</text>
+    <text x="762" y="224" fill="#EAFBFF">cli:doctor</text><text x="892" y="224" fill="#83A8C5">[cli · transporter · support]</text>
+    <line x1="762" y1="248" x2="1312" y2="248" stroke="#2B6F9F"/>
+    <text x="762" y="290" fill="#20D9FF">file</text><text x="876" y="290" fill="#EAFBFF">bin/harness</text>
+    <text x="762" y="326" fill="#20D9FF">flags</text><text x="876" y="326" fill="#EAFBFF">locked-layer · unused=yes</text>
+    <text x="762" y="382" fill="#83A8C5">dependencies</text><text x="922" y="382" fill="#EAFBFF">none extracted</text>
+    <text x="762" y="418" fill="#83A8C5">dependents</text><text x="922" y="418" fill="#EAFBFF">none extracted</text>
+    <text x="762" y="454" fill="#83A8C5">blast radius</text><text x="922" y="454" fill="#EAFBFF">no structural dependents</text>
+    <text x="762" y="520" fill="#83A8C5">Atlas, health, and ask share one extracted graph.</text>
+    <text x="762" y="552" fill="#83A8C5">CI blocks new un-baselined structural rot.</text>
+  </g>
+</svg>

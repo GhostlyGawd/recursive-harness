@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Recursive Harness social preview</title>
+  <desc id="desc">Cyber-blue Recursive Harness identity with a guarded four-node loop and the promise Durable state, observable agents, evidence-backed improvement.</desc>
+  <defs>
+    <radialGradient id="glow"><stop stop-color="#20D9FF" stop-opacity=".28"/><stop offset="1" stop-color="#020611" stop-opacity="0"/></radialGradient>
+    <linearGradient id="signal" x1="0" x2="1"><stop stop-color="#123CFF"/><stop offset=".5" stop-color="#20D9FF"/><stop offset="1" stop-color="#8A6CFF"/></linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="#020611"/>
+  <circle cx="995" cy="315" r="300" fill="url(#glow)"/>
+  <g opacity=".2" stroke="#20D9FF"><path d="M0 520C190 470 310 548 480 500S780 470 960 520s220 8 320-18" fill="none"/><path d="M0 552H1280"/><path d="M0 576H1280"/></g>
+  <g font-family="Arial, system-ui, sans-serif">
+    <text x="74" y="115" fill="#20D9FF" font-size="18" font-weight="700" letter-spacing="4">A GHOSTLY AGENT SYSTEM</text>
+    <text x="70" y="218" fill="#EAFBFF" font-size="68" font-weight="800">Recursive</text>
+    <text x="70" y="292" fill="#EAFBFF" font-size="68" font-weight="800">Harness</text>
+    <text x="74" y="354" fill="#83A8C5" font-size="25">Durable state. Observable agents.</text>
+    <text x="74" y="392" fill="#83A8C5" font-size="25">Evidence-backed improvement.</text>
+    <rect x="74" y="448" width="132" height="42" rx="21" fill="#07142B" stroke="#20D9FF"/><text x="140" y="476" text-anchor="middle" fill="#EAFBFF" font-size="17" font-weight="700">v0.1.2 BETA</text>
+    <text x="226" y="476" fill="#83A8C5" font-size="17">Claude Code · local-first · reviewed memory</text>
+  </g>
+  <g transform="translate(830 122)">
+    <circle cx="190" cy="190" r="172" fill="none" stroke="#2B6F9F" stroke-width="2" stroke-dasharray="7 10"/>
+    <path d="M82 190C82 106 116 64 190 64s108 42 108 126-34 126-108 126S82 274 82 190Z" fill="none" stroke="url(#signal)" stroke-width="16" stroke-linecap="round"/>
+    <path d="m272 117 35 69-72-9" fill="#020611" stroke="#20D9FF" stroke-width="10" stroke-linejoin="round"/>
+    <g fill="#EAFBFF" stroke="#20D9FF" stroke-width="6"><circle cx="190" cy="64" r="13"/><circle cx="298" cy="190" r="13"/><circle cx="190" cy="316" r="13"/><circle cx="82" cy="190" r="13"/></g>
+  </g>
+</svg>

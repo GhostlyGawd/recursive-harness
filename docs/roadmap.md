@@ -10,8 +10,10 @@ their normal explicit decisions and reviews.
 - The core architecture is coherent: Cartograph reports no structural rot or dead-weight
   candidates, and the full local CI suite is green.
 - Dependency and secret scans found no live credential or known vulnerable dependency.
-- The repository is functionally rich but still beta: source-based installation, Bash-first
-  setup, limited privacy controls, and a dense internal vocabulary raise the adoption cost.
+- The repository is functionally rich but still beta. The `v0.1.2` candidate adds a
+  checksummed GitHub Release channel, cross-platform black-box journeys, explicit stability
+  labels, and a product landing page; native package-manager channels and repeated external
+  release validation remain future work.
 - The strongest near-term opportunity is hardening the operational boundary rather than
   adding another large subsystem.
 
@@ -40,10 +42,11 @@ promotion into public memory or eval fixtures review-only.
 
 ### 3. Turn on repository security services
 
-**Delivered in part:** secret scanning, push protection, private vulnerability
-reporting, Dependabot security updates, pinned Actions, and CodeQL are enabled.
-Alert remediation, immutable worktree inputs, and safe branch-rule strengthening
-remain active release work under P-2026-042.
+**Delivered:** secret scanning, push protection, private vulnerability reporting,
+Dependabot security updates, immutable Actions, CodeQL, immutable worktree inputs,
+expanded protected checks, and conversation resolution are enabled. The release-candidate
+alert review documents every remaining intentional local-path boundary rather than treating
+scanner output as confirmed exploitation.
 
 Enable GitHub secret scanning, push protection, and CodeQL if the repository plan supports
 them. Pin `actions/checkout` and `actions/setup-python` to reviewed commit SHAs, then add a
@@ -82,9 +85,9 @@ maintainer-specific `rhen` account name.
 
 ### 6. Define compatibility and upgrades
 
-**Delivered in documentation:** [compatibility.md](compatibility.md) defines the
-runtime and host baselines plus upgrade, rollback, and removal behavior. Minimum-
-Git and macOS CI remain P-2026-042 verification work.
+**Delivered:** [compatibility.md](compatibility.md) defines the runtime and host baselines,
+upgrade, rollback, and removal behavior. Ubuntu, Windows, macOS, exact Git 2.39.0, optional
+surfaces, and a Doctor-enforced Claude Code 2.1.200 minimum are continuously checked.
 
 Document the supported Python, Git, Claude Code, Bash, and Windows versions. Add an upgrade
 check that compares generated account settings with the canonical template and reports
@@ -117,9 +120,10 @@ Automate version consistency, docs links, changelog/release notes, security scan
 fresh-install smoke tests, and upgrade tests. Keep publication manual until the checklist is
 proven across several releases.
 
-**In progress:** [releasing.md](releasing.md) records the checklist, while the
-deterministic archive builder supplies manifests and checksums. Publication and
-repeated release evidence remain gated on the rest of P-2026-042.
+**Delivered for the first release:** [releasing.md](releasing.md) records the checklist;
+the deterministic archive builder supplies manifests and checksums; GitHub Releases are the
+versioned distribution channel. Repeated release evidence and native package-manager
+channels remain post-`v0.1.2` investments.
 
 ## P2 — improve maintainability with existing evidence
 
@@ -169,11 +173,11 @@ These scenarios should assert observable outcomes, not prompt text.
 
 ## Suggested delivery sequence
 
-1. Repository security settings and immutable Actions pins
-2. Distribution tests and cross-platform launcher
-3. License and supported-surface decisions
-4. Release checklist and end-to-end scenarios
-5. Connectedness and external-repository trust cleanup
+1. Publish and observe `v0.1.2` through the governed release checklist
+2. Collect clean-environment install, upgrade, rollback, and model-backed replay reports
+3. Work down evidence-backed Cartograph connectedness gaps
+4. Decide whether demand justifies Homebrew, Scoop, or another package-manager channel
+5. Promote or retire optional/experimental surfaces only with consumer evidence
 
 The security-specific evidence and status are in
 [security-assessment-2026-07-17.md](security-assessment-2026-07-17.md). Architecture and

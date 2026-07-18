@@ -1,7 +1,8 @@
 # Support
 
 Recursive Harness is beta, maintainer-supported software. Support applies to the latest
-commit of `main`; there are no long-term support branches or response-time guarantees.
+GitHub Release and current `main`; there are no long-term support branches, older-minor
+support promises, or response-time guarantees.
 
 ## Before opening an issue
 

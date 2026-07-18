@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import types
+import unittest.mock as _mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)  # tests/ -> repo root
@@ -140,8 +141,33 @@ check("doctor never prints raw jargon labels (plain-language rule)",
       "TIER" not in out and "exit-2" not in out)
 
 _H = _load_harness_cli()
+check("Claude Code version parser accepts the supported baseline",
+      _H._version_tuple("2.1.200 (Claude Code)") == (2, 1, 200))
+check("Claude Code version parser rejects non-version output",
+      _H._version_tuple("Claude Code unknown") is None)
+check("Doctor hook parser survives JSON quoting and space-containing paths",
+      _H._hook_names(r'{"command":"python C:\\repo with spaces\\hooks\\guard_one.py --then hook_two.py"}')
+      == ["guard_one.py", "hook_two.py"])
 import tempfile as _tf
 import types as _t
+with _tf.TemporaryDirectory(prefix="doctor-silo-") as _doctor_tmp:
+    _silo = os.path.join(_doctor_tmp, ".claude-private")
+    _account = os.path.join(_silo, "accounts", "dev")
+    _outside = os.path.join(_doctor_tmp, ".claude-private-escape", "accounts", "dev")
+    os.makedirs(_account)
+    os.makedirs(_outside)
+    _acct, _settings = _H._silo_account_settings(_account, _silo)
+    check("Doctor resolves settings only from a discovered silo account",
+          _acct == "dev" and _settings == os.path.join(_account, "settings.json"))
+    check("Doctor rejects a same-prefix config directory outside its silo",
+          _H._silo_account_settings(_outside, _silo) == (None, None))
+    with _mock.patch.object(
+        _H.os.path,
+        "isjunction",
+        side_effect=lambda path: os.path.normcase(path) == os.path.normcase(_account),
+    ):
+        check("Doctor rejects a junctioned account directory",
+              _H._silo_account_settings(_account, _silo) == (None, None))
 _tmp = _tf.mkdtemp(prefix="standing_")
 _H.APPROVALS = os.path.join(_tmp, "state", "approvals.jsonl")
 _H.MARKER = os.path.join(_tmp, "HUMAN_APPROVED")

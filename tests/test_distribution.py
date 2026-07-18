@@ -331,6 +331,47 @@ def test_powershell_launcher() -> None:
         check("PowerShell launcher announces its account", "Harness account : dev" in result.stderr, result.stderr)
 
 
+def test_market_surface() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    check("README version matches VERSION", f"v{version}" in readme)
+    check("README checksum command downloads both covered archives",
+          f'recursive-harness-v{version}.tar.gz' in readme
+          and f'recursive-harness-v{version}.zip' in readme
+          and f'recursive-harness-v{version}.sha256' in readme)
+    for phrase in (
+        "What you get",
+        "corrections",
+        "follow-ups",
+        "feature flags",
+        "Proposal lifecycle",
+        "Cartograph",
+        "human approval gates",
+        "Fleet/Agent Mail",
+        "Mission Control",
+        "worktree",
+        "multi-repository",
+        "Supported beta",
+        "Optional",
+        "Experimental",
+        "Why not plain `CLAUDE.md`?",
+        "GitHub Release",
+        "Claude Code 2.1.200",
+    ):
+        check(f"README presents {phrase}", phrase in readme)
+    for relative in (
+        "brand/applications/readme-hero.png",
+        "brand/applications/system-map.svg",
+        "brand/applications/control-loop.svg",
+        "brand/applications/social-preview.png",
+        "brand/evidence/operator-proof.svg",
+        "brand/evidence/structure-proof.svg",
+        "brand/evidence/mission-control.svg",
+        "docs/releases/v0.1.2.md",
+    ):
+        check(f"release-facing asset exists: {relative}", (ROOT / relative).is_file())
+
+
 def main() -> int:
     if not Path(BASH_COMMAND).is_file():
         print("FAIL  Bash is required for distribution smoke tests")
@@ -341,6 +382,7 @@ def main() -> int:
     test_release_archives()
     test_account_initialization()
     test_powershell_launcher()
+    test_market_surface()
     if FAILURES:
         print(f"\ntest_distribution: {len(FAILURES)} failure(s): {', '.join(FAILURES)}", file=sys.stderr)
         return 1
