@@ -5,10 +5,13 @@ does not train or proxy the model. It controls which instructions load, reacts t
 events, records selected evidence, routes learnings into versioned artifacts, and verifies
 the resulting changes.
 
-Claude Code is the only fully shipped provider integration today. The kernel, procedures,
-and evidence model are the canonical product; provider lifecycle events, installation
-metadata, and host-specific commands belong in adapters. OpenAI/Codex and other adapters
-must prove this boundary before the product claims general multi-agent compatibility.
+Claude Code is the only fully shipped provider integration today, and its account silo is an
+advanced reference runtime rather than the public portability default. The default is a
+non-invasive sidecar: inspect without reading contents, preserve existing configuration,
+and invoke explicit capabilities without adding repository policy. The kernel, procedures,
+and evidence model are canonical; provider lifecycle events, installation metadata, and
+host-specific commands belong in generated adapters. OpenAI/Codex and other adapters must
+prove this boundary before the product claims general multi-agent compatibility.
 
 ## System boundaries
 
@@ -75,6 +78,12 @@ but it must not become an independently edited second harness. Each adapter must
 - how installation, upgrade, rollback, and removal work; and
 - which safety guarantees remain provider-specific.
 
+The machine-readable [capability catalog](../capabilities/catalog.json) currently maps six
+packages: Observe, Learn, Verify, Coordinate, Guard, and Lab. Their manifests are design
+contracts with `packaging_status: planned`, not published plugins. Advisory capabilities
+prohibit repository writes, operational capabilities disclose their state, and Guard is a
+separate high-trust package that can never arrive as a hidden dependency.
+
 The detailed Agentic Dev OS adoption and rejection decisions live in the
 [consolidation map](comparisons/agentic-dev-os.md). It is the drain checklist for that
 repository, not a reason to preserve two active control planes.
@@ -126,19 +135,26 @@ This boundary is not a sandbox. Hooks and procedures execute with the operator's
 permissions, and one-off escape hatches exist for intentional recovery. Branch protection,
 CI, review, OS permissions, and repository trust remain separate controls.
 
-## Distribution topology
+## Adoption and distribution topology
 
-The supported model is a single checkout with per-account silos under
+The safe default is `scripts/recursive_inspect.py` plus explicit personal-sidecar commands.
+Inspection reports known configuration paths without printing their contents or changing a
+byte. Existing instructions and provider settings remain authoritative. Team integration is
+an exact reviewed patch or pull request; Recursive does not infer precedence.
+
+The full Claude reference runtime uses a single checkout with per-account silos under
 `.claude-private/accounts/`. Each silo links its procedure directories back to the checkout
 and materializes settings from one portable template. One locally selected account owns the
 shared session store; the ignored `session-store-account` file keeps that choice stable.
 Multiple populated stores converge through the lossless sync step documented in
-[Distribution](../DISTRIBUTION.md).
+[Distribution](../DISTRIBUTION.md). `launch.sh` and `launch.ps1` preserve the target working
+directory but deliberately select the silo's `CLAUDE_CONFIG_DIR`; they isolate Recursive
+from the normal Claude configuration rather than composing the two.
 
-Other repositories consume the harness through `launch.sh` or `launch.ps1`, which pins the
-silo's `CLAUDE_CONFIG_DIR` while preserving the target repository as the working directory.
-An optional thin `CLAUDE.md` holds facts unique to the consuming
-repository; reusable procedures return upstream instead of forking the brain.
+Provider packages will be generated from canonical capability sources with source-hash
+receipts. Skills carry procedures, runtime code owns deterministic state and privacy,
+provider hooks map lifecycle events, and CI/repository policy owns merge enforcement. A
+missing host event reduces the supported mode instead of being papered over by prompt text.
 
 ## Structural source of truth
 

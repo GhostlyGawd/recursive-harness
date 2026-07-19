@@ -1,0 +1,24 @@
+{
+  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "schema_version": 1,
+  "id": "recursive-lab",
+  "display_name": "Recursive Lab",
+  "capability_version": "0.1.0",
+  "packaging_status": "planned",
+  "safety_class": "experimental",
+  "default_repository_writes": "never",
+  "repository_writes": "capability-specific-disclosed",
+  "state_behavior": "workflow-specific; preview and approval requirements must be disclosed",
+  "required_events": [],
+  "optional_events": [],
+  "canonical_components": [
+    "skills/brainstorm",
+    "skills/roadmap",
+    "skills/venture-build",
+    "skills/build-loop",
+    "skills/language-selection",
+    "commands/roadmap.md",
+    "commands/venture.md"
+  ],
+  "provider_packages": []
+}

@@ -30,9 +30,13 @@ and accepted lessons become reviewed skills, commands, decisions, evaluations, o
 The result is an improvement loop you can inspect instead of a growing prompt file you have
 to trust on faith.
 
-The canonical capability model is provider-neutral, but the production integration today
-is Claude Code. OpenAI/Codex support is a planned adapter and plugin, not a separately
-maintained harness. See the [architecture](docs/architecture.md) and
+The public adoption default is now non-invasive: inspect first, keep every existing
+`AGENTS.md`, `CLAUDE.md`, agent, skill, hook, and provider setting authoritative, then opt
+into only the capabilities you want. The canonical capability model is provider-neutral,
+but the full production integration today is the advanced Claude Code reference runtime.
+OpenAI/Codex and namespaced capability plugins are planned packages, not features this page
+pretends are already shipped. See the [capability catalog](capabilities/README.md),
+[architecture](docs/architecture.md), and
 [Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
 migration status.
 
@@ -48,7 +52,7 @@ migration status.
 | Governed change | Proposal lifecycle states, validated transitions, generated indexing, acceptance criteria, decision history, and locked-layer review rules |
 | Agent coordination | Fleet/Agent Mail claims, handoffs, inboxes, acknowledgements, TTL cleanup, and one canonical event log across worktrees |
 | Control room | Optional Mission Control TUI with roster, map, proof counters, contention signals, and a read-only live feed |
-| Project integration | Account silos, Bash and PowerShell launchers, thin project contracts, shared session-store migration, and pinned multi-repository worktree sources |
+| Project integration | Zero-write compatibility inspection, personal sidecar operation, an advanced Claude account silo, shared session-store migration, and pinned multi-repository worktree sources |
 
 ## See the product, not just the concept
 
@@ -74,11 +78,12 @@ Fleet data. This capture is a real render of the repository's tested sample fixt
 
 ## How it works
 
-Claude Code lifecycle events enter through repository-owned settings. Hooks enforce narrow
-safety rules and record selected local signals; skills, commands, and fresh-context agents
-perform the reasoning; lint, tests, eval structure, and Cartograph protect the resulting
-change. Private operational state stays ignored until a human promotes a sanitized lesson
-into versioned repository memory.
+In the full Claude reference runtime, lifecycle events enter through Recursive-owned account
+settings. Hooks enforce narrow safety rules and record selected local signals; skills,
+commands, and fresh-context agents perform the reasoning; lint, tests, eval structure, and
+Cartograph protect the resulting change. Personal-sidecar use calls the same explicit CLI
+without replacing a project's provider configuration. Private operational state stays in
+the Recursive checkout until a human promotes a sanitized lesson through review.
 
 ![Claude Code events flow through hooks and procedures into private state and review gates, producing reviewed repository memory](brand/applications/system-map.svg)
 
@@ -126,8 +131,8 @@ feedback loops.
 ### 3. Coordinate parallel or multi-repository work
 
 ```bash
-# In another project, install only a thin repository contract.
-/path/to/recursive-harness/project-init.sh
+# Inspect another project without reading configuration contents or changing any file.
+python3 /path/to/recursive-harness/scripts/recursive_inspect.py /path/to/project
 
 # Share claims and handoffs through the canonical worktree-aware event log.
 python3 /path/to/recursive-harness/bin/harness fleet emit claim \
@@ -140,7 +145,33 @@ python3 /path/to/recursive-harness/bin/harness fleet send reviewer \
 Session guards detect cross-worktree ownership conflicts, while configured companion
 repositories use reviewed immutable commits unless explicitly marked as development-only.
 
+## Choose an adoption mode
+
+| Mode | Changes the project? | Use it when |
+| --- | --- | --- |
+| Compatibility inspection | No | You want a deterministic inventory of existing agent configuration before deciding anything |
+| Personal sidecar | No | You want explicit prediction, outcome, privacy, structure, or coordination commands while keeping the project's setup untouched |
+| Namespaced capability plugin | Not yet shipped | You want selected Observe, Learn, Verify, or Coordinate procedures inside a supported provider without adopting the full runtime |
+| Reviewed repository integration | Exact proposed diff only | A team deliberately wants shared workflow or CI configuration in the repository |
+| Full Claude reference runtime | No target-source writes, but it selects a separate Claude configuration | You want the complete hooks, agents, skills, settings, and safety model and accept isolation from your normal Claude config |
+
+Inspection is read-only and does not print file contents:
+
+```bash
+python3 scripts/recursive_inspect.py /path/to/existing-project
+# Compatibility notes are reported; Repository writes: none
+```
+
+The retained `project-init.sh` command is now only a deprecated compatibility wrapper for
+that inspector. It never appends to `CLAUDE.md`. There is intentionally no automatic
+“merge both configurations” command: precedence and hook conflicts require a human-owned,
+reviewed integration.
+
 ## Install in five minutes
+
+This section installs the full Claude reference runtime in its own explicit account silo.
+For a first look at an existing project, run the zero-write inspector above; installation is
+not required.
 
 Supported baseline: Python 3.12, Git 2.39.0 or newer, Bash 5.x (current Git Bash on
 Windows), and Claude Code 2.1.200 or newer. Ubuntu, Windows, and macOS operator journeys
@@ -189,8 +220,9 @@ backups, ignored state, and the checkout are retained for deliberate inspection.
 
 | Level | Surfaces | Expectation |
 | --- | --- | --- |
-| Supported beta | Install/account/project flows; state CLI; hooks and review gates; Cartograph; proposal governance | Continuously tested on the supported baseline; breaking changes remain possible before 1.0 and require aligned docs/evidence |
+| Supported beta | Read-only inspection; personal sidecar CLI; full Claude install/account flow; hooks and review gates; Cartograph; proposal governance | Continuously tested on the supported baseline; breaking changes remain possible before 1.0 and require aligned docs/evidence |
 | Optional | Fleet MCP adapter and Mission Control TUI | Tested separately with pinned dependency snapshots; not required for the core loop |
+| Planned | Namespaced Observe, Learn, Verify, Coordinate, Guard, and Lab provider packages | Capability manifests exist; provider packages and broad compatibility claims require generated artifacts and consumer evidence |
 | Experimental | Product/venture workflows, extraction proposals, and product-build tooling | Available for evaluation without a compatibility promise |
 | Internal/legacy | Raw state schemas, graph internals, calibration storage, and `--global-legacy` install | Not a public integration surface; legacy install is a guarded migration path only |
 
@@ -208,15 +240,18 @@ The complete promise and promotion criteria are in
 | Grows through prose edits | Routes learnings to the smallest appropriate skill, command, decision, eval, or guard |
 | Offers no structural proof | Runs lint, tests, eval structure, Doctor, Scorecard, Cartograph, and protected GitHub checks |
 
-You can still keep a small `CLAUDE.md`; the harness treats it as the kernel, not the whole
-operating system.
+Your existing instruction files remain yours. Recursive neither appends its policy nor
+assumes its instructions outrank them. The improvement loop belongs in a sidecar or selected
+namespaced capability; repository-specific truth stays in the repository's established
+instruction hierarchy.
 
 ## Verification and proof points
 
 - Protected `main` requires the branch to be current and requires Linux, Windows, macOS,
   minimum-Git, optional-surface, Python CodeQL, and Actions CodeQL checks.
-- Black-box disposable-clone tests cover install → account initialization → Doctor → thin
-  project contract → predict/outcome/Scorecard → settings backup → uninstall/rollback.
+- Black-box disposable-clone tests cover install → account initialization → Doctor →
+  byte-identical coexistence inspection → predict/outcome/Scorecard → settings backup →
+  uninstall/rollback.
 - The release builder produces byte-identical archives from one committed revision and
   publishes a manifest plus SHA-256 checksums.
 - Secret scanning, push protection, private vulnerability reporting, Dependabot, immutable

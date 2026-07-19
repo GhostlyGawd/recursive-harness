@@ -1,0 +1,24 @@
+{
+  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "schema_version": 1,
+  "id": "recursive-learn",
+  "display_name": "Recursive Learn",
+  "capability_version": "0.1.0",
+  "packaging_status": "planned",
+  "safety_class": "advisory",
+  "default_repository_writes": "never",
+  "repository_writes": "explicit-reviewed-action-only",
+  "state_behavior": "private sidecar candidates; durable promotion requires an explicit reviewed action",
+  "explicit_repository_actions": ["run retrospection", "promote learning", "prepare reviewed change"],
+  "required_events": [],
+  "optional_events": ["prompt-submit", "tool-result", "session-end"],
+  "canonical_components": [
+    "skills/routing-learnings",
+    "skills/retrospection",
+    "skills/specialization",
+    "skills/follow-up-handling",
+    "commands/retro.md",
+    "commands/followups.md"
+  ],
+  "provider_packages": []
+}

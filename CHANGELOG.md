@@ -6,7 +6,13 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 ### Changed
 
-- No changes yet.
+- Replaced the `CLAUDE.md`-mutating project initializer with a read-only compatibility
+  inspector that preserves existing repository instructions, agents, skills, hooks,
+  provider settings, Git metadata, and unrelated files.
+- Reframed the account silo as the advanced Claude reference runtime and made non-invasive
+  personal-sidecar adoption the public default.
+- Added versioned source manifests for the planned Observe, Learn, Verify, Coordinate,
+  Guard, and Lab capability packages without claiming that provider plugins already ship.
 
 ## [0.1.2] - 2026-07-18
 

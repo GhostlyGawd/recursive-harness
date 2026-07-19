@@ -7,8 +7,8 @@ install, wire, and synchronize the harness. `install.sh` (installer; the
 global `~/.claude` path is demoted to `--global-legacy`), `account-init.sh`
 (makes a fleet account's CLAUDE_CONFIG_DIR a complete, siloed view of this
 repo: real symlinks for agents/commands/hooks/skills + settings.json
-materialized from templates/), `project-init.sh` (lets a foreign project
-CONSUME the harness via a thin CLAUDE.md contract — never forking the brain),
+materialized from templates/), `project-init.sh` (deprecated read-only wrapper
+for compatibility inspection; it never edits a foreign project),
 `launch.sh` / `launch.ps1` (validate and visibly select one account before
 starting Claude Code without changing the working directory),
 `statusline-command.sh` (the fleet HUD: context % + 5h/7d rate-limit usage),
@@ -18,7 +18,9 @@ a silo's session store into the shared canonical one), and `uninstall.sh` /
 
 ## Why (provenance)
 
-`install.sh` + `project-init.sh` shipped with v0.1.0 (`c72ba4a`). The fleet
+`install.sh` plus the original mutating `project-init.sh` shipped with v0.1.0
+(`c72ba4a`). That initializer was retired after portability review showed that even an
+append-only contract could conflict with an existing instruction hierarchy. The fleet
 silo model arrived in `ba54eba` (2026-06-13): per-account config dirs had
 split from the trunk, so account-init became the documented default and the
 `~/.claude` hijack was demoted behind `--global-legacy`. The HUD landed the
@@ -48,8 +50,9 @@ stock Windows PowerShell).
 - **Code vs wiring:** merged hook-code fixes go live when the trunk working
   tree updates (the silo hooks/ is a symlink); distribution scripts are only
   involved when WIRING or silo STRUCTURE changes.
-- `project-init.sh` writes the thin consumer CLAUDE.md (kernel directive 6:
-  project files stay thin; learnings PR upstream).
+- `scripts/recursive_inspect.py` reports known agent configuration paths without reading
+  their contents or changing the target. `project-init.sh` is a compatibility wrapper for
+  the same read-only behavior. Existing configuration remains authoritative.
 - The sync-* pair is ONE-TIME per silo (merge-then-cutover); on this Windows
   host use the `.ps1` (bash is not on a stock PowerShell PATH).
 

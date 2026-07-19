@@ -1,0 +1,21 @@
+{
+  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "schema_version": 1,
+  "id": "recursive-guard",
+  "display_name": "Recursive Guard",
+  "capability_version": "0.1.0",
+  "packaging_status": "planned",
+  "safety_class": "enforcement",
+  "default_repository_writes": "never",
+  "repository_writes": "reviewed-integration-only",
+  "state_behavior": "local enforcement evidence and leases",
+  "required_events": ["pre-tool-use"],
+  "optional_events": ["session-start", "post-tool-use", "session-end"],
+  "canonical_components": [
+    "hooks",
+    "settings.json",
+    "templates/account-settings.json",
+    "autonomy.json"
+  ],
+  "provider_packages": []
+}

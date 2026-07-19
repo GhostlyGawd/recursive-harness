@@ -1,0 +1,21 @@
+{
+  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "schema_version": 1,
+  "id": "recursive-coordinate",
+  "display_name": "Recursive Coordinate",
+  "capability_version": "0.1.0",
+  "packaging_status": "planned",
+  "safety_class": "operational",
+  "default_repository_writes": "never",
+  "repository_writes": "runtime-only",
+  "state_behavior": "explicit local claims, leases, handoffs, and operator views",
+  "required_events": [],
+  "optional_events": ["session-start", "tool-result", "session-end"],
+  "canonical_components": [
+    "skills/worktree",
+    "commands/standup.md",
+    "fleet",
+    "mission_control"
+  ],
+  "provider_packages": []
+}
