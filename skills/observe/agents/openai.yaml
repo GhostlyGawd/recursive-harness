@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Observe"
+  short_description: "Score outcomes without touching repositories."
+  default_prompt: "Use $observe to record and score a falsifiable prediction for this task."

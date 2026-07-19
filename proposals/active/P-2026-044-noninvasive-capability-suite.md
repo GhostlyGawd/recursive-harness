@@ -14,6 +14,7 @@ resolution: ""
 
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-19 | approved | in-progress | Receipt-bound Claude Code 2.1.200 user-scope installation and cached-package execution passed; Codex remains generated preview pending its own consumer run |
 | 2026-07-19 | approved | in-progress | Owner approved the non-invasive sidecar and capability-plugin-suite implementation after identifying that the silo and project-contract model could conflict with existing agent setups |
 <!-- proposal-history:end -->
 
@@ -78,9 +79,13 @@ consumer repository and cannot promote itself.
   hooks, Git metadata, and unrelated files remain byte-identical after inspection.
 - [x] Versioned capability manifests disclose safety class, state behavior, repository-write
   policy, required events, and packaging status.
-- [ ] Generated packages carry canonical source hashes and fail CI when they drift.
-- [ ] `recursive-observe` is proven first as the safe no-repository-write package.
-- [ ] Claude and Codex adapters pass shared fixtures plus provider-specific coexistence tests.
+- [x] Generated packages carry canonical source hashes and fail CI when they drift.
+- [x] `recursive-observe` is proven first as the safe no-repository-write package.
+- [x] The generic Agent Skill and Claude Code adapter pass shared coexistence fixtures; a
+  receipt-bound Claude Code 2.1.200 user-scope install and cached execution is recorded in
+  [consumer acceptance evidence](../../docs/observe-claude-acceptance.md).
+- [ ] The Codex adapter passes a real receipt-bound consumer installation and execution; it
+  remains generated preview until then.
 - [ ] `recursive-guard` remains separately installable, separately trusted, and never a
   dependency of advisory plugins.
 - [ ] At least two existing consumer configurations and one hosted GitHub workflow validate

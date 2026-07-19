@@ -47,11 +47,13 @@ def test_recursive_redaction_is_idempotent_and_preserves_benign_data():
             "https://alice:password@example.test/path from dev@example.test "
             "at 192.0.2.14 under C:\\Users\\alice\\repo"
         ),
+        "header": "Authorization: Bearer opaque-header-value-123",
         "safe": ["branch feature/privacy", {"count": 3}],
     }
     cleaned = ps.sanitize(raw)
     rendered = json.dumps(cleaned)
     assert "top-secret" not in rendered
+    assert "opaque-header-value-123" not in rendered
     assert "github_pat_" not in rendered
     assert "alice:password" not in rendered
     assert "dev@example.test" not in rendered

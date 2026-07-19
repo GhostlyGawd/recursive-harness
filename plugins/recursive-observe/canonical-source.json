@@ -1,0 +1,47 @@
+{
+  "capability": "recursive-observe",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "provider_manifests": [
+    ".codex-plugin/plugin.json",
+    ".claude-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "28423a0c29028d477b78e06f2b9a504d0ae3b0989514a2ebd2ed7bb3fa14a5f9",
+  "package_tree_sha256": "a6a667e5e15527c7f8aed5575e7f62e57d3dcdf272cc0c24c94c21135b12a0b1",
+  "package_files": {
+    ".claude-plugin/plugin.json": "cc524fce9ef82b20bc8aebf396e26e3bfca271f5924a4d95456d271efa850ac8",
+    ".codex-plugin/plugin.json": "9c6fd6e87f2b8cbe4749ff3976cd11d7e466d32bf14d05537eae0d0195baad9e",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "skills/observe/SKILL.md": "fa727e6f8f4854f334f039ab298454258a72a222338940e8dc068dde2e401c38",
+    "skills/observe/agents/openai.yaml": "5bdb5659e6ee9752e2db5767016c766f80f2f668e6fe6d9c5152c766d40e6b22",
+    "skills/observe/references/privacy.md": "cd8c8dbb914387ee67430f905aafb9c67f6cfe365fe6ad7cb73decf686d486a3",
+    "skills/observe/scripts/observe.py": "c22b628f2f536399d023ae0a92121dc7d981fdefb7a0caca1b8eb9eea012f68d",
+    "skills/observe/scripts/private_state.py": "39cbf528ca954b448cacac1cd280ac4c21545e2013027b02b2c3b663c6ba120b"
+  },
+  "sources": {
+    "skills/observe/SKILL.md": {
+      "packaged_path": "skills/observe/SKILL.md",
+      "sha256": "fa727e6f8f4854f334f039ab298454258a72a222338940e8dc068dde2e401c38"
+    },
+    "skills/observe/agents/openai.yaml": {
+      "packaged_path": "skills/observe/agents/openai.yaml",
+      "sha256": "5bdb5659e6ee9752e2db5767016c766f80f2f668e6fe6d9c5152c766d40e6b22"
+    },
+    "skills/observe/scripts/observe.py": {
+      "packaged_path": "skills/observe/scripts/observe.py",
+      "sha256": "c22b628f2f536399d023ae0a92121dc7d981fdefb7a0caca1b8eb9eea012f68d"
+    },
+    "skills/observe/references/privacy.md": {
+      "packaged_path": "skills/observe/references/privacy.md",
+      "sha256": "cd8c8dbb914387ee67430f905aafb9c67f6cfe365fe6ad7cb73decf686d486a3"
+    },
+    "private_state.py": {
+      "packaged_path": "skills/observe/scripts/private_state.py",
+      "sha256": "39cbf528ca954b448cacac1cd280ac4c21545e2013027b02b2c3b663c6ba120b"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

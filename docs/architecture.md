@@ -78,10 +78,12 @@ but it must not become an independently edited second harness. Each adapter must
 - how installation, upgrade, rollback, and removal work; and
 - which safety guarantees remain provider-specific.
 
-The machine-readable [capability catalog](../capabilities/catalog.json) currently maps six
-packages: Observe, Learn, Verify, Coordinate, Guard, and Lab. Their manifests are design
-contracts with `packaging_status: planned`, not published plugins. Advisory capabilities
-prohibit repository writes, operational capabilities disclose their state, and Guard is a
+The machine-readable [capability catalog](../capabilities/catalog.json) maps six packages:
+Observe, Learn, Verify, Coordinate, Guard, and Lab. Observe is `generated-beta`: one
+canonical skill plus the shared private-state helper produces a self-contained generic
+Agent Skill, Claude and Codex manifests, and a source-hash receipt. The other manifests
+remain `planned`, not published plugins. Advisory capabilities prohibit
+default repository writes, operational capabilities disclose their state, and Guard is a
 separate high-trust package that can never arrive as a hidden dependency.
 
 The detailed Agentic Dev OS adoption and rejection decisions live in the

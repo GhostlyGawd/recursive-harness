@@ -122,10 +122,11 @@ choosing the full Claude reference runtime: it preserves the target working dire
 selects Recursive's dedicated `CLAUDE_CONFIG_DIR`. That is useful isolation, not a merge
 with your normal Claude setup.
 
-Namespaced provider plugins are planned from the canonical
-[capability catalog](../capabilities/README.md). Until a package has a source-hash receipt,
-coexistence fixtures, and a real consumer validation, its manifest is a design contract—not
-an installable compatibility claim.
+Recursive Observe is the first namespaced provider package from the canonical
+[capability catalog](../capabilities/README.md). It has a source-hash receipt and a standalone
+coexistence fixture; follow the [Observe guide](observe-plugin.md) for user-scoped Claude,
+Codex marketplace, or generic Agent Skill installation. The remaining capability manifests
+are design contracts, not installable compatibility claims.
 
 ## 5. Verify the working loop
 

@@ -4,7 +4,7 @@
   "id": "recursive-observe",
   "display_name": "Recursive Observe",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-beta",
   "safety_class": "advisory",
   "default_repository_writes": "never",
   "repository_writes": "never",
@@ -12,10 +12,25 @@
   "required_events": [],
   "optional_events": ["session-start", "session-end"],
   "canonical_components": [
-    "skills/calibration",
-    "commands/calibrate.md",
-    "bin/harness",
-    "PRIVACY.md"
+    "skills/observe",
+    "private_state.py"
   ],
-  "provider_packages": []
+  "source_receipt": "plugins/recursive-observe/canonical-source.json",
+  "provider_packages": [
+    {
+      "provider": "agent-skills",
+      "path": "plugins/recursive-observe/skills/observe",
+      "status": "generated-beta"
+    },
+    {
+      "provider": "claude-code",
+      "path": "plugins/recursive-observe/.claude-plugin/plugin.json",
+      "status": "generated-beta"
+    },
+    {
+      "provider": "codex",
+      "path": "plugins/recursive-observe/.codex-plugin/plugin.json",
+      "status": "generated-preview"
+    }
+  ]
 }

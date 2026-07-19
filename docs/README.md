@@ -5,6 +5,8 @@ Start with the page that matches the job you are doing.
 | Document | Use it when you need to… |
 | --- | --- |
 | [Getting started](getting-started.md) | Install an account silo, launch Claude Code with the correct brain, or connect another repository |
+| [Recursive Observe](observe-plugin.md) | Install the zero-repository-write Claude, Codex, or generic Agent Skill package and manage its private evidence |
+| [Observe Claude acceptance](observe-claude-acceptance.md) | Inspect the sanitized, receipt-bound Claude Code 2.1.200 consumer evidence |
 | [Architecture](architecture.md) | Understand the runtime lifecycle, feedback loops, state flow, trust boundaries, and subsystem ownership |
 | [Operations](operations.md) | Run the daily workflow, diagnose an install, synchronize accounts, query structure, or recover safely |
 | [Product surface](product-surface.md) | Distinguish supported beta interfaces from optional, experimental, internal, and legacy surfaces |
