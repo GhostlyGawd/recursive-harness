@@ -38,9 +38,9 @@ credential, prompt, or transcript.
 
 ## Limit
 
-This evidence promotes only the local Claude Code package. Codex remains generated preview
-until a real Codex consumer runs the receipt-bound package. Hosted Claude Code and hosted
-Codex state lifecycles remain unverified.
+This record promotes only the local Claude Code package. Local Codex now has its own
+[separate consumer acceptance](codex-consumer-acceptance.md); neither receipt proves hosted
+Claude Code or hosted Codex state lifecycles.
 
 <!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-044 isolated Claude Code 2.1.200 consumer acceptance. -->

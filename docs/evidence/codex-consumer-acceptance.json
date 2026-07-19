@@ -1,0 +1,82 @@
+{
+  "accepted_date": "2026-07-19",
+  "consumer": {
+    "package": "@openai/codex",
+    "plugin_cli": "stable",
+    "version": "0.144.6",
+    "version_output": "codex-cli 0.144.6"
+  },
+  "foreign_repository": {
+    "after_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "before_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "existing_configuration_files": 7,
+    "git_status_after": "",
+    "git_status_before": "",
+    "repository_writes": 0
+  },
+  "guard_journey": {
+    "audit": "warn-allow",
+    "enforce": "deny-protected-write",
+    "no_policy": "exact-noop"
+  },
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "limitations": {
+    "execution": "installed deterministic package runtimes",
+    "hosted_web": "not tested",
+    "model_skill_selection": "not tested",
+    "public_marketplace": "not tested"
+  },
+  "marketplace": {
+    "name": "recursive-harness",
+    "public_listing": false,
+    "ref": "202647e50edea2418773e8005e93630a5b7ca479",
+    "snapshot_commit": "202647e50edea2418773e8005e93630a5b7ca479",
+    "source": "GhostlyGawd/recursive-harness"
+  },
+  "observe_journey": {
+    "prediction_scored": "hit",
+    "scorecard": {
+      "brier": 0.01,
+      "hits": 1,
+      "scored": 1
+    },
+    "state_outside_repository": true
+  },
+  "packages": {
+    "recursive-guard": {
+      "installed": true,
+      "package_files": {
+        ".codex-plugin/plugin.json": "3357cbca54746a1e4aa1935ed88e153813015ef8bc363e129450d7f44a289978",
+        "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+        "hooks/hooks.json": "8cfb27c237ddeaad954e021876394e58605ba7f8ca8915c6326a74852cc90665",
+        "skills/guard/SKILL.md": "6781dd9400fd18f15afe3be1fe36ac5c2dc3d40b2d6df01627a64393bbd878c4",
+        "skills/guard/agents/openai.yaml": "d722ddc4b34988a3ee203fed1d524b8899b883fc936ca3b7f0c8d959efc1ae95",
+        "skills/guard/references/policy.md": "bb4a4a79a12d1e7d4b8bca311139be21692f035e4608dd39ba07cfb2a51c17ed",
+        "skills/guard/scripts/guard_hook.py": "507c49bf2566ce53a08b9af9488aca032a2cb0952d4d03212048dafaade0fc7b"
+      },
+      "package_tree_sha256": "86def5c00c550432ffc26d9ac6c3e8c97d0c51ea47f78931ef5e3865a4d6d1eb",
+      "receipt_verified": true
+    },
+    "recursive-observe": {
+      "installed": true,
+      "package_files": {
+        ".claude-plugin/plugin.json": "cc524fce9ef82b20bc8aebf396e26e3bfca271f5924a4d95456d271efa850ac8",
+        ".codex-plugin/plugin.json": "9c6fd6e87f2b8cbe4749ff3976cd11d7e466d32bf14d05537eae0d0195baad9e",
+        "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+        "skills/observe/SKILL.md": "ec455412834438b20c737b88b2fc37862a183d0aaa2687d83943f4d89e6592e6",
+        "skills/observe/agents/openai.yaml": "5bdb5659e6ee9752e2db5767016c766f80f2f668e6fe6d9c5152c766d40e6b22",
+        "skills/observe/references/privacy.md": "6915e96ed6622a6470153081dcdac8e6b4e6371138d6f11178dcadfcbf260ed0",
+        "skills/observe/scripts/observe.py": "f11c74a11aa2c050730b9096a49d9ecdcb39fe9b339101b31873a14935492099",
+        "skills/observe/scripts/observe_store.py": "e27923f1333fc7ef644a269cab8472d636f35548a8a81156b89b6b8935c16f32"
+      },
+      "package_tree_sha256": "2a3a37044fd4168281f0c3951047dff5eb75f3f5e683b2e6964611bfb7486005",
+      "receipt_verified": true
+    }
+  },
+  "release_commit": "202647e50edea2418773e8005e93630a5b7ca479",
+  "result": "accepted",
+  "schema_version": 1
+}

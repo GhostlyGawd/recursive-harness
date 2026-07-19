@@ -635,13 +635,15 @@ def test_capability_catalog() -> None:
     check("Observe names only its generated provider packages",
           by_id["recursive-observe"]["packaging_status"] == "generated-beta"
           and {item["provider"] for item in by_id["recursive-observe"]["provider_packages"]}
-          == {"agent-skills", "claude-code", "codex"})
-    check("Guard names only its generated Codex preview",
-          by_id["recursive-guard"]["packaging_status"] == "generated-preview"
+          == {"agent-skills", "claude-code", "codex"}
+          and all(item["status"] == "generated-beta"
+                  for item in by_id["recursive-observe"]["provider_packages"]))
+    check("Guard names only its generated Codex beta",
+          by_id["recursive-guard"]["packaging_status"] == "generated-beta"
           and by_id["recursive-guard"]["provider_packages"] == [{
               "provider": "codex",
               "path": "plugins/recursive-guard/.codex-plugin/plugin.json",
-              "status": "generated-preview",
+              "status": "generated-beta",
           }])
     check("every canonical capability component exists",
           all((ROOT / component).exists()

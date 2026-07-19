@@ -5,16 +5,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import random
 import re
+import shutil
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / "docs" / "evidence" / "codex-consumer-acceptance.json"
 NARRATIVE = ROOT / "docs" / "codex-consumer-acceptance.md"
-PROPOSAL = ROOT / "proposals" / "active" / "P-2026-044-noninvasive-capability-suite.md"
+PROPOSAL = ROOT / "proposals" / "resolved" / "P-2026-044-noninvasive-capability-suite.md"
 RELEASE_COMMIT = "202647e50edea2418773e8005e93630a5b7ca479"
 PLUGINS = ("recursive-observe", "recursive-guard")
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import record_codex_consumer_acceptance as recorder  # noqa: E402
 
 
 def require(condition: bool, message: str) -> None:
@@ -27,7 +33,64 @@ def canonical_receipt(plugin: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def property_checks() -> None:
+    rng = random.Random(20260719)
+    with tempfile.TemporaryDirectory(prefix="codex-acceptance-properties-") as raw_tmp:
+        temp_root = Path(raw_tmp)
+        first = temp_root / "first"
+        second = temp_root / "second"
+        first.mkdir()
+        second.mkdir()
+        payloads = {
+            f"group {index % 5}/ü-file-{index:02d}.bin": rng.randbytes(index + 1)
+            for index in range(40)
+        }
+        for root, names in ((first, list(payloads)), (second, list(reversed(payloads)))):
+            for name in names:
+                target = root / Path(name)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(payloads[name])
+        require(recorder.visible_files(first) == recorder.visible_files(second),
+                "tree inventory depends on file creation order")
+        baseline = recorder.inventory_digest(recorder.visible_files(first))
+        require(baseline == recorder.inventory_digest(recorder.visible_files(second)),
+                "equivalent trees have different inventory digests")
+        (first / ".git" / "objects").mkdir(parents=True)
+        (first / ".git" / "objects" / "noise").write_bytes(rng.randbytes(32))
+        require(baseline == recorder.inventory_digest(recorder.visible_files(first)),
+                "Git internals leaked into the consumer inventory")
+        candidate = first / Path(next(iter(payloads)))
+        candidate.write_bytes(candidate.read_bytes() + b"tamper")
+        require(baseline != recorder.inventory_digest(recorder.visible_files(first)),
+                "content mutation did not change the consumer inventory")
+
+        for plugin in PLUGINS:
+            copied = temp_root / f"copy-{plugin}"
+            shutil.copytree(ROOT / "plugins" / plugin, copied)
+            recorder.package_evidence(copied)
+            receipt = canonical_receipt(plugin)
+            selected = sorted(receipt["package_files"])[rng.randrange(len(receipt["package_files"]))]
+            target = copied / Path(selected)
+            original = target.read_bytes()
+            target.write_bytes(original + b"tamper")
+            try:
+                recorder.package_evidence(copied)
+            except recorder.AcceptanceError:
+                pass
+            else:
+                require(False, f"{plugin} accepted a mutated cached file")
+            target.write_bytes(original)
+            (copied / "unexpected.payload").write_text("unexpected", encoding="utf-8")
+            try:
+                recorder.package_evidence(copied)
+            except recorder.AcceptanceError:
+                pass
+            else:
+                require(False, f"{plugin} accepted an extra cached file")
+
+
 def main() -> int:
+    property_checks()
     require(EVIDENCE.is_file(), "real Codex consumer receipt is missing")
     data = json.loads(EVIDENCE.read_text(encoding="utf-8"))
 
@@ -85,6 +148,7 @@ def main() -> int:
     require("The Codex adapter passes a real receipt-bound consumer installation and execution" in proposal,
             "P-2026-044 no longer contains its Codex criterion")
     require("- [x] The Codex adapter" in proposal, "P-2026-044 Codex criterion is not complete")
+    require("implementation: landed" in proposal, "P-2026-044 is not resolved as landed")
 
     print("codex consumer acceptance: receipt and claims verified")
     return 0

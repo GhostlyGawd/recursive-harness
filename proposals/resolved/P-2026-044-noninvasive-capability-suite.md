@@ -2,13 +2,13 @@
 id: P-2026-044
 title: Make Recursive a non-invasive capability plugin suite
 status: approved
-implementation: in-progress
+implementation: landed
 created: 2026-07-19
 updated: 2026-07-19
 owner: GhostlyGawd
-resolution: ""
+resolution: "Codex CLI 0.144.6 installed Observe and Guard from immutable commit 202647e, verified complete cache receipts, and passed zero-write foreign-repository execution; see docs/codex-consumer-acceptance.md"
 ---
-> **Current:** `approved` decision · `in-progress` implementation
+> **Current:** `approved` decision · `landed` implementation
 
 ## Status history
 
@@ -17,6 +17,7 @@ resolution: ""
 | 2026-07-19 | approved | in-progress | Owner approved the non-invasive sidecar and capability-plugin-suite implementation after identifying that the silo and project-contract model could conflict with existing agent setups |
 | 2026-07-19 | approved | in-progress | Receipt-bound Claude Code 2.1.200 user-scope installation and cached-package execution passed; Codex remains generated preview pending its own consumer run |
 | 2026-07-19 | approved | in-progress | Added a separately installable and trusted Codex Guard preview with no-policy no-op behavior, receipt-bound packaging, two existing-config coexistence fixtures, and hosted workflow coverage |
+| 2026-07-19 | approved | landed | Codex CLI 0.144.6 installed Observe and Guard from immutable commit 202647e, verified complete cache receipts, and passed zero-write foreign-repository execution; see docs/codex-consumer-acceptance.md |
 <!-- proposal-history:end -->
 
 ## Problem
@@ -85,8 +86,9 @@ consumer repository and cannot promote itself.
 - [x] The generic Agent Skill and Claude Code adapter pass shared coexistence fixtures; a
   receipt-bound Claude Code 2.1.200 user-scope install and cached execution is recorded in
   [consumer acceptance evidence](../../docs/observe-claude-acceptance.md).
-- [ ] The Codex adapter passes a real receipt-bound consumer installation and execution; it
-  remains generated preview until then.
+- [x] The Codex adapter passes a real receipt-bound consumer installation and execution;
+  [Codex CLI 0.144.6 acceptance](../../docs/codex-consumer-acceptance.md) binds the immutable
+  marketplace snapshot, installed cache, and zero-write foreign-repository journeys.
 - [x] `recursive-guard` remains separately installable, separately trusted, and never a
   dependency of advisory plugins.
 - [x] At least two existing consumer configurations and one hosted GitHub workflow validate

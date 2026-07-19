@@ -2,21 +2,23 @@
 
 Phase: 1
 
+Status: verified on 2026-07-19
+
 Prove that the Codex package can be discovered, installed, cached, and executed by a real
 Codex consumer without changing an existing project or relying on a maintainer checkout.
 
 ## Tasks
 
-- [ ] Record the supported Codex build, exact CLI help, platform, and isolated `CODEX_HOME`.
-- [ ] Add the repository marketplace by `owner/repository` at an immutable revision and
+- [x] Record the supported Codex build, exact CLI help, platform, and isolated `CODEX_HOME`.
+- [x] Add the repository marketplace by `owner/repository` at an immutable revision and
   install Observe and Guard through the actual supported CLI or desktop workflow.
-- [ ] Verify every cached file against the builder receipt and reject missing, extra, or
+- [x] Verify every cached file against the builder receipt and reject missing, extra, or
   changed files.
-- [ ] Execute Observe's predict/outcome loop in a foreign repository containing existing
+- [x] Execute Observe's predict/outcome loop in a foreign repository containing existing
   `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/`, and GitHub configuration.
-- [ ] Execute Guard with no policy as an exact no-op, then audit and enforce only inside a
+- [x] Execute Guard with no policy as an exact no-op, then audit and enforce only inside a
   disposable repository with explicit consent.
-- [ ] Store sanitized consumer receipts, update maturity claims, and close the final
+- [x] Store sanitized consumer receipts, update maturity claims, and close the final
   P-2026-044 criterion only after the run passes.
 
 ## TDD
@@ -49,8 +51,13 @@ reviewed and merged on protected `main`.
 
 ## Completion evidence
 
-- Install/version/help transcript and environment manifest.
-- Builder and installed-cache SHA-256 receipts.
-- Before/after foreign-repository tree and content hashes.
-- Prediction/outcome identifiers and Guard no-policy/audit/enforce results.
-- Green PR checks and post-merge P-2026-044 lifecycle receipt.
+- [Codex acceptance record](../../codex-consumer-acceptance.md) and its linked sanitized
+  machine receipt record Codex CLI 0.144.6, stable plugin help, Windows, and the isolated
+  consumer contract.
+- Observe and Guard installed-cache trees match their complete canonical SHA-256 receipts;
+  randomized mutation and extra-file properties fail closed.
+- Foreign-repository before/after SHA-256 is
+  `2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79` with clean Git status.
+- Observe scored one hit with Brier 0.01; Guard proved exact no-policy no-op, warn/allow
+  audit, and deny enforcement.
+- P-2026-044 is resolved as landed with the receipt and merged verification evidence.

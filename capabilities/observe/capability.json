@@ -30,7 +30,7 @@
     {
       "provider": "codex",
       "path": "plugins/recursive-observe/.codex-plugin/plugin.json",
-      "status": "generated-preview"
+      "status": "generated-beta"
     }
   ]
 }
