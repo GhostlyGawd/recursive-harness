@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-19T23:49:00Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "ref": "19753b6c96fb124b8e6ba1e4f97b887a02bb553d",
+  "state": "open",
+  "rule": "py/path-injection",
+  "security_severity": "high",
+  "alert_count": 49,
+  "groups": [
+    {
+      "authority": "cartograph-selected-repository-and-explicit-output",
+      "source": "cartograph/extract.py:2832 (operator-selected --root and output arguments)",
+      "alerts": [
+        {"number": 62, "path": "cartograph/extract.py", "line": 66},
+        {"number": 64, "path": "cartograph/extract.py", "line": 83},
+        {"number": 65, "path": "cartograph/extract.py", "line": 86},
+        {"number": 63, "path": "cartograph/extract.py", "line": 87},
+        {"number": 68, "path": "cartograph/extract.py", "line": 460},
+        {"number": 67, "path": "cartograph/extract.py", "line": 460},
+        {"number": 69, "path": "cartograph/extract.py", "line": 462},
+        {"number": 70, "path": "cartograph/extract.py", "line": 517},
+        {"number": 71, "path": "cartograph/extract.py", "line": 520},
+        {"number": 72, "path": "cartograph/extract.py", "line": 528},
+        {"number": 73, "path": "cartograph/extract.py", "line": 529},
+        {"number": 74, "path": "cartograph/extract.py", "line": 530},
+        {"number": 75, "path": "cartograph/extract.py", "line": 534},
+        {"number": 76, "path": "cartograph/extract.py", "line": 897},
+        {"number": 77, "path": "cartograph/extract.py", "line": 925},
+        {"number": 78, "path": "cartograph/extract.py", "line": 926},
+        {"number": 79, "path": "cartograph/extract.py", "line": 950},
+        {"number": 80, "path": "cartograph/extract.py", "line": 1202},
+        {"number": 84, "path": "cartograph/extract.py", "line": 2666},
+        {"number": 85, "path": "cartograph/extract.py", "line": 2681},
+        {"number": 86, "path": "cartograph/extract.py", "line": 2683},
+        {"number": 87, "path": "cartograph/extract.py", "line": 2858},
+        {"number": 88, "path": "cartograph/extract.py", "line": 2859},
+        {"number": 89, "path": "cartograph/extract.py", "line": 2927},
+        {"number": 90, "path": "cartograph/extract.py", "line": 2928},
+        {"number": 91, "path": "cartograph/extract.py", "line": 2935},
+        {"number": 92, "path": "cartograph/extract.py", "line": 2936}
+      ]
+    },
+    {
+      "authority": "eval-runner-selected-sandbox",
+      "source": "evals/corpus/jsonl-rotate/check.py:5 (runner-selected sandbox argv[1])",
+      "alerts": [
+        {"number": 25, "path": "evals/corpus/jsonl-rotate/check.py", "line": 7},
+        {"number": 26, "path": "evals/corpus/jsonl-rotate/check.py", "line": 13},
+        {"number": 27, "path": "evals/corpus/jsonl-rotate/check.py", "line": 19},
+        {"number": 28, "path": "evals/corpus/jsonl-rotate/check.py", "line": 25}
+      ]
+    },
+    {
+      "authority": "host-hook-event-and-harness-private-state",
+      "source": "trusted host cwd/transcript/session fields plus tracked worktree registry",
+      "alerts": [
+        {"number": 24, "path": "hooks/_wtpaths.py", "line": 82},
+        {"number": 39, "path": "hooks/forbid_scratchpad.py", "line": 68},
+        {"number": 40, "path": "hooks/guard_trunk_lease.py", "line": 298},
+        {"number": 52, "path": "hooks/guard_worktree_isolation.py", "line": 521},
+        {"number": 53, "path": "hooks/guard_worktree_isolation.py", "line": 523},
+        {"number": 178, "path": "hooks/guard_worktree_isolation.py", "line": 525},
+        {"number": 55, "path": "hooks/guard_worktree_isolation.py", "line": 541},
+        {"number": 44, "path": "hooks/guard_worktree_session.py", "line": 204},
+        {"number": 56, "path": "hooks/guard_worktree_session.py", "line": 309},
+        {"number": 57, "path": "hooks/guard_worktree_session.py", "line": 312},
+        {"number": 58, "path": "hooks/guard_worktree_session.py", "line": 316},
+        {"number": 59, "path": "hooks/guard_worktree_session.py", "line": 320},
+        {"number": 81, "path": "hooks/materialize_worktree_repos.py", "line": 165},
+        {"number": 179, "path": "hooks/materialize_worktree_repos.py", "line": 168},
+        {"number": 180, "path": "hooks/materialize_worktree_repos.py", "line": 174}
+      ]
+    },
+    {
+      "authority": "test-fixture-selected-temporary-path",
+      "source": "test runner parameters and temporary directories",
+      "alerts": [
+        {"number": 103, "path": "tests/test_ci_coverage.py", "line": 229},
+        {"number": 104, "path": "tests/test_guard_worktree_session.py", "line": 182},
+        {"number": 151, "path": "tests/test_guard_worktree_session.py", "line": 186}
+      ]
+    }
+  ]
+}

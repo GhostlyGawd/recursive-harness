@@ -72,6 +72,7 @@ jobs:
           python3 tests/test_distribution.py
           python3 tests/test_distribution_completion_specs.py
           python3 tests/test_codex_consumer_acceptance.py
+          python3 tests/test_codeql_path_boundaries.py
           python3 tests/test_operator_journeys.py
           python3 tests/test_ci_coverage.py
           python3 tests/test_followup.py
