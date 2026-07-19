@@ -90,6 +90,28 @@ def test_cartograph_does_not_follow_repository_symlinks_outside_its_root() -> No
         assert "skill:escaped-private-skill" not in graph.nodes
 
 
+def test_cartograph_default_output_cannot_escape_selected_root() -> None:
+    with tempfile.TemporaryDirectory() as raw:
+        temp = Path(raw)
+        selected_root = temp / "selected"
+        outside = temp / "outside"
+        selected_root.mkdir()
+        outside.mkdir()
+        (selected_root / "settings.json").write_text('{"hooks": {}}\n', encoding="utf-8")
+        try:
+            (selected_root / "cartograph").symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            return
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "cartograph" / "extract.py"),
+             "--root", str(selected_root), "--html", "--quiet"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode != 0
+        assert not (outside / "index.html").exists()
+
+
 def test_materializer_never_probes_through_an_escaping_symlink() -> None:
     materializer = load_module(
         "materialize_boundary_contract", HOOKS / "materialize_worktree_repos.py"
