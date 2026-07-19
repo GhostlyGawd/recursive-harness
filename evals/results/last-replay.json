@@ -13,9 +13,9 @@
     "mission-control-p2p5": "pass",
     "spec-binding": "pass"
   },
-  "corpus_hash": "1ea176133d3e443c",
-  "date": "2026-07-05T18:27:07",
+  "corpus_hash": "3a01cca07e05e674",
+  "date": "2026-07-19T00:08:43",
   "passed": 12,
-  "session": "975732da",
+  "session": "codex-2026-07-18-specialization",
   "total": 12
 }

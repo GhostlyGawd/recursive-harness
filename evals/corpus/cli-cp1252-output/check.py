@@ -15,14 +15,17 @@ import json, os, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 SRC = os.path.join(ROOT, "bin", "harness")
+PRIVATE_STATE_SRC = os.path.join(ROOT, "private_state.py")
 
-if not os.path.exists(SRC):
-    print("FAIL: bin/harness missing at", SRC); sys.exit(1)
+for required in (SRC, PRIVATE_STATE_SRC):
+    if not os.path.exists(required):
+        print("FAIL: required runtime file missing at", required); sys.exit(1)
 
 with tempfile.TemporaryDirectory() as d:
     os.makedirs(os.path.join(d, "bin"))
     os.makedirs(os.path.join(d, "state"))
     shutil.copy(SRC, os.path.join(d, "bin", "harness"))   # copy isolates its state tree
+    shutil.copy(PRIVATE_STATE_SRC, os.path.join(d, "private_state.py"))
     # an isolated correction note carrying U+2192 (the char that crashed the real CLI)
     with open(os.path.join(d, "state", "corrections.jsonl"), "w", encoding="utf-8") as f:
         f.write(json.dumps({"ts": "2026-01-01T00:00:00+00:00", "session": "evaltest",

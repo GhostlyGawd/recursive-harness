@@ -17,6 +17,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 HOOK_SRC = os.path.join(ROOT, "hooks", "guard_worktree_session.py")
 WTPATHS_SRC = os.path.join(ROOT, "hooks", "_wtpaths.py")
+PRIVATE_STATE_SRC = os.path.join(ROOT, "private_state.py")
 
 _tmp = []
 
@@ -37,6 +38,7 @@ def fixture():
     os.makedirs(os.path.join(d, "hooks"))
     shutil.copyfile(HOOK_SRC, os.path.join(d, "hooks", "guard_worktree_session.py"))
     shutil.copyfile(WTPATHS_SRC, os.path.join(d, "hooks", "_wtpaths.py"))
+    shutil.copyfile(PRIVATE_STATE_SRC, os.path.join(d, "private_state.py"))
     wt = os.path.join(d, ".claude", "worktrees", "wt-eval")
     os.makedirs(wt)
     with open(os.path.join(wt, ".git"), "w") as f:
@@ -67,7 +69,7 @@ def owner(repo, tree):
     return entry.get("session_id") if isinstance(entry, dict) else None
 
 
-for src in (HOOK_SRC, WTPATHS_SRC):
+for src in (HOOK_SRC, WTPATHS_SRC, PRIVATE_STATE_SRC):
     if not os.path.exists(src):
         fail(f"{os.path.relpath(src, ROOT)} missing")
 
