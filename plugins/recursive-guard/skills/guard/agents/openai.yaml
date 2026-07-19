@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Guard"
+  short_description: "Opt-in protection for reviewed repository paths."
+  default_prompt: "Use $guard to inspect or propose a no-op-by-default repository guard policy."

@@ -4,18 +4,22 @@
   "id": "recursive-guard",
   "display_name": "Recursive Guard",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-preview",
   "safety_class": "enforcement",
   "default_repository_writes": "never",
   "repository_writes": "reviewed-integration-only",
-  "state_behavior": "local enforcement evidence and leases",
+  "state_behavior": "no private state; one explicit repository-owned policy activates enforcement",
   "required_events": ["pre-tool-use"],
-  "optional_events": ["session-start", "post-tool-use", "session-end"],
+  "optional_events": [],
   "canonical_components": [
-    "hooks",
-    "settings.json",
-    "templates/account-settings.json",
-    "autonomy.json"
+    "skills/guard"
   ],
-  "provider_packages": []
+  "source_receipt": "plugins/recursive-guard/canonical-source.json",
+  "provider_packages": [
+    {
+      "provider": "codex",
+      "path": "plugins/recursive-guard/.codex-plugin/plugin.json",
+      "status": "generated-preview"
+    }
+  ]
 }

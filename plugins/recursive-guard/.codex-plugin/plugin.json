@@ -1,0 +1,33 @@
+{
+  "name": "recursive-guard",
+  "version": "0.1.0",
+  "description": "Separately trusted, no-op-by-default repository path guardrails.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/guard-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "guardrails",
+    "hooks",
+    "policy",
+    "security"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Guard",
+    "shortDescription": "Opt-in protection for reviewed repository paths.",
+    "longDescription": "A separately trusted Codex hook that remains inert until a repository owner adds a reviewed policy, then audits or denies supported writes to named paths.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Policy guardrails",
+      "PreToolUse hooks",
+      "Audit mode"
+    ],
+    "defaultPrompt": "Use Recursive Guard to inspect or propose an opt-in repository policy."
+  }
+}
