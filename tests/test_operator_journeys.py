@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import json
 import re
 import shutil
 import stat
@@ -77,16 +78,36 @@ def main() -> int:
               doctor.stdout + doctor.stderr)
 
         target = tmp / "consumer-project"
-        target.mkdir()
+        existing_files = {
+            "AGENTS.md": "existing agent rules\n",
+            "CLAUDE.md": "existing Claude rules\n",
+            ".claude/settings.json": '{"existing":true}\n',
+            ".claude/agents/reviewer.md": "existing agent\n",
+            ".claude/skills/existing/SKILL.md": "existing skill\n",
+            ".codex/config.toml": 'model = "existing"\n',
+            ".git/hooks/pre-commit": "#!/bin/sh\nexit 0\n",
+            "src/unrelated.txt": "unchanged\n",
+        }
+        for relative, content in existing_files.items():
+            path = target / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        before = {relative: (target / relative).read_bytes() for relative in existing_files}
         project_first = run([BASH, str(checkout / "project-init.sh")], cwd=target, env=env)
-        project_second = run([BASH, str(checkout / "project-init.sh")], cwd=target, env=env)
-        contract = (target / "CLAUDE.md").read_text(encoding="utf-8")
-        check("target project receives one thin contract",
-              project_first.returncode == 0 and contract.count("## Harness contract") == 1,
-              project_first.stderr)
-        check("project initialization is idempotent",
-              project_second.returncode == 0 and "already initialized" in project_second.stdout,
-              project_second.stderr)
+        project_json = run([BASH, str(checkout / "project-init.sh"), "--json"], cwd=target, env=env)
+        after = {relative: (target / relative).read_bytes() for relative in existing_files}
+        try:
+            inspection = json.loads(project_json.stdout)
+        except json.JSONDecodeError:
+            inspection = {}
+        check("target project configuration stays byte-identical",
+              project_first.returncode == 0 and before == after,
+              project_first.stdout + project_first.stderr)
+        check("project compatibility inspection reports the coexistence contract",
+              project_json.returncode == 0
+              and inspection.get("repository_writes") == []
+              and inspection.get("existing_configuration_authoritative") is True,
+              project_json.stdout + project_json.stderr)
 
         predicted = run(
             [sys.executable, "bin/harness", "predict", "--task", "operator journey",

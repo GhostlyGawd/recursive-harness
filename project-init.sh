@@ -1,22 +1,10 @@
 #!/usr/bin/env bash
-# Initialize a project to CONSUME the harness without forking the brain.
-# Writes a deliberately thin project CLAUDE.md. Run from the project root.
+# Compatibility wrapper retained for operators who used the former initializer.
+# It is deliberately read-only: existing repository configuration is authoritative.
 set -euo pipefail
-if [ -f CLAUDE.md ]; then
-  echo "CLAUDE.md already exists — appending harness contract if missing."
-  grep -q "Harness contract" CLAUDE.md && { echo "already initialized"; exit 0; }
-fi
-cat >> CLAUDE.md << 'TPL'
 
-## Harness contract (do not bloat this file)
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
-This project consumes the shared harness (the fleet account's config dir, or a
-legacy ~/.claude install). Rules:
-- Only facts true of THIS repo belong here: build quirks, domain glossary,
-  invariants. One line each. No procedures, no preferences, no wisdom —
-  those route upstream (skill: routing-learnings).
-- Learnings discovered here are proposed to the harness repo via /retro,
-  never accumulated locally. Seen in a second project = promote upstream.
-- Keep this file under 40 lines. If it grows, something is misrouted.
-TPL
-echo "Project initialized. Thin CLAUDE.md contract appended."
+echo "project-init no longer edits CLAUDE.md or any repository file." >&2
+echo "Existing repository configuration remains authoritative." >&2
+exec python3 "$SCRIPT_DIR/scripts/recursive_inspect.py" "$PWD" "$@"

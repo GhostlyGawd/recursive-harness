@@ -17,8 +17,9 @@ their normal explicit decisions and reviews.
 - Recursive Harness is the selected canonical harness target. Agentic Dev OS is a
   capability donor and Master Harness is a retired consolidation spike; the companion
   `repo-audit` governance change aligns the portfolio records with that decision.
-- The strongest near-term opportunity is defining a provider boundary around the working
-  product, not adding another parallel harness.
+- The approved non-invasive capability boundary is now defined in P-2026-044 and ADR 0013.
+  Read-only inspection and canonical package manifests are the first delivery slice;
+  generated packages, hash receipts, coexistence fixtures, and external validation remain.
 
 ## P0 — consolidate ownership without duplicating the runtime
 
@@ -43,6 +44,14 @@ first adapter in substance even where its files predate the abstraction.
 Use one OpenAI/Codex plugin or adapter as the second-provider proof. Specialization remains
 a canonical Recursive capability; the provider package only exposes and wires it. Do not
 claim broad agent support until the adapter passes shared acceptance fixtures.
+
+### 0.2 Extract the capability suite in risk order
+
+Deliver Observe first as a zero-repository-write package, then Learn and Verify, followed by
+Coordinate. Keep Guard separately installable and separately trusted; never make it an
+implicit dependency of advisory plugins. Lab remains experimental. Each provider artifact
+must be generated from the canonical manifest, carry source hashes, disclose unsupported
+events, and pass coexistence tests against a real existing configuration.
 
 ## P0 — protect the evidence and data boundary
 
@@ -181,9 +190,10 @@ repos.
 
 ### 12. Add end-to-end operator scenarios
 
-**Delivered in P-2026-042:** a disposable-clone black-box journey covers install,
-account init, Doctor, project contract idempotency, predict/outcome/Scorecard,
-settings backup, uninstall retention, and rollback retention. Linux, macOS, and
+**Delivered in P-2026-042 and superseded by P-2026-044 where noted:** a disposable-clone
+black-box journey covers install, account init, Doctor, byte-identical compatibility
+inspection, predict/outcome/Scorecard, settings backup, uninstall retention, and rollback
+retention. Linux, macOS, and
 the exact Git 2.39.0 lower bound run it continuously; existing guard tests retain
 the multi-session/worktree conflict coverage. Model-backed replay remains a
 documented human release acceptance because CI must not invoke Claude.
@@ -191,7 +201,7 @@ documented human release acceptance because CI must not invoke Claude.
 Keep unit tests, but add a small set of black-box stories:
 
 1. fresh clone → account init → doctor,
-2. target repo → pinned launch → thin project contract,
+2. target repo → read-only inspection → byte-identical coexistence,
 3. predict → score → retro route → PR evidence,
 4. two sessions → worktree conflict → safe coordination,
 5. settings update → post-merge sync → rollback from backup.

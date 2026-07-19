@@ -117,7 +117,7 @@ if [ "${1:-}" != "--global-legacy" ]; then
 Siloed/fleet model is the default — nothing is installed globally.
   • Init/repair an account:    ./account-init.sh <name>
   • Inside a fleet session:    ./account-init.sh           (uses \$CLAUDE_CONFIG_DIR)
-  • Per-project thin contract: ./project-init.sh           (run in the project root)
+  • Read-only project check:   ./project-init.sh           (run in the project root)
   • Legacy single-user global (symlinks this repo to ~/.claude):
         ./install.sh --global-legacy
 EOF
@@ -153,4 +153,4 @@ fi
 install_git_hooks
 python3 lint/lint_harness.py
 echo "Installed (legacy global): $TARGET -> $REPO_DIR"
-echo "Next: run ./project-init.sh inside each project you work on."
+echo "Next: run ./project-init.sh inside a project for read-only compatibility inspection."

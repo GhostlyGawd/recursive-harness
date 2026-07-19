@@ -4,7 +4,7 @@
 
 - Git 2.39.0 or newer
 - Python 3.12, matching the CI runtime
-- Bash for `install.sh`, `account-init.sh`, and `project-init.sh`
+- Bash for `install.sh`, `account-init.sh`, and the deprecated `project-init.sh` wrapper
 - Claude Code 2.1.200 or newer
 
 On Windows, use Git Bash for the shell scripts. Enable Windows Developer Mode so
@@ -101,23 +101,31 @@ selected account/config/checkout to stderr, forward Claude Code arguments, and p
 current working directory. A plain `claude` invocation without the pin uses the operating
 system's default Claude config.
 
-## 4. Connect another repository
+## 4. Inspect or use another repository
 
-Loading the harness and adding project-local instructions are separate choices.
-
-1. From the target repository, invoke `/path/to/recursive-harness/launch.sh dev` on Bash or
-   `& C:\path\to\recursive-harness\launch.ps1 dev` on PowerShell.
-2. If the target needs repository-specific facts, run the harness's project initializer
-   from the target root:
+Start with a zero-write compatibility inspection. It checks only whether known instruction,
+provider, agent, skill, hook, and GitHub configuration paths exist; it does not read or print
+their contents.
 
 ```bash
-cd /path/to/target-project
-/path/to/recursive-harness/project-init.sh
+python3 /path/to/recursive-harness/scripts/recursive_inspect.py /path/to/target-project
+# Add --json for deterministic machine-readable output.
 ```
 
-The initializer appends a thin “Harness contract” to the target's `CLAUDE.md`. It does not
-copy procedures or memory into that repository. Project facts stay local; reusable lessons
-route back through a reviewed change to the harness.
+Existing `AGENTS.md`, `CLAUDE.md`, provider settings, agents, skills, and hooks remain
+authoritative. The command performs no repository writes. `project-init.sh` remains only as
+a deprecated wrapper for this inspection and no longer changes `CLAUDE.md`.
+
+You can call explicit sidecar commands from the Recursive checkout while another project is
+your working context. If you instead invoke `launch.sh dev` or `launch.ps1 dev`, you are
+choosing the full Claude reference runtime: it preserves the target working directory but
+selects Recursive's dedicated `CLAUDE_CONFIG_DIR`. That is useful isolation, not a merge
+with your normal Claude setup.
+
+Namespaced provider plugins are planned from the canonical
+[capability catalog](../capabilities/README.md). Until a package has a source-hash receipt,
+coexistence fixtures, and a real consumer validation, its manifest is a design contract—not
+an installable compatibility claim.
 
 ## 5. Verify the working loop
 

@@ -48,6 +48,25 @@ def write_executable(path: Path, text: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
+def tree_snapshot(root: Path) -> dict[str, str]:
+    """Hash a fixture tree without following links or interpreting file contents."""
+    snapshot: dict[str, str] = {}
+    for current, directories, filenames in os.walk(root, followlinks=False):
+        current_path = Path(current)
+        directories.sort()
+        filenames.sort()
+        for name in directories + filenames:
+            path = current_path / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                snapshot[relative] = "link:" + os.readlink(path)
+            elif path.is_dir():
+                snapshot[relative] = "directory"
+            else:
+                snapshot[relative] = "file:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
+
+
 def test_bash_launcher() -> None:
     with tempfile.TemporaryDirectory(prefix="harness-launch-") as raw_tmp:
         repo = Path(raw_tmp)
@@ -331,6 +350,132 @@ def test_powershell_launcher() -> None:
         check("PowerShell launcher announces its account", "Harness account : dev" in result.stderr, result.stderr)
 
 
+def test_noninvasive_project_inspection() -> None:
+    with tempfile.TemporaryDirectory(prefix="harness-inspect-") as raw_tmp:
+        target = Path(raw_tmp) / "existing-project"
+        fixtures = {
+            "AGENTS.md": "existing agent instructions -- DO_NOT_PRINT\n",
+            "CLAUDE.md": "existing Claude instructions -- DO_NOT_PRINT\n",
+            ".claude/settings.json": '{"hooks":{"PreToolUse":["existing"]}}\n',
+            ".claude/agents/reviewer.md": "existing reviewer -- DO_NOT_PRINT\n",
+            ".claude/skills/existing/SKILL.md": "existing skill -- DO_NOT_PRINT\n",
+            ".codex/config.toml": 'model = "existing"\n',
+            ".codex/hooks.json": '{"existing":true}\n',
+            ".agents/plugins/marketplace.json": '{"plugins":[]}\n',
+            ".github/workflows/existing.yml": "name: existing\n",
+            ".git/hooks/pre-commit": "#!/bin/sh\nexit 0\n",
+            "src/unrelated.txt": "must remain unchanged\n",
+        }
+        for relative, content in fixtures.items():
+            path = target / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        initialized = subprocess.run(["git", "init", "-q"], cwd=target, **CAPTURE)
+        check("coexistence fixture contains real Git metadata", initialized.returncode == 0, initialized.stderr)
+        (target / ".git" / "hooks" / "pre-commit").write_text(fixtures[".git/hooks/pre-commit"], encoding="utf-8")
+
+        before = tree_snapshot(target)
+        text_result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "recursive_inspect.py"), str(target)],
+            **CAPTURE,
+        )
+        json_result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "recursive_inspect.py"), str(target), "--json"],
+            **CAPTURE,
+        )
+        after = tree_snapshot(target)
+
+        check("read-only inspection exits successfully", text_result.returncode == 0, text_result.stderr)
+        check("inspection reports zero repository writes", "Repository writes: none" in text_result.stdout)
+        check("inspection does not print configuration contents", "DO_NOT_PRINT" not in text_result.stdout)
+        check("inspection leaves the complete target tree byte-identical", before == after)
+        try:
+            report = json.loads(json_result.stdout)
+        except json.JSONDecodeError:
+            report = {}
+        detected_paths = {item["path"] for item in report.get("detected", [])}
+        check("inspection JSON is machine readable", json_result.returncode == 0 and bool(report), json_result.stderr)
+        check("inspection records no writes", report.get("repository_writes") == [])
+        check("existing configuration remains authoritative",
+              report.get("existing_configuration_authoritative") is True)
+        check("personal sidecar is the safe recommendation", report.get("recommended_mode") == "personal-sidecar")
+        check("inspection detects provider configuration without reading it",
+              {"AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".codex/config.toml",
+               ".git/hooks"}.issubset(detected_paths))
+
+        wrapper_result = subprocess.run(
+            [BASH_COMMAND, str(ROOT / "project-init.sh"), "--json"],
+            cwd=target,
+            **CAPTURE,
+        )
+        check("deprecated project initializer is a read-only compatibility wrapper",
+              wrapper_result.returncode == 0
+              and "no longer edits CLAUDE.md" in wrapper_result.stderr
+              and tree_snapshot(target) == before,
+              wrapper_result.stdout + wrapper_result.stderr)
+
+        if os.name != "nt":
+            linked_target = Path(raw_tmp) / "linked-project"
+            linked_target.mkdir()
+            outside = Path(raw_tmp) / "outside-claude"
+            outside.mkdir()
+            (outside / "settings.json").write_text('{"secret":"DO_NOT_PRINT"}\n', encoding="utf-8")
+            (linked_target / ".claude").symlink_to(outside, target_is_directory=True)
+            linked_before = tree_snapshot(linked_target)
+            linked_result = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "recursive_inspect.py"), str(linked_target), "--json"],
+                **CAPTURE,
+            )
+            linked_report = json.loads(linked_result.stdout)
+            check("inspection stops at a linked provider directory",
+                  linked_result.returncode == 0
+                  and {"kind": "claude-settings", "path": ".claude", "path_type": "symlink"}
+                  in linked_report["detected"])
+            check("linked provider inspection reads no external contents and changes no bytes",
+                  "DO_NOT_PRINT" not in linked_result.stdout
+                  and tree_snapshot(linked_target) == linked_before
+                  and (outside / "settings.json").read_text(encoding="utf-8")
+                  == '{"secret":"DO_NOT_PRINT"}\n')
+
+
+def test_capability_catalog() -> None:
+    catalog = json.loads((ROOT / "capabilities" / "catalog.json").read_text(encoding="utf-8"))
+    manifests = [
+        json.loads((ROOT / "capabilities" / relative).read_text(encoding="utf-8"))
+        for relative in catalog["capabilities"]
+    ]
+    expected = {
+        "recursive-observe",
+        "recursive-learn",
+        "recursive-verify",
+        "recursive-coordinate",
+        "recursive-guard",
+        "recursive-lab",
+    }
+    by_id = {manifest["id"]: manifest for manifest in manifests}
+    check("capability catalog defines the complete approved suite", set(by_id) == expected)
+    check("capability manifests are canonical maps rather than false package claims",
+          all(manifest["packaging_status"] == "planned" and manifest["provider_packages"] == []
+              for manifest in manifests))
+    check("every canonical capability component exists",
+          all((ROOT / component).exists()
+              for manifest in manifests for component in manifest["canonical_components"]))
+    check("every capability prohibits repository writes by default",
+          all(manifest["default_repository_writes"] == "never" for manifest in manifests))
+    check("advisory authoring actions are disclosed separately",
+          by_id["recursive-observe"]["repository_writes"] == "never"
+          and by_id["recursive-learn"]["repository_writes"] == "explicit-reviewed-action-only"
+          and bool(by_id["recursive-learn"]["explicit_repository_actions"])
+          and by_id["recursive-verify"]["repository_writes"] == "explicit-reviewed-action-only"
+          and bool(by_id["recursive-verify"]["explicit_repository_actions"]))
+    check("guard is disclosed as separate reviewed enforcement",
+          by_id["recursive-guard"]["safety_class"] == "enforcement"
+          and by_id["recursive-guard"]["repository_writes"] == "reviewed-integration-only")
+    check("catalog makes existing configuration authoritative",
+          catalog["existing_configuration_authoritative"] is True
+          and catalog["marketplace_generated"] is False)
+
+
 def test_market_surface() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -382,6 +527,8 @@ def main() -> int:
     test_release_archives()
     test_account_initialization()
     test_powershell_launcher()
+    test_noninvasive_project_inspection()
+    test_capability_catalog()
     test_market_surface()
     if FAILURES:
         print(f"\ntest_distribution: {len(FAILURES)} failure(s): {', '.join(FAILURES)}", file=sys.stderr)

@@ -1,0 +1,28 @@
+{
+  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "schema_version": 1,
+  "id": "recursive-verify",
+  "display_name": "Recursive Verify",
+  "capability_version": "0.1.0",
+  "packaging_status": "planned",
+  "safety_class": "advisory",
+  "default_repository_writes": "never",
+  "repository_writes": "explicit-reviewed-action-only",
+  "state_behavior": "read-only evidence by default; reviewed artifacts require an explicit action",
+  "explicit_repository_actions": ["capture evaluation", "create proposal", "prepare reviewed change"],
+  "required_events": [],
+  "optional_events": ["pull-request", "continuous-integration"],
+  "canonical_components": [
+    "skills/eval-capture",
+    "skills/structural-qa",
+    "skills/harness-authoring",
+    "skills/harness-pr-ops",
+    "commands/capture-eval.md",
+    "commands/run-evals.md",
+    "commands/atlas.md",
+    "agents/critic.md",
+    "agents/harness-auditor.md",
+    "cartograph"
+  ],
+  "provider_packages": []
+}
