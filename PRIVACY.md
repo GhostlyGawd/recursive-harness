@@ -12,6 +12,7 @@ data boundary for operators and contributors; it is not a legal privacy policy.
 | `state/corrections.jsonl` | Short excerpts from prompts classified as corrections, plus session identifiers | Ignored |
 | `state/heal/` | Short failure snippets, tool names, repository keys, and repair history | Ignored |
 | Other `state/*.jsonl` | Predictions, follow-ups, skill use, approvals, coordination messages, leases, and session metadata | Ignored |
+| `~/.recursive-harness/specialization/` | Compact capability-gap or skill-feedback shapes, provider/session identifiers, private candidates, and dogfood receipts | Outside the repository; fixed path with no runtime override |
 | Linked worktrees | Checked-out source from local or configured Git repositories | Ignored by this repository |
 
 Prompt and failure excerpts are capped by their writers. Before persistence, the shared
@@ -19,6 +20,11 @@ private-state writer recursively redacts sensitive keys and common credential, e
 IP-address, user-home-path, and authenticated-URL shapes. This is defense in depth, not a
 guarantee that every secret or identifier will be recognized. Do not use the ledgers as a
 secret store.
+
+Specialization does not ingest full prompts or transcripts. Its lifecycle adapter gives the
+active model a session/turn identifier and asks the model to record a compact evidence shape.
+The provider-neutral directory is retained across plugin upgrades and uninstall; inspect it
+before any explicit purge.
 
 Privacy-bearing JSONL writers use the shared `private_state.py` primitive. It creates
 owner-only directories/files where the operating system supports POSIX modes, serializes

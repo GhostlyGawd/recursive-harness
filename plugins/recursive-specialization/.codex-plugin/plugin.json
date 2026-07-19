@@ -1,0 +1,23 @@
+{
+  "name": "recursive-specialization",
+  "version": "0.1.0",
+  "description": "Turn first-observation capability gaps and skill feedback into dogfooded expert candidates.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/codex-specialization.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": ["skills", "learning", "dogfood", "codex"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Specialization",
+    "shortDescription": "Create and improve skills from first-use evidence.",
+    "longDescription": "A narrow Codex adapter for Recursive Harness Specialization. It records local evidence, creates or amends candidates immediately, and requires dogfood proof before canonical promotion.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": ["Local state", "Lifecycle hooks", "Skill authoring"],
+    "defaultPrompt": "Capture this missing capability or skill improvement and dogfood the candidate."
+  }
+}

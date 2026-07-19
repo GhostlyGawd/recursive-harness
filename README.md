@@ -35,9 +35,11 @@ The public adoption default is now non-invasive: inspect first, keep every exist
 into only the capabilities you want. The canonical capability model is provider-neutral,
 but the full production integration today is the advanced Claude Code reference runtime.
 Observe now ships as a generated-beta Claude and generic Agent Skill package plus a
-generated-preview Codex package; Learn, Verify, Coordinate, Guard, and Lab remain planned. See the
-[Observe guide](docs/observe-plugin.md), [capability catalog](capabilities/README.md),
-[architecture](docs/architecture.md), and
+generated-preview Codex package. Recursive also includes an experimental, narrow OpenAI/Codex
+[Specialization adapter](docs/codex-specialization.md); it packages that canonical capability
+rather than making the entire harness installable. Learn, Verify, Coordinate, Guard, and Lab
+remain planned. See the [Observe guide](docs/observe-plugin.md),
+[capability catalog](capabilities/README.md), [architecture](docs/architecture.md), and
 [Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
 migration status.
 

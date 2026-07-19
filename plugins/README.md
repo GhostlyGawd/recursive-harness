@@ -2,11 +2,11 @@
 
 ## Identity
 
-The shelf for provider and multi-skill packages. `recursive-observe/` is the first tracked
-provider package: one generated, hook-free bundle with Claude Code and Codex manifests over
-the canonical `skills/observe` capability and shared private-state helper. Its packaged
-skill is also the self-contained generic Agent Skill distribution. `prospector/` and `wraithworld/` remain
-vendored-live nested repositories with their own histories and are gitignored here.
+The shelf for provider and multi-skill packages. `recursive-observe/` is a tracked,
+hook-free Claude/Codex/generic package over the canonical `skills/observe` capability.
+`recursive-specialization/` is a narrow generated Codex adapter for the canonical
+`skills/specialization/` capability. `prospector/` and `wraithworld/` remain vendored-live
+nested repositories with their own histories and are gitignored here.
 
 ## Why (provenance)
 
@@ -33,8 +33,8 @@ must not be a budget-bypass.
   each `worktree-repos.json` entry into new worktrees (nested repos don't
   ride `.worktreeinclude`); no-op in the primary checkout, fails open.
 - A vendored-live plugin's history and product learnings live in its repository. A tracked
-  provider package stays in this trunk and carries a canonical-source receipt so generated
-  packaging cannot become a second brain.
+  provider package stays in this trunk and must carry a canonical-source receipt plus a
+  drift check so generated packaging cannot become a second brain.
 
 ## Operations (how to extend correctly)
 
@@ -50,8 +50,10 @@ must not be a budget-bypass.
   expect NO `note:` skip line for it. Provider packages must additionally name their
   canonical capability and prove generated-source parity.
 - Rebuild Observe with `python3 scripts/build_observe_plugins.py`; verify drift with
-  `python3 scripts/build_observe_plugins.py --check`. Edit canonical sources, never the
-  generated package copy.
+  `python3 scripts/build_observe_plugins.py --check`.
+- Rebuild Specialization with `python3 scripts/build_codex_specialization_plugin.py`; verify
+  drift with `python3 scripts/build_codex_specialization_plugin.py --check`. Edit canonical
+  sources, never generated package copies.
 - Verify either way: lint output names each gitignored plugin as skipped
   (surfaced, never silent), and `python3 tests/test_materialize_worktree_repos.py`
   covers the materialization contract.

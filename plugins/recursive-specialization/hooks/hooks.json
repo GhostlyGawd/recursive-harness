@@ -1,0 +1,43 @@
+{
+  "description": "First-observation capture, dogfood, and promotion reminders for Recursive Specialization.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "timeout": 10,
+            "statusMessage": "Loading Recursive Specialization"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'hooks','specialization_hook.py'),run_name='__main__')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

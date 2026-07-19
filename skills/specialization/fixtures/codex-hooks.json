@@ -1,0 +1,34 @@
+[
+  {
+    "input": {
+      "hook_event_name": "SessionStart",
+      "session_id": "fixture-session",
+      "source": "startup",
+      "permission_mode": "default"
+    },
+    "expect": "context",
+    "contains": "Recursive Specialization is active"
+  },
+  {
+    "input": {
+      "hook_event_name": "UserPromptSubmit",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "prompt": "Plan a Kafka change",
+      "permission_mode": "default"
+    },
+    "expect": "context",
+    "contains": "--session \"fixture-session\""
+  },
+  {
+    "input": {
+      "hook_event_name": "UserPromptSubmit",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-plan-turn",
+      "prompt": "Plan only",
+      "permission_mode": "plan"
+    },
+    "expect": "context",
+    "contains": "do not write the ledger"
+  }
+]

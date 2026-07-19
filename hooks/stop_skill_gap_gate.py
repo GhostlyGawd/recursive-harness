@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
-"""Stop hook: the SPECIALIZATION gate - autonomous trigger for expert-accretion.
+"""Stop hook: finish first-observation Specialization candidates and surface proof.
 
-The skills/specialization loop logs capability gaps (*needs*) continuously as the
-agent works; this hook is what makes PROMOTION fire without being asked. Once a
-domain has provably recurred (recurrence >= threshold) with no expert skill, it
-nudges - once per session - to distill the evidence cluster into an expert.
-
-The promotion predicate is NOT re-implemented here: it imports promotable() from
-skills/specialization/needs.py, so the hook and the CLI can never drift. Zero false
-positives by construction - it only fires on real, logged, recurring needs (an empty
-ledger never nudges).
+The skill creates or amends a private candidate on the first capability gap,
+correction, or improvement. This hook nudges once per session when that candidate
+still needs dogfood, when proof makes it promotion-ready, or when recurrence shows
+an unvalidated candidate is being repeatedly avoided.
 
 Fail-open everywhere: a Stop hook must never brick a session, and a MISSED nudge is
 harmless while a SPURIOUS one is annoying - so any uncertainty => no nudge. Dark-able
 via the SOFT flag nudges.skill_gap_gate (default on; recurrence empty == silent).
 
-provenance: 2026-06-27, session 9f6014a0 - built with the expert-accretion loop
-(skills/specialization, needs.py, memory/skill-needs.md) so the harness extends its own
-capabilities autonomously. Mirrors stop_cadence_gate's once-per-session gate discipline.
+provenance: 2026-06-27, session 9f6014a0, original recurrence promotion nudge;
+revised 2026-07-18 after the owner required immediate candidate creation and
+dogfooded amendments to provenance-owned skills.
 """
 import json
 import os
@@ -34,17 +29,15 @@ except Exception:  # never let a config-reader import brick the hook
 
 HARNESS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HARNESS_ROOT)
-import private_state
-STATE = os.path.join(HARNESS_ROOT, "state")
 DEFAULT_RECURRENCE = 3
 
-# Single source of the promotion predicate: import it from the (unlocked) ledger helper
-# so the gate and `needs.py promote-check` always agree. Fail-open if it can't load.
+# Single source of attention and once-per-session predicates. Fail open if unavailable.
 try:
     sys.path.insert(0, os.path.join(HARNESS_ROOT, "skills", "specialization"))
-    from needs import promotable
+    from needs import attention_items, claim_nudge
 except Exception:
-    promotable = None
+    attention_items = None
+    claim_nudge = None
 
 
 def main() -> int:
@@ -58,7 +51,7 @@ def main() -> int:
     # SOFT flag (ADR 0008): disable the specialization promotion nudge.
     if not flag("nudges.skill_gap_gate", True):
         return 0
-    if promotable is None:
+    if attention_items is None or claim_nudge is None:
         return 0  # ledger helper unavailable -> fail open
     try:
         data = json.load(sys.stdin)
@@ -67,29 +60,39 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
     session = data.get("session_id", "?")
-    session_file_id = private_state.safe_filename_id(session, "session")
-    gate_flag = os.path.join(STATE, f"skill_gap_gate_{session_file_id}")
-    if os.path.exists(gate_flag):
-        return 0  # already nudged this session
     try:
         threshold = int(num("nudges.skill_gap_recurrence", DEFAULT_RECURRENCE))
-        hot = promotable(threshold=threshold)
+        hot = attention_items(session=session, threshold=threshold)
     except Exception:
         return 0  # any ledger error -> fail open (no nudge)
     if not hot:
         return 0
-    try:
-        private_state.atomic_write_text(gate_flag, "nudged\n")
-    except OSError:
-        return 0  # if we cannot record the once-per-session flag, do not nudge
     top = hot[0]
-    extra = f" (+{len(hot) - 1} more promotable)" if len(hot) > 1 else ""
-    reason = (
-        f"Specialization gate: domain '{top['domain']}' has recurred {top['recurrence']}x "
-        f"with no expert skill{extra}. Distill its evidence cluster into an expert: "
-        f"`python3 skills/specialization/needs.py list --domain \"{top['domain']}\" --verbose`, "
-        f"then codify via the specialization skill. (Fires once per session.)"
-    )
+    try:
+        if not claim_nudge(session, top["attention"]):
+            return 0
+    except Exception:
+        return 0  # if we cannot record the once-per-session flag, do not nudge
+    extra = f" (+{len(hot) - 1} more)" if len(hot) > 1 else ""
+    if top["attention"] == "dogfood-now":
+        reason = (
+            f"Specialization gate: the first observation for '{top['domain']}' already "
+            f"created candidate {top['candidate_dir']}{extra}. Before finishing, author and "
+            "dogfood it on the triggering case; record worked/partial/failed evidence with "
+            f"`python3 skills/specialization/needs.py candidate dogfood {top['nid']} ...`."
+        )
+    elif top["attention"] == "promotion-ready":
+        reason = (
+            f"Specialization gate: candidate '{top['domain']}' is proof-validated{extra}. "
+            "Surface the local candidate to the user and request approval before changing "
+            "the canonical provenance owner or opening a PR."
+        )
+    else:
+        reason = (
+            f"Specialization gate: '{top['domain']}' has appeared in {top['recurrence']} "
+            f"distinct sessions but its candidate is still unvalidated{extra}. Finish a "
+            "falsifiable dogfood replay now; recurrence is urgency, not proof."
+        )
     print(json.dumps({"decision": "block", "reason": reason}))
     return 0
 

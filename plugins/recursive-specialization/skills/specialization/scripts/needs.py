@@ -26,7 +26,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
-import private_state
+import specialization_state as private_state
 
 SCHEMA_VERSION = 2
 DEFAULT_REVIEW_THRESHOLD = 3

@@ -36,14 +36,19 @@ unless concrete threat or consumer evidence justifies their cost.
 
 ### 0.1 Define and prove the provider adapter contract
 
+**Delivered as an experimental proof:** the Specialization provider contract, shared
+ledger/hook fixtures, generated-source drift receipt, repository marketplace, and narrow
+Codex plugin now exist. Local installation dogfood and release evidence remain required
+before widening the compatibility claim beyond this capability.
+
 Extract the smallest contract needed to expose canonical capabilities without copying them:
 capability/version metadata, lifecycle mapping, shared fixtures, unsupported-event
 disclosure, and install/upgrade/removal behavior. The existing Claude integration is the
 first adapter in substance even where its files predate the abstraction.
 
-Use one OpenAI/Codex plugin or adapter as the second-provider proof. Specialization remains
-a canonical Recursive capability; the provider package only exposes and wires it. Do not
-claim broad agent support until the adapter passes shared acceptance fixtures.
+The OpenAI/Codex proof packages only Specialization. Specialization remains a canonical
+Recursive capability; the provider package only exposes and wires it. Do not claim broad
+agent support from this narrow proof.
 
 ### 0.2 Extract the capability suite in risk order
 

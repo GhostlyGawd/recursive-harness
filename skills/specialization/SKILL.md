@@ -1,135 +1,130 @@
 ---
 name: specialization
-description: Use the moment you work in a domain with no skill covering it - a framework, tool, protocol, or problem-class faced from scratch. `python3 skills/specialization/needs.py add` logs the gap as a *need* with the shape it took; recurrence across sessions promotes it. When a need recurs (or `needs.py promote-check` flags one), distill the whole evidence cluster into an *expert* skill via harness-authoring - so next session inherits the expertise instead of re-deriving. How the harness grows its own specialists; pairs with routing-learnings (where) + harness-authoring (how).
+description: Use immediately when no installed skill covers a reusable domain, or when feedback, a mistake, or a better process reveals that an existing skill is incomplete or wrong. Record the first observation, create or amend a private candidate, and dogfood it on the triggering case now. Follow provenance to improve the canonical skill instead of forking it. Recurrence strengthens evidence but never delays a proven correction.
 ---
 
-# Specialization - the expert-accretion loop
+# Specialization
 
-The harness should get more capable as it works, without being told to. This is
-that mechanism: every domain you reason about from scratch is a missing expert.
-You log the gap, it accretes evidence across sessions, and once it has proven it
-recurs you distill the accumulated evidence into a skill - a permanent specialist
-you call next time instead of re-deriving. Five concepts, each named once:
+Turn the first useful observation into a tested candidate. Do not wait for a
+second session to learn; only permanent canonical changes wait for proof and
+review.
 
-- a **need** is one capability gap: a domain with no skill covering it.
-- **evidence** is one session-observation of a need - what *shape* the gap took there.
-- **recurrence** is the evidence count for a domain. It is the promotion signal.
-- **promotion** is distilling a need's whole evidence cluster into an expert.
-- an **expert** is the resulting skill package, callable forever after.
+Read `references/evolution-loop.md` when classifying evidence or deciding whether
+a dogfood replay is strong enough.
 
-Don't wait for permission and don't wait for /retro. Logging is continuous and
-cheap; promotion is gated by demonstrated recurrence so experts are earned, not
-sprawled.
+## 1. Recall and classify
 
-## 1. Detect & log - every session, as you work
+Before minting a new domain, recall related evidence:
 
-When you catch yourself reasoning about a domain from scratch - a new framework,
-API, protocol, file format, algorithm class, ops surface - and no skill fired for
-it, that is a **need**. Before logging, recall so you don't split one need in two:
-
-```
+```sh
 python3 skills/specialization/needs.py match --domain "kafka consumer groups"
 ```
 
-Then log this session's **evidence** - the *shape* the gap took THIS time (the
-specific thing you had to work out), not a generic label:
+Classify the observation exactly once:
 
-```
+- `gap`: no installed skill covers a reusable capability.
+- `correction`: existing guidance produced or encouraged a wrong result.
+- `improvement`: existing guidance worked, but feedback revealed a better process.
+
+Project-only facts route to that project's instructions. A code defect routes to
+`auto-healer`. A reusable procedure routes here even on its first occurrence.
+
+## 2. Record and create immediately
+
+For a new capability:
+
+```sh
 python3 skills/specialization/needs.py add \
-  --domain "kafka consumer groups" --category infra \
-  --tags area:streaming,class:rebalance \
-  --shape "had to derive why a consumer rejoin triggered a full partition reshuffle"
+  --learning-kind gap --domain "kafka consumer groups" \
+  --category infra --tags area:streaming,class:rebalance \
+  --shape "had to derive why a consumer rejoin caused a full rebalance"
 ```
 
-`--shape` is what makes promotion smart: the expert is distilled from the real
-shapes the gap took, not a textbook. **Reuse facet names** in `--tags`
-(`area:`, `class:`, `tool:`) so related needs cluster instead of fragmenting
-(the same `one name per concept` discipline as harness-authoring / auto-healer).
+For an existing skill, follow its provenance to the canonical source and seed an
+amendment candidate from that source. Corrections and improvements require all
+three provenance arguments and a readable source skill; `add` rejects a generic
+sibling draft when any is missing or the target does not match source frontmatter.
+The source must resolve to a literal `SKILL.md`; a `gap` cannot carry owner inputs:
 
-The ledger is event-sourced JSONL at `state/skill_needs.jsonl`, resolved to the
-canonical main checkout - so evidence from every worktree and session lands in
-one place. `add` prints the running recurrence and flags when a need crosses the
-threshold.
-
-### 1b. A missing TOOL is acquired, not worked around
-
-A *need* is a knowledge gap you reason through. A missing **tool** is different - a
-concrete binary / CLI / service the task requires that simply is not installed (a
-renderer, an encoder, an auth'd CLI - e.g. playwright, ffmpeg). The standing user
-directive for that case is ACQUIRE it, never degrade around it: identify the right
-tool, install/build/vendor it, verify it runs, then proceed. Shipping a worse result -
-or FAKING it, or DEFERRING the work to a follow-up - because a tool was absent is the
-anti-pattern (the documented install is usually one step: e.g.
-`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install` to drive system Chrome). Stay inside
-the user's floors - subscription-CLI auth only, no API-key dependencies, no headless
-execution (memory/user-model.md). Still `needs.py add` the gap: a recurring
-acquisition is real evidence and promotes to a documented setup/preflight step, the
-same accretion loop. (correction #89, 2026-06-28.)
-
-## 2. Recurrence & promotion - mostly automatic
-
-A need with recurrence >= threshold (default 3, `nudges.skill_gap_recurrence`)
-is **promotable**. You don't have to remember to check: the `stop_skill_gap_gate`
-hook reads the same predicate and nudges you, once per session, when a domain has
-recurred with no expert. To check by hand:
-
-```
-python3 skills/specialization/needs.py promote-check        # or --json
+```sh
+python3 skills/specialization/needs.py add \
+  --learning-kind correction --domain "codex hook output" \
+  --target-skill hook-authoring \
+  --target-provenance "GhostlyGawd/recursive-harness@<commit>" \
+  --source-skill skills/hook-authoring/SKILL.md \
+  --shape "the documented output shape failed against the current host schema"
 ```
 
-## 3. Promotion - distill the cluster into an expert
+`add` appends compact evidence to the provider-neutral private ledger and creates
+or updates `candidates/<domain-key>/` immediately. Never store transcripts or full
+prompts. Multiple observations in one provider session add shapes but count as one
+recurrence. If a generic gap later resolves to an existing owner, `add` archives
+the generic draft and rebases from that owner. It rejects a domain already bound
+to a different target skill, including a targetless gap observation; continue
+through the known owner or resolve the collision instead of clearing provenance.
 
-This is the payoff. Do NOT research the domain generically. Pull the actual
-evidence cluster - every shape the gap took, across every session:
+## 3. Author and dogfood now
 
+Open the candidate path printed by `add`. Replace its draft marker with the
+smallest evidence-shaped procedure. Use `harness-authoring` for duplication,
+provenance, source-of-truth, and budget checks.
+
+Replay the triggering case with the candidate explicitly in context. Compare the
+actual before and after behavior, then record the result:
+
+```sh
+python3 skills/specialization/needs.py candidate dogfood <nid> \
+  --case "consumer rebalance diagnosis" \
+  --before "reasoned from scratch and missed the coordinator transition" \
+  --after "candidate identified the transition and selected the verified fix" \
+  --outcome worked --generalizes yes \
+  --verification "replay fixture rebalance-v1 passed"
 ```
-python3 skills/specialization/needs.py list --domain "kafka consumer groups" --verbose
+
+Log failed and partial replays too. Revise the same candidate; do not mint a
+sibling. A new `gap` needs two materially distinct worked cases for the current
+revision, including one marked `generalizes=yes`. A `correction` or `improvement`
+needs one worked replay with concrete verification.
+
+After authoring and successful dogfood, remove the draft marker and validate:
+
+```sh
+python3 skills/specialization/needs.py candidate validate <nid>
 ```
 
-Then:
+Validation makes the candidate promotion-ready after the first observation when
+the proof is strong enough. Recurrence >= 3 only surfaces an unvalidated candidate
+for urgent review; count alone is never proof.
 
-1. **Mark it building:** `needs.py status <nid> building` (stops re-nudging).
-2. **Research, shaped by the evidence.** Spawn subagents (Explore / general-purpose
-   / deep-research) aimed at the *specific shapes* the cluster recorded plus the
-   domain's load-bearing intricacies and failure modes. Verify load-bearing claims
-   against authoritative sources - this is reference material future-you will trust
-   blind (harness-authoring source-of-truth gate).
-3. **Codify the expert** via the **harness-authoring** skill (description budget,
-   `references/` for depth, falsifiability, provenance citing the contributing
-   session ids). The skill's body is the callable procedure; deep reference goes in
-   `skills/<expert>/references/`. Use **routing-learnings** if part of the cluster is
-   really a hook/command/ADR, not a skill - don't force everything into a skill.
-4. **Close the loop:** `needs.py promoted <nid> --skill <expert-name>` and update
-   the registry (below). The need drops out of `promote-check` for good.
+## 4. Promote through the canonical owner
 
-A need that proves not worth an expert: `needs.py status <nid> wontfix` (it stops
-nudging but stays as falsified memory - we considered it and declined).
+`promote-check` shows proof-ready and recurring-unvalidated candidates:
 
-## 4. The registry - memory/skill-needs.md
+```sh
+python3 skills/specialization/needs.py promote-check
+```
 
-`state/skill_needs.jsonl` is the hot, machine-local accretion. The versioned,
-human-readable, **relational** view is `memory/skill-needs.md`: each tracked need
-with its `facet:value` tags, `[[links]]` to related needs and to the expert that
-resolved it, and status. Update it when you promote a need or when a need is worth
-tracking durably. It is the harness's map of its own capability frontier.
+Do not install, push, or open a cross-repository change without approval. After
+approval:
 
-## 5. Boundaries - reuse, don't duplicate
+1. Strengthen the provenance owner when one exists; do not create an overlapping
+   skill.
+2. Add the triggering case as a regression fixture.
+3. Regenerate provider packages from the canonical source and run shared fixtures.
+4. Land through the repository's guarded branch and review workflow.
+5. Close the loop with `needs.py promoted <nid> --skill <name>`.
 
-- **routing-learnings** decides *where* a learning goes; **harness-authoring** is
-  *how* to write any artifact to standard. This skill orchestrates them for the
-  specific detect->accrete->distill loop; it does not re-implement either.
-- **auto-healer** is the sibling pattern for *bugs* (per-repo defect ledger,
-  recurrence -> escalate). This is the same shape for *expertise* (per-domain gap
-  ledger, recurrence -> expert). If a recurring need is really a recurring *defect*,
-  it belongs in auto-healer, not here.
-- **Anti-sprawl is the recurrence gate.** A first-touch domain is logged, never
-  built. Experts are earned by proven repeat-need, so the skills/ tree grows
-  specialists that actually get called, not a junk drawer. /meta-retro prunes any
-  expert that never fires.
+## Boundaries
 
-<!-- provenance: 2026-06-27, session 9f6014a0 - user defined the recursive-harness thesis ("it should recursively create and improve itself and extend its capabilities over time... creating experts as you go to call upon in the future") and corrected that this must be autonomous, not user-prompted. Scope set via AskUserQuestion (recurrence-gated promotion + continuous live logging + distill-from-evidence-cluster) under a blanket execute-and-land grant. Ships with needs.py (the ledger), memory/skill-needs.md (the registry), and the stop_skill_gap_gate hook (the autonomous nudge). Mirrors the auto-healer accretion->promotion pattern. -->
-<!-- provenance: 2026-06-28, session 24f99be7 (correction #89, state/corrections.jsonl) - added §1b
-(a missing TOOL is acquired, not worked around): the skill covered knowledge-gap->expert only, but
-the user standing directive is to ACQUIRE a missing tool/binary (install/build/vendor), never work
-around / fake / DEFER for lack of it. Triggered by a brand-foundry render DEFERRED citing "Playwright
-absent" instead of the one-step documented install. Paired with a memory/user-model.md working-style bullet. -->
+- A missing binary is acquired and verified; record a specialization only when
+  the reusable acquisition procedure itself was the knowledge gap.
+- `routing-learnings` chooses the artifact; `harness-authoring` governs its form;
+  this skill owns first-observation capture, candidate evolution, and dogfood.
+- `auto-healer` records code defects and attempted fixes. When the root is wrong or
+  missing reusable guidance, route that learning back here.
+- Never edit an installed provider cache as canonical source. Follow provenance,
+  update Recursive Harness, then regenerate and reinstall the adapter.
+
+provenance: 2026-06-27, session 9f6014a0, original expert-accretion loop; revised
+2026-07-18 after the owner required immediate first-observation creation plus
+dogfooded improvements to existing skills instead of recurrence-gated learning.

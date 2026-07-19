@@ -2,45 +2,40 @@
 title: Ledger of Needs - the harness's capability frontier
 status: living
 date: 2026-06-27
-provenance: session 9f6014a0 (the expert-accretion build) - the versioned, relational
-  view of state/skill_needs.jsonl. Managed by [[skills/specialization]]; entries are
-  added/promoted by needs.py. See [[skills/auto-healer]] for the sibling bug-ledger pattern.
+provenance: session 9f6014a0 original expert-accretion registry; revised 2026-07-18
+  after the owner required first-observation candidates and dogfooded improvements.
 ---
 
 # Ledger of Needs
 
-This is the harness's map of its own missing experts. `state/skill_needs.jsonl` is the
-hot, machine-local accretion (every `needs.py add` appends one *evidence* row); this file
-is the curated, **relational** view a human (or future session) reads to see the frontier.
+This is the reviewed relational view of the capability frontier. The hot JSONL ledger and
+private candidate workspaces now live in the platform user-state directory documented by
+`docs/specialization-provider-contract.md`, shared by local provider adapters.
 
-A **need** is a domain worked in with no skill covering it. **Recurrence** (evidence count
-across sessions) is the promotion signal: at recurrence >= 3 a need is *promotable* - distill
-its whole evidence cluster into an *expert* skill (see [[skills/specialization]]). First-touch
-domains are logged, never built - that recurrence gate is the anti-sprawl guard.
+A **need** may be a missing capability, a correction to an existing skill, or an improvement
+discovered through feedback. The first observation creates or amends a candidate immediately.
+**Dogfood proof** makes it promotion-ready; **recurrence** counts distinct provider sessions
+and raises urgency but is not a promotion gate.
 
-How to read an entry: `nid` cross-references `state/skill_needs.jsonl`; `tags` are
-`facet:value` (reuse facets so needs cluster); `[[links]]` are relational edges to related
-needs and to the skills that resolve or border them.
+Provider-local evidence does not automatically change this file. Update the registry when a
+candidate is accepted, rejected, or important enough to track across machines.
 
-## Open needs
+## Historical open evidence
 
-### Claude Code hook authoring  -  `nid 53977f`  -  recurrence 1  -  [open]
-- **domain_key:** `claude-code-hook-authoring`  -  **category:** harness
+### Claude Code hook authoring - `nid 53977f` - historical recurrence 1
+
+- **domain_key:** `claude-code-hook-authoring` - **category:** harness
 - **tags:** `area:hooks`, `area:enforcement`, `tool:claude-code`
-- **shape** (session 9f6014a0): had to research the full hook I/O contract (PostToolUse /
-  Stop stdin fields; `decision:block`+`reason` vs exit-2 vs `additionalContext` output),
-  the `guard_enforcement_layer` PROTECTED list, and the `settings.json` event-wiring - all
-  from scratch - to add the `stop_skill_gap_gate` hook.
-- **related:** [[skills/harness-authoring]] (covers artifact *standards*, but NOT the hook
-  lifecycle / I/O contract / enforcement-lock mechanics - that is the gap), [[skills/worktree]]
-  (covers the trunk-vs-worktree enforcement-guard boundary).
-- **note:** the subagent research from session 9f6014a0 is the raw material for this expert
-  if it recurs; capture it rather than re-deriving.
+- **shape:** the founding session researched hook input/output, enforcement protection, and
+  settings wiring from scratch while adding `stop_skill_gap_gate`.
+- **related:** [[skills/harness-authoring]], [[skills/worktree]].
+- **next action:** if this evidence is re-imported or observed again, create the candidate
+  immediately and dogfood it; do not wait for a third recurrence.
 
-## Promoted - built experts
+## Promoted experts
 
-_(none yet - this ledger was born 2026-06-27)_
+_(none recorded in the reviewed registry)_
 
-## Won't-fix - considered and declined
+## Rejected or won't-fix candidates
 
-_(none yet)_
+_(none recorded)_

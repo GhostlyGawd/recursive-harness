@@ -35,7 +35,7 @@ from memory. Status 2026-07-02: all 22 rows researched, zero TODO cells.
 | PostToolUse | `guard_trunk_lease.py` | Edit/Write/Bash/PS | `d295597` (2026-06-19, Guard C) | Lease RE-STAMP: renews this session's lease after each mutating op so its own next op isn't false-blocked |
 | Stop | `stop_retro_gate.py` | session stop | `c72ba4a` (v0.1.0) | Nudges /retro after significant sessions (kernel cadence) |
 | Stop | `stop_cadence_gate.py` | session stop | `6f60d0c` (routes ledger `2e87fe`) | Multi-session retro cadence. ⚠ Oddity 1 below |
-| Stop | `stop_skill_gap_gate.py` | session stop | `ab271ed` (specialization loop) | Surfaces recurring skill gaps (needs.py promote-check) |
+| Stop | `stop_skill_gap_gate.py` | session stop | `ab271ed` + 2026-07-18 first-observation revision | Finishes newly created candidates, surfaces proof-ready promotion, and flags recurring unvalidated evidence |
 | SessionEnd | `session_end.py` | session end | `c72ba4a` (v0.1.0) | Appends one per-session summary record; reaps the fleet event log (Mission Control P4, fail-open); cleans gate flags |
 | SessionEnd | `guard_worktree_session.py` | session end | `f9f073d` (2026-06-17, Guard B) | Releases every tree this session owns — a clean exit frees its tree instantly |
 

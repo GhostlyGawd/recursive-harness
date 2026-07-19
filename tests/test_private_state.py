@@ -3,7 +3,8 @@
 
 Stdlib only; runnable directly so CI needs no package installation.
 
-provenance: 2026-07-17, user-approved security/privacy roadmap implementation.
+provenance: 2026-07-17, user-approved security/privacy roadmap implementation;
+2026-07-18 strengthened process cleanup during Windows contention regression work.
 """
 import datetime as dt
 import contextlib
@@ -72,7 +73,7 @@ def test_concurrent_append_keeps_every_record_parseable_and_unique():
             process.start()
         for process in processes:
             process.join(20)
-            assert process.exitcode == 0
+        assert [process.exitcode for process in processes] == [0, 0, 0, 0]
         records = ps.read_jsonl(path)
         assert len(records) == 200
         assert {record["id"] for record in records} == set(range(200))
@@ -115,6 +116,27 @@ def test_explicit_root_confines_extracted_consumers():
         ps.append_jsonl(path, {"id": 1}, root=d)
         assert ps.path_exists(path, root=d)
         assert ps.read_jsonl(path, root=d) == [{"id": 1}]
+
+
+def test_private_document_reads_are_confined_and_parsed():
+    with tempfile.TemporaryDirectory() as d:
+        root = os.path.join(d, "state")
+        text_path = os.path.join(root, "candidate", "SKILL.md")
+        json_path = os.path.join(root, "candidate", "candidate.json")
+        ps.atomic_write_text(text_path, "procedure\n", root=root)
+        ps.atomic_write_json(json_path, {"revision": 2}, root=root)
+        assert ps.read_text(text_path, root=root) == "procedure\n"
+        assert ps.read_json(json_path, root=root) == {"revision": 2}
+
+        outside = os.path.join(d, "outside.json")
+        with open(outside, "w", encoding="utf-8") as stream:
+            json.dump({"secret": True}, stream)
+        try:
+            ps.read_json(outside, root=root)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("private document read escaped its state root")
 
 
 def test_parent_traversal_is_refused_even_when_it_normalizes_inside_root():

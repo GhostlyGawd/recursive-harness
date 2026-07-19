@@ -4,7 +4,7 @@ title: Make Recursive Harness the canonical multi-agent harness target
 status: approved
 implementation: in-progress
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-07-19
 owner: GhostlyGawd
 resolution: ""
 ---
@@ -15,6 +15,7 @@ resolution: ""
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
 | 2026-07-18 | approved | in-progress | Owner selected Recursive Harness over Agentic Dev OS, approved capability consolidation, and retired Master Harness as a candidate |
+| 2026-07-19 | approved | in-progress | Added the narrow Codex Specialization provider proof, shared fixtures, and canonical-source drift validation; desktop install acceptance remains open |
 <!-- proposal-history:end -->
 
 ## Problem
@@ -68,9 +69,9 @@ capability equivalence, not a claim that code was copied from Agentic Dev OS.
   consolidation branch.
 - [ ] A reviewed proposal defines the R0-R3 risk/scope adaptation without weakening the
   enforcement boundary.
-- [ ] A provider contract and shared fixtures exist before OpenAI/Codex compatibility is
+- [x] A provider contract and shared fixtures exist before OpenAI/Codex compatibility is
   claimed.
-- [ ] One OpenAI/Codex adapter exposes specialization from the canonical source and
+- [x] One OpenAI/Codex adapter exposes specialization from the canonical source and
   documents install, upgrade, removal, unsupported lifecycle events, and test evidence.
 - [ ] Every material Agentic Dev OS capability is adopted, rejected, or deliberately
   deferred before that repository is considered fully drained.
