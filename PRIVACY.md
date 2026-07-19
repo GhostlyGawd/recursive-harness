@@ -12,7 +12,7 @@ data boundary for operators and contributors; it is not a legal privacy policy.
 | `state/corrections.jsonl` | Short excerpts from prompts classified as corrections, plus session identifiers | Ignored |
 | `state/heal/` | Short failure snippets, tool names, repository keys, and repair history | Ignored |
 | Other `state/*.jsonl` | Predictions, follow-ups, skill use, approvals, coordination messages, leases, and session metadata | Ignored |
-| Platform user-state `RecursiveHarness/specialization/` | Compact capability-gap or skill-feedback shapes, provider/session identifiers, private candidates, and dogfood receipts | Outside the repository |
+| `~/.recursive-harness/specialization/` | Compact capability-gap or skill-feedback shapes, provider/session identifiers, private candidates, and dogfood receipts | Outside the repository; fixed path with no runtime override |
 | Linked worktrees | Checked-out source from local or configured Git repositories | Ignored by this repository |
 
 Prompt and failure excerpts are capped by their writers. Before persistence, the shared

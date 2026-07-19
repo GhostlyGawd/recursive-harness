@@ -47,16 +47,32 @@ class Env:
 
     def __enter__(self):
         for key, value in self.values.items():
+            if key == "RECURSIVE_HARNESS_STATE_HOME":
+                self.before[key] = needs.resolve_state_dir
+                needs.resolve_state_dir = lambda value=value: os.path.join(
+                    value, ".recursive-harness", "specialization"
+                )
+                continue
             self.before[key] = os.environ.get(key)
             os.environ[key] = value
         return self
 
     def __exit__(self, *_unused):
         for key, value in self.before.items():
+            if key == "RECURSIVE_HARNESS_STATE_HOME":
+                needs.resolve_state_dir = value
+                continue
             if value is None:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+
+
+def _subprocess_env(home, **extra):
+    env = dict(os.environ)
+    env.pop("RECURSIVE_HARNESS_STATE_HOME", None)
+    env.update({"HOME": str(home), "USERPROFILE": str(home), **extra})
+    return env
 
 
 def _add_args(**overrides):
@@ -107,7 +123,9 @@ def _write_source(directory, name="existing-skill"):
 
 
 def _parallel_add_worker(state_parent, index, gate):
-    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    needs.resolve_state_dir = lambda: os.path.join(
+        state_parent, ".recursive-harness", "specialization"
+    )
     gate.wait(10)
     raise SystemExit(needs.cmd_add(_add_args(
         shape=f"parallel evidence {index}", session=f"parallel-{index}",
@@ -116,19 +134,25 @@ def _parallel_add_worker(state_parent, index, gate):
 
 
 def _parallel_migrate_worker(state_parent, legacy_path, gate):
-    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    needs.resolve_state_dir = lambda: os.path.join(
+        state_parent, ".recursive-harness", "specialization"
+    )
     gate.wait(10)
     raise SystemExit(needs.cmd_migrate(argparse.Namespace(from_path=legacy_path)))
 
 
 def _parallel_validate_worker(state_parent, selector, gate, results):
-    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    needs.resolve_state_dir = lambda: os.path.join(
+        state_parent, ".recursive-harness", "specialization"
+    )
     gate.wait(10)
     results.put(needs.cmd_candidate_validate(argparse.Namespace(selector=selector)))
 
 
 def _parallel_claim_worker(state_parent, gate, results):
-    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    needs.resolve_state_dir = lambda: os.path.join(
+        state_parent, ".recursive-harness", "specialization"
+    )
     gate.wait(10)
     results.put(needs.claim_nudge("parallel-session", "dogfood-now"))
 
@@ -144,7 +168,8 @@ def test_domain_label_is_single_line_and_candidate_dir_is_confined():
     with tempfile.TemporaryDirectory() as directory:
         state = Path(directory) / "specialization"
         candidate = Path(needs._candidate_dir("../../outside", str(state)))
-        assert candidate == state / "candidates" / "outside"
+        expected = needs.private_state.safe_filename_id("outside", "candidate")
+        assert candidate == state / "candidates" / expected
 
 
 def test_nid_stable_and_rederivable():
@@ -566,7 +591,8 @@ def test_migration_rejects_wrong_shape_and_normalizes_hostile_paths():
 
         migrated = needs._all_needs()["outside"]
         state = Path(needs.resolve_state_dir())
-        assert Path(migrated["candidate_dir"]) == state / "candidates" / "outside"
+        safe = needs.private_state.safe_filename_id("outside", "candidate")
+        assert Path(migrated["candidate_dir"]) == state / "candidates" / safe
         assert Path(migrated["candidate_dir"], "SKILL.md").exists()
         assert not (Path(directory) / "outside" / "SKILL.md").exists()
         rows = needs._read(needs._ledger(), needs.resolve_state_dir())
@@ -680,8 +706,7 @@ def test_codex_packaged_migration_requires_explicit_legacy_path():
     packaged = (ROOT / "plugins" / "recursive-specialization" / "skills" /
                 "specialization" / "scripts" / "needs.py")
     with tempfile.TemporaryDirectory() as directory:
-        env = dict(os.environ)
-        env["RECURSIVE_HARNESS_STATE_HOME"] = directory
+        env = _subprocess_env(directory)
         result = subprocess.run(
             [sys.executable, str(packaged), "migrate"], capture_output=True,
             text=True, env=env,
@@ -696,12 +721,9 @@ def test_codex_hook_contract_fixtures():
     fixture_path = HERE / "fixtures" / "codex-hooks.json"
     fixtures = json.loads(fixture_path.read_text(encoding="utf-8"))
     with tempfile.TemporaryDirectory() as directory:
-        env = dict(os.environ)
-        env.update({
-            "PLUGIN_ROOT": str(plugin),
-            "RECURSIVE_HARNESS_STATE_HOME": directory,
-            "PYTHONIOENCODING": "utf-8",
-        })
+        env = _subprocess_env(
+            directory, PLUGIN_ROOT=str(plugin), PYTHONIOENCODING="utf-8"
+        )
         for fixture in fixtures:
             result = subprocess.run(
                 [sys.executable, str(hook)], input=json.dumps(fixture["input"]),
@@ -719,7 +741,9 @@ def test_codex_hook_contract_fixtures():
             else:
                 assert fixture["contains"] in payload["systemMessage"]
         # Plan-mode prompt submission is advisory and creates no specialization ledger.
-        assert not Path(directory, "specialization", "skill_needs.jsonl").exists()
+        assert not Path(
+            directory, ".recursive-harness", "specialization", "skill_needs.jsonl"
+        ).exists()
 
 
 def test_codex_hook_keeps_host_ids_inert():
@@ -746,8 +770,7 @@ def test_codex_stop_continues_for_first_observation_candidate():
     hook = plugin / "hooks" / "specialization_hook.py"
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
         assert needs.cmd_add(_add_args(session="codex-stop")) == 0
-        env = dict(os.environ)
-        env.update({"PLUGIN_ROOT": str(plugin), "RECURSIVE_HARNESS_STATE_HOME": directory})
+        env = _subprocess_env(directory, PLUGIN_ROOT=str(plugin))
         event = {
             "hook_event_name": "Stop", "session_id": "codex-stop", "turn_id": "t1",
             "permission_mode": "default", "stop_hook_active": False,
@@ -768,8 +791,7 @@ def test_codex_plan_stop_is_read_only():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
         assert needs.cmd_add(_add_args(session="codex-plan-stop")) == 0
         state = Path(needs.resolve_state_dir())
-        env = dict(os.environ)
-        env.update({"PLUGIN_ROOT": str(plugin), "RECURSIVE_HARNESS_STATE_HOME": directory})
+        env = _subprocess_env(directory, PLUGIN_ROOT=str(plugin))
         event = {
             "hook_event_name": "Stop", "session_id": "codex-plan-stop", "turn_id": "t1",
             "permission_mode": "plan", "stop_hook_active": False,

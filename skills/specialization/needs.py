@@ -41,24 +41,8 @@ def _now():
 
 
 def _platform_state_home():
-    override = os.environ.get("RECURSIVE_HARNESS_STATE_HOME", "").strip()
-    if override:
-        base = os.path.abspath(os.path.expanduser(override))
-    elif os.name == "nt":
-        local = os.environ.get("LOCALAPPDATA") or os.path.join(
-            os.path.expanduser("~"), "AppData", "Local"
-        )
-        base = os.path.join(local, "RecursiveHarness")
-    elif sys.platform == "darwin":
-        base = os.path.join(
-            os.path.expanduser("~"), "Library", "Application Support", "RecursiveHarness"
-        )
-    else:
-        xdg = os.environ.get("XDG_STATE_HOME") or os.path.join(
-            os.path.expanduser("~"), ".local", "state"
-        )
-        base = os.path.join(xdg, "recursive-harness")
-    return os.path.join(base, "specialization")
+    """Return the only production state root; callers cannot grant path authority."""
+    return os.path.join(os.path.expanduser("~"), ".recursive-harness", "specialization")
 
 
 def resolve_state_dir(start=None):
@@ -85,7 +69,8 @@ def _transaction_file(state_dir=None):
 
 
 def _candidate_dir(domain_key, state_dir=None):
-    return os.path.join(_candidate_root(state_dir), _domain_key(domain_key))
+    safe = private_state.safe_filename_id(_domain_key(domain_key), "candidate")
+    return os.path.join(_candidate_root(state_dir), safe)
 
 
 def _domain_key(domain):

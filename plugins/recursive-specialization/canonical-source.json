@@ -5,8 +5,8 @@
   "provider_manifests": [
     ".codex-plugin/plugin.json"
   ],
-  "source_tree_sha256": "4592acc72a41e4078cf9a5ef743669e95a382777afc871fd913411cc47995b0c",
-  "package_tree_sha256": "79d472d8365d6506d906eacefdc12f8af4b3417f3698eb9a15281ef59bb3d1cc",
+  "source_tree_sha256": "d14b92504e34b681449324d3c8915d29a8d4716ec65629f539661776276ea0fe",
+  "package_tree_sha256": "0692f089411331f2744651bcefd207407b4177e015165d738926dacb7163a02e",
   "package_files": {
     ".codex-plugin/plugin.json": "871fbb737762d8ba89a9184199458cf77c556671777e61e65d14a04c4b5756c9",
     "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
@@ -15,14 +15,14 @@
     "skills/specialization/SKILL.md": "8d22acf72c3280a023f5fc3c37cddbc00d112924e458b6aced4e06f7771c5c24",
     "skills/specialization/agents/openai.yaml": "9cd80b223a7ebf70ae052145bac9990abc85ca66dbea2d8658e36a15dd47a26c",
     "skills/specialization/references/evolution-loop.md": "8ccf83f033d85ae14f5f0a17fd583ce83296eff3f213029d77e3285be3d96d09",
-    "skills/specialization/scripts/needs.py": "b4c2c0908b0a66997fd6d9819a77a233c8974da1172695ed4204896071a69e38",
+    "skills/specialization/scripts/needs.py": "6687eef25514b07bf88cff2ba2634be8ace8af9b6f4d4620d1d7e9f59bd2a230",
     "skills/specialization/scripts/specialization_state.py": "034aa8327207a4db4881f526de12a9589b7eeba538e1808f4a4e773366059fcd"
   },
   "sources": {
     "skills/specialization/needs.py": {
       "packaged_path": "skills/specialization/scripts/needs.py",
-      "sha256": "8d8dc73ff5f60ba856adb80314d41f256d6216c4b3acb1da01eb04a921f28f2c",
-      "packaged_sha256": "b4c2c0908b0a66997fd6d9819a77a233c8974da1172695ed4204896071a69e38"
+      "sha256": "355e148e187f39a1b77637b994dbb1f970a753ded2fbe9444b06a5657510c90e",
+      "packaged_sha256": "6687eef25514b07bf88cff2ba2634be8ace8af9b6f4d4620d1d7e9f59bd2a230"
     },
     "private_state.py": {
       "packaged_path": "skills/specialization/scripts/specialization_state.py",

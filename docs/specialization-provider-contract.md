@@ -47,16 +47,10 @@ material, and raw external content.
 
 ## State contract
 
-Local adapters use one provider-neutral state directory:
-
-| Platform | Default |
-| --- | --- |
-| Windows | `%LOCALAPPDATA%\RecursiveHarness\specialization\` |
-| macOS | `~/Library/Application Support/RecursiveHarness/specialization/` |
-| Linux | `${XDG_STATE_HOME:-~/.local/state}/recursive-harness/specialization/` |
-
-`RECURSIVE_HARNESS_STATE_HOME` overrides the parent; the runtime appends
-`specialization/`. A capability-wide interprocess transaction serializes compound
+Local adapters use one fixed provider-neutral state directory:
+`~/.recursive-harness/specialization/`. The runtime accepts no state-path argument or
+environment override, and candidate directory names are derived with SHA-256 rather than
+free-form evidence. A capability-wide interprocess transaction serializes compound
 ledger, manifest, migration, validation, and nudge transitions. State is sanitized,
 atomically replaced, and constrained to the current user where the host filesystem
 supports it.
