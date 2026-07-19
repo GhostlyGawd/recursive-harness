@@ -25,21 +25,24 @@ project's defect loop. Wrong or missing reusable guidance belongs here.
 Recall related evidence first:
 
 ```text
-python "<cli-from-hook>" match --domain "domain"
+<cli-command-from-hook> match --domain "domain"
 ```
 
 Then record. Pass the `--provider codex`, `--session`, and `--turn` values supplied
 by the hook:
 
 ```text
-python "<cli-from-hook>" add --learning-kind gap \
+<cli-command-from-hook> add --learning-kind gap \
   --domain "domain" --shape "specific missing reasoning" \
   --provider codex --session "<session>" --turn "<turn>"
 ```
 
 For an existing skill, follow the provenance in its `SKILL.md` and add
 `--target-skill`, `--target-provenance`, and `--source-skill` pointing to the
-canonical source. Never edit the installed plugin cache as the owner.
+canonical source. All three are mandatory for a correction or improvement so a
+missing provenance owner cannot silently become a sibling skill; the target must
+also match the source frontmatter name. Never edit the installed plugin cache as
+the owner.
 
 `add` writes compact evidence to a provider-neutral private ledger and creates or
 updates the candidate immediately. It never needs prior-chat access and must not
@@ -52,7 +55,7 @@ that addresses the evidence. Replay the triggering case with the candidate loade
 explicitly, compare before and after, and record the honest result:
 
 ```text
-python "<cli-from-hook>" candidate dogfood <nid> \
+<cli-command-from-hook> candidate dogfood <nid> \
   --case "triggering case" --before "observed baseline" \
   --after "candidate result" --outcome worked \
   --generalizes yes --verification "named check or fixture passed" \
@@ -60,12 +63,13 @@ python "<cli-from-hook>" candidate dogfood <nid> \
 ```
 
 Record `partial` and `failed` attempts too, then revise the same candidate. A new
-gap needs a worked replay that generalizes. Corrections and improvements need a
-worked replay with concrete verification. Remove the draft marker only after the
-candidate is authored, then run:
+gap needs two materially distinct worked cases for the current revision, including
+one marked `generalizes=yes`. Corrections and improvements need one worked replay
+with concrete verification. Remove the draft marker only after the candidate is
+authored, then run:
 
 ```text
-python "<cli-from-hook>" candidate validate <nid>
+<cli-command-from-hook> candidate validate <nid>
 ```
 
 ## Promotion boundary

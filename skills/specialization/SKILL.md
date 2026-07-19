@@ -41,7 +41,9 @@ python3 skills/specialization/needs.py add \
 ```
 
 For an existing skill, follow its provenance to the canonical source and seed an
-amendment candidate from that source:
+amendment candidate from that source. Corrections and improvements require all
+three provenance arguments and a readable source skill; `add` rejects a generic
+sibling draft when any is missing or the target does not match source frontmatter:
 
 ```sh
 python3 skills/specialization/needs.py add \
@@ -76,8 +78,9 @@ python3 skills/specialization/needs.py candidate dogfood <nid> \
 ```
 
 Log failed and partial replays too. Revise the same candidate; do not mint a
-sibling. A new `gap` needs one worked replay marked `generalizes=yes`. A
-`correction` or `improvement` needs one worked replay with concrete verification.
+sibling. A new `gap` needs two materially distinct worked cases for the current
+revision, including one marked `generalizes=yes`. A `correction` or `improvement`
+needs one worked replay with concrete verification.
 
 After authoring and successful dogfood, remove the draft marker and validate:
 

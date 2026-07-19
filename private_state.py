@@ -259,6 +259,14 @@ def _locked(path, boundary):
                 os.close(fd)
 
 
+@contextlib.contextmanager
+def exclusive_lock(path, *, root=None):
+    """Hold one capability-confined interprocess lock across a compound transaction."""
+    path, boundary = _resolve_private_path(path, root=root)
+    with _locked(path, boundary):
+        yield
+
+
 def _sanitize_text(value):
     cleaned = value
     for pattern, replacement in _VALUE_PATTERNS:

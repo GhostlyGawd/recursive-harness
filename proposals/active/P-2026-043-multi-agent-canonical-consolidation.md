@@ -4,7 +4,7 @@ title: Make Recursive Harness the canonical multi-agent harness target
 status: approved
 implementation: in-progress
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-07-19
 owner: GhostlyGawd
 resolution: ""
 ---
@@ -15,6 +15,7 @@ resolution: ""
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
 | 2026-07-18 | approved | in-progress | Owner selected Recursive Harness over Agentic Dev OS, approved capability consolidation, and retired Master Harness as a candidate |
+| 2026-07-19 | approved | in-progress | Added the narrow Codex Specialization provider proof, shared fixtures, and canonical-source drift validation; desktop install acceptance remains open |
 <!-- proposal-history:end -->
 
 ## Problem

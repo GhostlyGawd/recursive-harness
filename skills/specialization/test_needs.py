@@ -7,6 +7,7 @@ session recurrence, migration, and Codex adapter parity.
 """
 import argparse
 import json
+import multiprocessing as mp
 import os
 from pathlib import Path
 import subprocess
@@ -77,6 +78,59 @@ def _add_args(**overrides):
     return argparse.Namespace(**values)
 
 
+def _dogfood_args(selector, case, **overrides):
+    values = {
+        "selector": selector,
+        "case": case,
+        "before": "reasoned from scratch",
+        "after": "candidate produced the verified result",
+        "outcome": "worked",
+        "generalizes": "yes",
+        "verification": f"fixture:{case}",
+        "session": "session-1",
+        "provider": "codex",
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+def _write_source(directory, name="existing-skill"):
+    source = Path(directory) / f"{name}-SKILL.md"
+    source.write_text(
+        f"---\nname: {name}\ndescription: Existing behavior.\n---\n\n"
+        "# Existing\n\nDo work.\n",
+        encoding="utf-8",
+    )
+    return source
+
+
+def _parallel_add_worker(state_parent, index, gate):
+    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    gate.wait(10)
+    raise SystemExit(needs.cmd_add(_add_args(
+        shape=f"parallel evidence {index}", session=f"parallel-{index}",
+        turn=f"turn-{index}",
+    )))
+
+
+def _parallel_migrate_worker(state_parent, legacy_path, gate):
+    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    gate.wait(10)
+    raise SystemExit(needs.cmd_migrate(argparse.Namespace(from_path=legacy_path)))
+
+
+def _parallel_validate_worker(state_parent, selector, gate, results):
+    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    gate.wait(10)
+    results.put(needs.cmd_candidate_validate(argparse.Namespace(selector=selector)))
+
+
+def _parallel_claim_worker(state_parent, gate, results):
+    os.environ["RECURSIVE_HARNESS_STATE_HOME"] = state_parent
+    gate.wait(10)
+    results.put(needs.claim_nudge("parallel-session", "dogfood-now"))
+
+
 def test_domain_key_normalizes():
     assert needs._domain_key("React  State-Management!") == "react-state-management"
     assert needs._domain_key("React state management") == "react-state-management"
@@ -143,15 +197,16 @@ def test_first_observation_creates_candidate_and_worked_replay_validates():
         skill = candidate / "SKILL.md"
         assert needs.DRAFT_MARKER in skill.read_text(encoding="utf-8")
 
-        dogfood = argparse.Namespace(
-            selector=need["nid"], case="replay rebalance diagnosis",
-            before="reasoned from scratch", after="candidate found the coordinator cause",
-            outcome="worked", generalizes="yes", verification="fixture:rebalance-pass",
-            session="session-1", provider="codex",
-        )
-        assert needs.cmd_candidate_dogfood(dogfood) == 0
+        assert needs.cmd_candidate_dogfood(_dogfood_args(
+            need["nid"], "replay rebalance diagnosis"
+        )) == 0
         skill.write_text(skill.read_text(encoding="utf-8").replace(needs.DRAFT_MARKER, ""),
                          encoding="utf-8")
+        assert needs.cmd_candidate_validate(argparse.Namespace(selector=need["nid"])) == 1
+        assert needs.cmd_candidate_dogfood(_dogfood_args(
+            need["nid"], "replay rolling-deploy membership change",
+            verification="fixture:rolling-deploy-pass",
+        )) == 0
         assert needs.cmd_candidate_validate(argparse.Namespace(selector=need["nid"])) == 0
         ready = needs.promotable(state_dir=str(state))
         assert [row["domain_key"] for row in ready] == ["kafka-consumer-groups"]
@@ -159,11 +214,7 @@ def test_first_observation_creates_candidate_and_worked_replay_validates():
 
 def test_existing_skill_is_copied_into_improvement_candidate():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
-        source = Path(directory) / "source-SKILL.md"
-        source.write_text(
-            "---\nname: existing-skill\ndescription: Existing behavior.\n---\n\n# Existing\n\nDo work.\n",
-            encoding="utf-8",
-        )
+        source = _write_source(directory)
         args = _add_args(
             domain="existing skill workflow",
             learning_kind="improvement",
@@ -179,6 +230,23 @@ def test_existing_skill_is_copied_into_improvement_candidate():
         assert need["target_skills"] == ["existing-skill"]
 
 
+def test_existing_skill_feedback_requires_provenance_and_source():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        args = _add_args(learning_kind="correction", target_skill="existing-skill")
+        assert needs.cmd_add(args) == 1
+        state = Path(needs.resolve_state_dir())
+        assert not state.joinpath("skill_needs.jsonl").exists()
+
+        args.target_provenance = "GhostlyGawd/recursive-harness@abc123"
+        args.source_skill = str(Path(directory) / "missing-SKILL.md")
+        assert needs.cmd_add(args) == 1
+        assert not state.joinpath("skill_needs.jsonl").exists()
+
+        args.source_skill = str(_write_source(directory, "different-skill"))
+        assert needs.cmd_add(args) == 1
+        assert not state.joinpath("skill_needs.jsonl").exists()
+
+
 def test_new_evidence_reopens_candidate_and_old_proof_cannot_validate_revision():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
         assert needs.cmd_add(_add_args()) == 0
@@ -186,12 +254,12 @@ def test_new_evidence_reopens_candidate_and_old_proof_cannot_validate_revision()
         skill = Path(need["candidate_dir"], "SKILL.md")
         skill.write_text(skill.read_text(encoding="utf-8").replace(needs.DRAFT_MARKER, ""),
                          encoding="utf-8")
-        dogfood = argparse.Namespace(
-            selector=need["nid"], case="first replay", before="unknown", after="known",
-            outcome="worked", generalizes="yes", verification="first fixture passed",
-            session="session-1", provider="codex",
-        )
-        assert needs.cmd_candidate_dogfood(dogfood) == 0
+        assert needs.cmd_candidate_dogfood(_dogfood_args(
+            need["nid"], "first replay", verification="first fixture passed"
+        )) == 0
+        assert needs.cmd_candidate_dogfood(_dogfood_args(
+            need["nid"], "second distinct replay", verification="second fixture passed"
+        )) == 0
         assert needs.cmd_candidate_validate(argparse.Namespace(selector=need["nid"])) == 0
 
         assert needs.cmd_add(_add_args(
@@ -215,11 +283,14 @@ def test_built_status_requires_validation():
         )) == 1
 
 
-def test_new_gap_requires_generalization_but_correction_does_not():
+def test_new_gap_requires_two_cases_but_correction_requires_one():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        source = _write_source(directory, "hook-authoring")
         assert needs.cmd_add(_add_args(
             domain="wrong hook output", learning_kind="correction",
-            target_skill="hook-authoring")) == 0
+            target_skill="hook-authoring",
+            target_provenance="GhostlyGawd/recursive-harness@abc123",
+            source_skill=str(source))) == 0
         need = needs._all_needs()["wrong-hook-output"]
         candidate = Path(need["candidate_dir"], "SKILL.md")
         candidate.write_text(candidate.read_text(encoding="utf-8").replace(needs.DRAFT_MARKER, ""),
@@ -241,6 +312,104 @@ def test_attention_and_nudge_are_session_scoped():
         assert items[0]["attention"] == "dogfood-now"
         assert needs.claim_nudge("active-session", "dogfood-now") is True
         assert needs.claim_nudge("active-session", "dogfood-now") is False
+
+
+def test_parallel_same_domain_add_is_one_serial_candidate_history():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        context = mp.get_context("spawn")
+        gate = context.Event()
+        processes = [context.Process(
+            target=_parallel_add_worker, args=(directory, index, gate)
+        ) for index in range(8)]
+        for process in processes:
+            process.start()
+        gate.set()
+        for process in processes:
+            process.join(30)
+        assert [process.exitcode for process in processes] == [0] * 8
+        need = needs._all_needs()["kafka-consumer-groups"]
+        manifest = json.loads(
+            Path(need["candidate_dir"], "candidate.json").read_text(encoding="utf-8")
+        )
+        assert need["evidence_count"] == 8
+        assert manifest["revision"] == 8
+        assert len(manifest["evidence_ids"]) == 8
+
+
+def test_parallel_nudge_claim_has_exactly_one_winner():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        context = mp.get_context("spawn")
+        gate = context.Event()
+        results = context.Queue()
+        processes = [context.Process(
+            target=_parallel_claim_worker, args=(directory, gate, results)
+        ) for _index in range(8)]
+        for process in processes:
+            process.start()
+        gate.set()
+        for process in processes:
+            process.join(30)
+        assert [process.exitcode for process in processes] == [0] * 8
+        assert sum(bool(results.get(timeout=5)) for _index in processes) == 1
+
+
+def test_migration_and_add_do_not_lose_each_others_evidence():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        legacy = Path(directory) / "legacy-race.jsonl"
+        legacy.write_text(json.dumps({
+            "ts": "2026-06-27T00:00:00+00:00", "kind": "evidence",
+            "domain": "Legacy race", "domain_key": "legacy-race", "session": "old-1",
+            "shape": "legacy shape", "tags": [], "category": "general",
+        }) + "\n", encoding="utf-8")
+        context = mp.get_context("spawn")
+        gate = context.Event()
+        processes = [
+            context.Process(target=_parallel_migrate_worker,
+                            args=(directory, str(legacy), gate)),
+            context.Process(target=_parallel_add_worker, args=(directory, 99, gate)),
+        ]
+        for process in processes:
+            process.start()
+        gate.set()
+        for process in processes:
+            process.join(30)
+        assert [process.exitcode for process in processes] == [0, 0]
+        all_needs = needs._all_needs()
+        assert all_needs["legacy-race"]["evidence_count"] == 1
+        assert all_needs["kafka-consumer-groups"]["evidence_count"] == 1
+
+
+def test_validation_racing_new_evidence_cannot_validate_old_revision():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        assert needs.cmd_add(_add_args()) == 0
+        need = needs._all_needs()["kafka-consumer-groups"]
+        skill = Path(need["candidate_dir"], "SKILL.md")
+        skill.write_text(skill.read_text(encoding="utf-8").replace(needs.DRAFT_MARKER, ""),
+                         encoding="utf-8")
+        assert needs.cmd_candidate_dogfood(_dogfood_args(need["nid"], "race case one")) == 0
+        assert needs.cmd_candidate_dogfood(_dogfood_args(need["nid"], "race case two")) == 0
+
+        context = mp.get_context("spawn")
+        gate = context.Event()
+        results = context.Queue()
+        processes = [
+            context.Process(target=_parallel_validate_worker,
+                            args=(directory, need["nid"], gate, results)),
+            context.Process(target=_parallel_add_worker, args=(directory, 100, gate)),
+        ]
+        for process in processes:
+            process.start()
+        gate.set()
+        for process in processes:
+            process.join(30)
+        assert [process.exitcode for process in processes] == [0, 0]
+        assert results.get(timeout=5) in (0, 1)
+        final = needs._all_needs()["kafka-consumer-groups"]
+        manifest = json.loads(
+            Path(final["candidate_dir"], "candidate.json").read_text(encoding="utf-8")
+        )
+        assert final["candidate_status"] == "drafting"
+        assert manifest["revision"] == 2
 
 
 def test_migration_is_idempotent():
@@ -284,6 +453,20 @@ def test_codex_packaged_runtime_matches_canonical_when_generated():
     assert result.returncode == 0, result.stderr
 
 
+def test_codex_packaged_migration_requires_explicit_legacy_path():
+    packaged = (ROOT / "plugins" / "recursive-specialization" / "skills" /
+                "specialization" / "scripts" / "needs.py")
+    with tempfile.TemporaryDirectory() as directory:
+        env = dict(os.environ)
+        env["RECURSIVE_HARNESS_STATE_HOME"] = directory
+        result = subprocess.run(
+            [sys.executable, str(packaged), "migrate"], capture_output=True,
+            text=True, env=env,
+        )
+    assert result.returncode == 2
+    assert "requires --from-path" in result.stderr
+
+
 def test_codex_hook_contract_fixtures():
     plugin = ROOT / "plugins" / "recursive-specialization"
     hook = plugin / "hooks" / "specialization_hook.py"
@@ -307,6 +490,9 @@ def test_codex_hook_contract_fixtures():
                 specific = payload["hookSpecificOutput"]
                 assert specific["hookEventName"] == fixture["input"]["hook_event_name"]
                 assert fixture["contains"] in specific["additionalContext"]
+                if (fixture["input"]["hook_event_name"] == "UserPromptSubmit"
+                        and fixture["input"].get("permission_mode") != "plan"):
+                    assert f'"{sys.executable}"' in specific["additionalContext"]
             else:
                 assert fixture["contains"] in payload["systemMessage"]
         # Plan-mode prompt submission is advisory and creates no specialization ledger.

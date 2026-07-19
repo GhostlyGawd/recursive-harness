@@ -32,10 +32,12 @@ Specialization lifecycle entries, and trust them. Without that trust, explicit
 
 ## Migrate former local evidence
 
-Run the CLI path shown by the SessionStart hook:
+Run the exact Python executable and CLI path shown by the SessionStart hook, and
+name the former checkout ledger explicitly:
 
 ```text
-python "<plugin-skill>/scripts/needs.py" migrate
+<cli-command-from-hook> migrate \
+  --from-path "<recursive-harness-checkout>/state/skill_needs.jsonl"
 ```
 
 Migration is idempotent and does not delete the former ledger.

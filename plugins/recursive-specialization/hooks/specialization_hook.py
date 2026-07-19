@@ -33,6 +33,10 @@ def cli_path():
     return str(SCRIPTS / "needs.py")
 
 
+def cli_invocation():
+    return f'"{sys.executable}" "{cli_path()}"'
+
+
 def on_session_start(data):
     pending = [] if needs is None else needs.attention_items(threshold=needs.DEFAULT_REVIEW_THRESHOLD)
     suffix = ""
@@ -44,7 +48,7 @@ def on_session_start(data):
         "Recursive Specialization is active. It cannot browse prior chats; it uses one "
         "private local ledger shared with other Recursive provider adapters. On the first "
         "reusable gap, correction, or skill improvement, use $specialization and create/"
-        f"dogfood a candidate immediately. CLI: {cli_path()}.{suffix}"
+        f"dogfood a candidate immediately. CLI command: {cli_invocation()}.{suffix}"
     ))
 
 
@@ -62,7 +66,7 @@ def on_user_prompt(data):
             "First-observation Specialization check: if this turn exposes a reusable "
             "capability gap, a proven correction to a skill, or a measurable skill-process "
             "improvement, do not wait for recurrence. Use $specialization; run "
-            f"`python \"{cli_path()}\" add ... --provider codex --session \"{session}\" "
+            f"`{cli_invocation()} add ... --provider codex --session \"{session}\" "
             f"--turn \"{turn}\"`; then author and dogfood the printed candidate now. "
             "Follow existing skill provenance; do not log project-only facts or transcripts."
         )
@@ -94,7 +98,7 @@ def on_stop(data):
         reason = (
             f"Before finishing, complete the first-observation candidate for "
             f"'{first['domain']}' at {first['candidate_dir']}. Replay the triggering case "
-            f"and record worked/partial/failed with `python \"{cli_path()}\" candidate "
+            f"and record worked/partial/failed with `{cli_invocation()} candidate "
             f"dogfood {first['nid']} ...`."
         )
     elif first["attention"] == "promotion-ready":

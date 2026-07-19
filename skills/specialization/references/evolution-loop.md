@@ -14,6 +14,11 @@ existing one.
 Do not promote an unverified assertion. Store it as evidence and keep the
 candidate `drafting` until a replay can falsify it.
 
+For `correction` and `improvement`, target skill, provenance, and readable source
+are mandatory inputs, and the target must match the source frontmatter name. If
+the owner cannot be located, stop and resolve provenance; never substitute a
+generic sibling candidate.
+
 ## Dogfood sequence
 
 1. Preserve the triggering input, expected behavior, and observed failure as a

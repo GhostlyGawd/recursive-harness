@@ -13,9 +13,15 @@ The first observation of a reusable `gap`, `correction`, or `improvement` must:
 3. Preserve the provider session and turn identity without storing a transcript.
 4. Prompt the active agent to author and dogfood that candidate during the task.
 
-Promotion is proof-gated. A candidate becomes `validated` after a worked dogfood
-replay with concrete verification; new capabilities must also show that the
-procedure generalizes. Recurrence counts distinct `provider:session` pairs and
+A `correction` or `improvement` must identify its target skill, canonical
+provenance, and a readable source `SKILL.md`; an adapter must not fall back to a
+new generic expert when those amendment inputs are absent or the target name does
+not match the source frontmatter.
+
+Promotion is proof-gated. A candidate becomes `validated` after worked dogfood
+with concrete verification; a new capability requires two distinct worked cases
+for its current revision and must show that the procedure generalizes. Recurrence
+counts distinct `provider:session` pairs and
 raises review urgency, but it neither proves a candidate nor delays a verified
 correction. New evidence reopens the candidate as a new revision, so proof from
 an earlier revision cannot validate an amendment silently.
@@ -24,8 +30,9 @@ an earlier revision cannot validate an amendment silently.
 
 Every JSONL event carries `schema_version`, `event_id`, `ts`, `kind`, `domain`,
 and `domain_key`. Evidence adds `learning_kind`, `shape`, `provider`, `session`,
-`turn`, optional target-skill provenance, category, and facet tags. Candidate and
-dogfood events record lifecycle status and verification receipts.
+`turn`, category, and facet tags; target-skill provenance is required for
+corrections/improvements and omitted for new gaps. Candidate and dogfood events
+record lifecycle status and verification receipts.
 
 The contract intentionally excludes full prompts, transcripts, authentication
 material, and raw external content.
@@ -41,12 +48,15 @@ Local adapters use one provider-neutral state directory:
 | Linux | `${XDG_STATE_HOME:-~/.local/state}/recursive-harness/specialization/` |
 
 `RECURSIVE_HARNESS_STATE_HOME` overrides the parent; the runtime appends
-`specialization/`. State is sanitized, process-serialized, atomically replaced,
-and constrained to the current user where the host filesystem supports it.
+`specialization/`. A capability-wide interprocess transaction serializes compound
+ledger, manifest, migration, validation, and nudge transitions. State is sanitized,
+atomically replaced, and constrained to the current user where the host filesystem
+supports it.
 
-The `migrate` command idempotently imports the former checkout-local
-`state/skill_needs.jsonl`, activates private candidates for open imported needs,
-and leaves the source untouched.
+The `migrate --from-path <checkout>/state/skill_needs.jsonl` command idempotently
+imports an explicitly named former checkout-local ledger, activates private
+candidates for open imported needs, and leaves the source untouched. Provider
+packages never guess a checkout path.
 
 ## Adapter contract
 

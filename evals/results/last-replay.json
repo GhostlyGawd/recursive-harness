@@ -14,8 +14,8 @@
     "spec-binding": "pass"
   },
   "corpus_hash": "3a01cca07e05e674",
-  "date": "2026-07-19T00:08:43",
+  "date": "2026-07-19T08:30:59",
   "passed": 12,
-  "session": "codex-2026-07-18-specialization",
+  "session": "codex-2026-07-19-specialization-audit-fixes",
   "total": 12
 }

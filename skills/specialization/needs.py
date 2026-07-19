@@ -72,17 +72,16 @@ def resolve_state_dir(start=None):
     return _platform_state_home()
 
 
-def legacy_ledger_path():
-    """Former checkout-local ledger, used only by the idempotent migration command."""
-    return os.path.join(ROOT, "state", "skill_needs.jsonl")
-
-
 def _ledger(state_dir=None):
     return os.path.join(state_dir or resolve_state_dir(), "skill_needs.jsonl")
 
 
 def _candidate_root(state_dir=None):
     return os.path.join(state_dir or resolve_state_dir(), "candidates")
+
+
+def _transaction_file(state_dir=None):
+    return os.path.join(state_dir or resolve_state_dir(), "specialization.transaction")
 
 
 def _candidate_dir(domain_key, state_dir=None):
@@ -212,39 +211,45 @@ def _all_needs(state_dir=None):
 def promotable(threshold=None, state_dir=None):
     """Return proof-validated candidates. ``threshold`` is compatibility-only."""
     del threshold
-    rows = [need for need in _all_needs(state_dir).values()
-            if need["status"] == "open" and need["candidate_status"] == "validated"]
+    state = state_dir or resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        rows = [need for need in _all_needs(state).values()
+                if need["status"] == "open" and need["candidate_status"] == "validated"]
     return sorted(rows, key=lambda need: (need["last_ts"], need["recurrence"]), reverse=True)
 
 
 def reviewable(threshold=DEFAULT_REVIEW_THRESHOLD, state_dir=None):
     """Return unvalidated candidates whose independent-session evidence is recurring."""
-    rows = [need for need in _all_needs(state_dir).values()
-            if need["status"] == "open"
-            and need["candidate_status"] == "drafting"
-            and need["recurrence"] >= threshold]
+    state = state_dir or resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        rows = [need for need in _all_needs(state).values()
+                if need["status"] == "open"
+                and need["candidate_status"] == "drafting"
+                and need["recurrence"] >= threshold]
     return sorted(rows, key=lambda need: (-need["recurrence"], need["last_ts"]))
 
 
 def attention_items(session=None, threshold=DEFAULT_REVIEW_THRESHOLD, state_dir=None):
     """Return candidates a lifecycle adapter should surface, highest-value first."""
+    state = state_dir or resolve_state_dir()
     items = []
-    for need in _all_needs(state_dir).values():
-        if need["status"] != "open":
-            continue
-        if need["candidate_status"] == "validated":
-            row = dict(need)
-            row["attention"] = "promotion-ready"
-            items.append(row)
-        elif (session and any(key.endswith(f":{session}") for key in need["sessions"])
-              and need["candidate_status"] == "drafting"):
-            row = dict(need)
-            row["attention"] = "dogfood-now"
-            items.append(row)
-        elif need["candidate_status"] == "drafting" and need["recurrence"] >= threshold:
-            row = dict(need)
-            row["attention"] = "recurring-unvalidated"
-            items.append(row)
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        for need in _all_needs(state).values():
+            if need["status"] != "open":
+                continue
+            if need["candidate_status"] == "validated":
+                row = dict(need)
+                row["attention"] = "promotion-ready"
+                items.append(row)
+            elif (session and any(key.endswith(f":{session}") for key in need["sessions"])
+                  and need["candidate_status"] == "drafting"):
+                row = dict(need)
+                row["attention"] = "dogfood-now"
+                items.append(row)
+            elif need["candidate_status"] == "drafting" and need["recurrence"] >= threshold:
+                row = dict(need)
+                row["attention"] = "recurring-unvalidated"
+                items.append(row)
     order = {"dogfood-now": 0, "promotion-ready": 1, "recurring-unvalidated": 2}
     return sorted(items, key=lambda row: (order[row["attention"]], -row["recurrence"]))
 
@@ -254,10 +259,11 @@ def claim_nudge(session, attention, state_dir=None):
     state = state_dir or resolve_state_dir()
     safe = private_state.safe_filename_id(f"{session}:{attention}", "nudge")
     path = os.path.join(state, "nudges", safe + ".txt")
-    if private_state.path_exists(path, root=state):
-        return False
-    private_state.atomic_write_text(path, "nudged\n", root=state)
-    return True
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        if private_state.path_exists(path, root=state):
+            return False
+        private_state.atomic_write_text(path, "nudged\n", root=state)
+        return True
 
 
 def _resolve_selector(needs, selector):
@@ -282,8 +288,27 @@ def _read_candidate_manifest(path):
         return {}
 
 
+def _source_skill_name(path):
+    """Read the small frontmatter name needed to bind an amendment to its owner."""
+    try:
+        with open(path, encoding="utf-8") as stream:
+            lines = stream.read().splitlines()
+    except (OSError, UnicodeError):
+        return ""
+    if not lines or lines[0].strip() != "---":
+        return ""
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if line.lower().startswith("name:"):
+            return line.split(":", 1)[1].strip().strip("\"'")
+    return ""
+
+
 def _candidate_seed(domain, domain_key, learning_kind, target_skill, event_id):
     skill_name = target_skill or f"{domain_key}-expert"
+    second_case = ("\n- Replay a second materially distinct case for this new capability."
+                   if learning_kind == "gap" else "")
     return f"""---
 name: {skill_name}
 description: Draft a precise trigger for the verified {domain} capability and its boundaries.
@@ -300,7 +325,7 @@ description: Draft a precise trigger for the verified {domain} capability and it
 
 ## Verification
 
-- Replay the triggering case and record the before/after result with `needs.py candidate dogfood`.
+- Replay the triggering case and record the before/after result with `needs.py candidate dogfood`.{second_case}
 
 provenance: first-observation specialization candidate {event_id}; kind={learning_kind}
 """
@@ -389,9 +414,34 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
 
 def cmd_add(args):
     state = resolve_state_dir()
+    source_skill = (os.path.abspath(os.path.expanduser(args.source_skill))
+                    if args.source_skill else "")
     if not args.domain.strip() or not args.shape.strip():
         print("domain and shape must contain non-whitespace evidence", file=sys.stderr)
         return 1
+    if args.learning_kind in ("correction", "improvement"):
+        missing = [name for name, value in (
+            ("--target-skill", args.target_skill),
+            ("--target-provenance", args.target_provenance),
+            ("--source-skill", args.source_skill),
+        ) if not str(value).strip()]
+        if missing:
+            print(
+                f"{args.learning_kind} must amend its provenance owner; required: "
+                + ", ".join(missing),
+                file=sys.stderr,
+            )
+            return 1
+        if not os.path.isfile(source_skill):
+            print("--source-skill must name a readable existing SKILL.md", file=sys.stderr)
+            return 1
+        source_name = _source_skill_name(source_skill)
+        if source_name != args.target_skill.strip():
+            print(
+                "--target-skill must match the name in --source-skill frontmatter",
+                file=sys.stderr,
+            )
+            return 1
     domain_key = _domain_key(args.domain)
     session = (args.session or os.environ.get("CLAUDE_SESSION_ID")
                or os.environ.get("CODEX_SESSION_ID") or "unknown")
@@ -400,29 +450,30 @@ def cmd_add(args):
         provider = "claude" if os.environ.get("CLAUDE_SESSION_ID") else (
             "codex" if os.environ.get("CODEX_SESSION_ID") else "unknown"
         )
-    record = {
-        "ts": _now(),
-        "kind": "evidence",
-        "learning_kind": args.learning_kind,
-        "domain": args.domain.strip(),
-        "domain_key": domain_key,
-        "category": args.category,
-        "tags": _parse_tags(args.tags),
-        "shape": args.shape.strip(),
-        "session": session,
-        "turn": args.turn or None,
-        "provider": provider,
-        "repo": args.repo or None,
-        "target_skill": args.target_skill or None,
-        "target_provenance": args.target_provenance or None,
-    }
-    record = _append(_ledger(state), record, state)
-    try:
-        candidate_dir, created = _ensure_candidate(record, args.source_skill, state)
-    except (OSError, UnicodeError) as exc:
-        print(f"evidence logged but candidate creation failed: {exc}", file=sys.stderr)
-        return 1
-    need = _all_needs(state)[domain_key]
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        record = {
+            "ts": _now(),
+            "kind": "evidence",
+            "learning_kind": args.learning_kind,
+            "domain": args.domain.strip(),
+            "domain_key": domain_key,
+            "category": args.category,
+            "tags": _parse_tags(args.tags),
+            "shape": args.shape.strip(),
+            "session": session,
+            "turn": args.turn or None,
+            "provider": provider,
+            "repo": args.repo or None,
+            "target_skill": args.target_skill or None,
+            "target_provenance": args.target_provenance or None,
+        }
+        record = _append(_ledger(state), record, state)
+        try:
+            candidate_dir, created = _ensure_candidate(record, source_skill, state)
+        except (OSError, UnicodeError) as exc:
+            print(f"evidence logged but candidate creation failed: {exc}", file=sys.stderr)
+            return 1
+        need = _all_needs(state)[domain_key]
     verb = "created" if created else "updated"
     print(f"need {need['nid']} [{domain_key}] logged - evidence {need['evidence_count']}, "
           f"distinct sessions {need['recurrence']}")
@@ -436,7 +487,9 @@ def cmd_add(args):
 
 
 def cmd_match(args):
-    needs = _all_needs()
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        needs = _all_needs(state)
     selected = (args.domain or args.tags or "").lower()
     tags = set(_parse_tags(args.tags))
     hits = []
@@ -470,7 +523,9 @@ def _print_need(need, verbose=False):
 
 
 def cmd_list(args):
-    needs = _all_needs()
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        needs = _all_needs(state)
     if args.domain:
         domain_key = _resolve_selector(needs, args.domain)
         if not domain_key:
@@ -518,49 +573,53 @@ def _selected_need(selector, state_dir=None):
 
 
 def cmd_candidate_show(args):
-    try:
-        _state, need = _selected_need(args.selector)
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        try:
+            _state, need = _selected_need(args.selector, state)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
     _print_need(need, verbose=True)
     print(f"        candidate={need['candidate_dir'] or _candidate_dir(need['domain_key'])}")
     return 0
 
 
 def cmd_candidate_dogfood(args):
-    try:
-        state, need = _selected_need(args.selector)
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    if need["status"] != "open" or need["candidate_status"] != "drafting":
-        print("dogfood requires an open drafting candidate", file=sys.stderr)
-        return 1
-    if not all(value.strip() for value in (
-            args.case, args.before, args.after, args.verification)):
-        print("dogfood evidence fields must contain non-whitespace values", file=sys.stderr)
-        return 1
-    manifest = _read_candidate_manifest(
-        os.path.join(need["candidate_dir"], "candidate.json")
-    )
-    revision = int(manifest.get("revision", 1))
-    record = _append(_ledger(state), {
-        "ts": _now(),
-        "kind": "dogfood",
-        "domain": need["domain"],
-        "domain_key": need["domain_key"],
-        "session": args.session or os.environ.get("CLAUDE_SESSION_ID")
-                   or os.environ.get("CODEX_SESSION_ID") or "unknown",
-        "provider": args.provider,
-        "candidate_revision": revision,
-        "case": args.case,
-        "before": args.before,
-        "after": args.after,
-        "outcome": args.outcome,
-        "generalizes": args.generalizes,
-        "verification": args.verification,
-    }, state)
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        try:
+            _state, need = _selected_need(args.selector, state)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        if need["status"] != "open" or need["candidate_status"] != "drafting":
+            print("dogfood requires an open drafting candidate", file=sys.stderr)
+            return 1
+        if not all(value.strip() for value in (
+                args.case, args.before, args.after, args.verification)):
+            print("dogfood evidence fields must contain non-whitespace values", file=sys.stderr)
+            return 1
+        manifest = _read_candidate_manifest(
+            os.path.join(need["candidate_dir"], "candidate.json")
+        )
+        revision = int(manifest.get("revision", 1))
+        record = _append(_ledger(state), {
+            "ts": _now(),
+            "kind": "dogfood",
+            "domain": need["domain"],
+            "domain_key": need["domain_key"],
+            "session": args.session or os.environ.get("CLAUDE_SESSION_ID")
+                       or os.environ.get("CODEX_SESSION_ID") or "unknown",
+            "provider": args.provider,
+            "candidate_revision": revision,
+            "case": args.case,
+            "before": args.before,
+            "after": args.after,
+            "outcome": args.outcome,
+            "generalizes": args.generalizes,
+            "verification": args.verification,
+        }, state)
     print(f"dogfood recorded for {need['nid']}: {record['outcome']} "
           f"(generalizes={record['generalizes']})")
     if record["outcome"] == "worked":
@@ -570,85 +629,98 @@ def cmd_candidate_dogfood(args):
 
 
 def cmd_candidate_validate(args):
-    try:
-        state, need = _selected_need(args.selector)
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    if need["status"] != "open" or need["candidate_status"] != "drafting":
-        print("validation requires an open drafting candidate", file=sys.stderr)
-        return 1
-    directory = need["candidate_dir"] or _candidate_dir(need["domain_key"], state)
-    skill_path = os.path.join(directory, "SKILL.md")
-    try:
-        with open(skill_path, encoding="utf-8") as stream:
-            content = stream.read()
-    except OSError as exc:
-        print(f"candidate SKILL.md unavailable: {exc}", file=sys.stderr)
-        return 1
-    if DRAFT_MARKER in content:
-        print("candidate still carries the draft marker; author it before validation", file=sys.stderr)
-        return 1
-    manifest_path = os.path.join(directory, "candidate.json")
-    manifest = _read_candidate_manifest(manifest_path)
-    revision = int(manifest.get("revision", 1))
-    worked = [row for row in need["dogfoods"]
-              if row.get("outcome") == "worked"
-              and row.get("verification")
-              and int(row.get("candidate_revision", 0)) == revision]
-    if not worked:
-        print("validation requires a worked dogfood replay with verification evidence", file=sys.stderr)
-        return 1
-    if "gap" in need["learning_kinds"] and not any(
-            row.get("generalizes") == "yes" for row in worked):
-        print("a new capability requires one worked replay marked generalizes=yes", file=sys.stderr)
-        return 1
-    _append(_ledger(state), {
-        "ts": _now(),
-        "kind": "candidate",
-        "domain": need["domain"],
-        "domain_key": need["domain_key"],
-        "action": "validated",
-        "candidate_dir": os.path.join("candidates", need["domain_key"]),
-        "candidate_revision": revision,
-        "verification_event_ids": [row.get("event_id") for row in worked],
-    }, state)
-    manifest["status"] = "validated"
-    manifest["validated_at"] = _now()
-    private_state.atomic_write_json(manifest_path, manifest, root=state)
-    print(f"candidate {need['nid']} validated and promotion-ready; canonical changes still require approval")
-    return 0
-
-
-def _status_write(selector, new_status, skill=None):
-    try:
-        state, need = _selected_need(selector)
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    if new_status == "built" and need["candidate_status"] != "validated":
-        print("promotion requires a proof-validated candidate", file=sys.stderr)
-        return 1
-    _append(_ledger(state), {
-        "ts": _now(),
-        "kind": "status",
-        "domain": need["domain"],
-        "domain_key": need["domain_key"],
-        "status": new_status,
-        "skill": skill or None,
-        "session": os.environ.get("CLAUDE_SESSION_ID")
-                   or os.environ.get("CODEX_SESSION_ID") or "unknown",
-    }, state)
-    if new_status == "built":
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        try:
+            _state, need = _selected_need(args.selector, state)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        if need["status"] != "open" or need["candidate_status"] != "drafting":
+            print("validation requires an open drafting candidate", file=sys.stderr)
+            return 1
+        directory = need["candidate_dir"] or _candidate_dir(need["domain_key"], state)
+        skill_path = os.path.join(directory, "SKILL.md")
+        try:
+            with open(skill_path, encoding="utf-8") as stream:
+                content = stream.read()
+        except OSError as exc:
+            print(f"candidate SKILL.md unavailable: {exc}", file=sys.stderr)
+            return 1
+        if DRAFT_MARKER in content:
+            print("candidate still carries the draft marker; author it before validation",
+                  file=sys.stderr)
+            return 1
+        manifest_path = os.path.join(directory, "candidate.json")
+        manifest = _read_candidate_manifest(manifest_path)
+        revision = int(manifest.get("revision", 1))
+        worked = [row for row in need["dogfoods"]
+                  if row.get("outcome") == "worked"
+                  and row.get("verification")
+                  and int(row.get("candidate_revision", 0)) == revision]
+        if not worked:
+            print("validation requires a worked dogfood replay with verification evidence",
+                  file=sys.stderr)
+            return 1
+        if manifest.get("learning_kind", "gap") == "gap":
+            distinct_cases = {row.get("case", "").strip().casefold() for row in worked}
+            distinct_cases.discard("")
+            if len(distinct_cases) < 2 or not any(
+                    row.get("generalizes") == "yes" for row in worked):
+                print(
+                    "a new capability requires two distinct worked cases for this revision, "
+                    "including one marked generalizes=yes",
+                    file=sys.stderr,
+                )
+                return 1
         _append(_ledger(state), {
             "ts": _now(),
             "kind": "candidate",
             "domain": need["domain"],
             "domain_key": need["domain_key"],
-            "action": "promoted",
+            "action": "validated",
             "candidate_dir": os.path.join("candidates", need["domain_key"]),
-            "skill": skill or None,
+            "candidate_revision": revision,
+            "verification_event_ids": [row.get("event_id") for row in worked],
         }, state)
+        manifest["status"] = "validated"
+        manifest["validated_at"] = _now()
+        private_state.atomic_write_json(manifest_path, manifest, root=state)
+    print(f"candidate {need['nid']} validated and promotion-ready; canonical changes still require approval")
+    return 0
+
+
+def _status_write(selector, new_status, skill=None):
+    state = resolve_state_dir()
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        try:
+            _state, need = _selected_need(selector, state)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        if new_status == "built" and need["candidate_status"] != "validated":
+            print("promotion requires a proof-validated candidate", file=sys.stderr)
+            return 1
+        _append(_ledger(state), {
+            "ts": _now(),
+            "kind": "status",
+            "domain": need["domain"],
+            "domain_key": need["domain_key"],
+            "status": new_status,
+            "skill": skill or None,
+            "session": os.environ.get("CLAUDE_SESSION_ID")
+                       or os.environ.get("CODEX_SESSION_ID") or "unknown",
+        }, state)
+        if new_status == "built":
+            _append(_ledger(state), {
+                "ts": _now(),
+                "kind": "candidate",
+                "domain": need["domain"],
+                "domain_key": need["domain_key"],
+                "action": "promoted",
+                "candidate_dir": os.path.join("candidates", need["domain_key"]),
+                "skill": skill or None,
+            }, state)
     print(f"need {need['nid']} [{need['domain_key']}] -> {new_status}"
           + (f" -> {skill}" if skill else ""))
     return 0
@@ -664,7 +736,13 @@ def cmd_promoted(args):
 
 def cmd_migrate(args):
     state = resolve_state_dir()
-    source = os.path.abspath(os.path.expanduser(args.from_path or legacy_ledger_path()))
+    if not args.from_path:
+        print(
+            "migration requires --from-path <recursive-harness-checkout>/state/skill_needs.jsonl",
+            file=sys.stderr,
+        )
+        return 2
+    source = os.path.abspath(os.path.expanduser(args.from_path))
     if not os.path.exists(source):
         print(f"no legacy ledger at {source}; nothing to migrate")
         return 0
@@ -680,32 +758,33 @@ def cmd_migrate(args):
             row.setdefault("learning_kind", "gap")
             row.setdefault("event_id", _event_id(row))
             legacy.append(row)
-    target = _ledger(state)
-    current = _read(target, state)
-    known = {row.get("event_id") or _event_id(row) for row in current}
-    imported = [row for row in legacy if row["event_id"] not in known]
-    if imported:
-        private_state.rewrite_jsonl(target, current + imported, root=state)
-    activated = 0
-    records = _read(target, state)
-    aggregated = _aggregate(records)
-    for domain_key, need in aggregated.items():
-        if (need["status"] != "open" or not need["evidence_count"]
-                or need["candidate_status"] is not None):
-            continue
-        evidence = next(
-            row for row in reversed(records)
-            if row.get("kind") == "evidence" and row.get("domain_key") == domain_key
-        )
-        _ensure_candidate(evidence, state_dir=state)
-        activated += 1
-    receipt_name = private_state.safe_filename_id(source, "migration") + ".json"
-    private_state.atomic_write_json(os.path.join(state, "migrations", receipt_name), {
-        "source": source,
-        "source_records": len(legacy),
-        "imported_records": len(imported),
-        "completed_at": _now(),
-    }, root=state)
+    with private_state.exclusive_lock(_transaction_file(state), root=state):
+        target = _ledger(state)
+        current = _read(target, state)
+        known = {row.get("event_id") or _event_id(row) for row in current}
+        imported = [row for row in legacy if row["event_id"] not in known]
+        if imported:
+            private_state.rewrite_jsonl(target, current + imported, root=state)
+        activated = 0
+        records = _read(target, state)
+        aggregated = _aggregate(records)
+        for domain_key, need in aggregated.items():
+            if (need["status"] != "open" or not need["evidence_count"]
+                    or need["candidate_status"] is not None):
+                continue
+            evidence = next(
+                row for row in reversed(records)
+                if row.get("kind") == "evidence" and row.get("domain_key") == domain_key
+            )
+            _ensure_candidate(evidence, state_dir=state)
+            activated += 1
+        receipt_name = private_state.safe_filename_id(source, "migration") + ".json"
+        private_state.atomic_write_json(os.path.join(state, "migrations", receipt_name), {
+            "source": source,
+            "source_records": len(legacy),
+            "imported_records": len(imported),
+            "completed_at": _now(),
+        }, root=state)
     print(f"migration complete: imported {len(imported)} of {len(legacy)} legacy records; "
           f"activated {activated} candidates")
     return 0
@@ -779,8 +858,11 @@ def build_parser():
     command.add_argument("--skill", required=True)
     command.set_defaults(fn=cmd_promoted)
 
-    command = sub.add_parser("migrate", help="idempotently import the former checkout-local ledger")
-    command.add_argument("--from-path", default="")
+    command = sub.add_parser("migrate", help="idempotently import an explicitly named legacy ledger")
+    command.add_argument(
+        "--from-path", default="",
+        help="former Recursive Harness checkout's state/skill_needs.jsonl (required)",
+    )
     command.set_defaults(fn=cmd_migrate)
     return parser
 
