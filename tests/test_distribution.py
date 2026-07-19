@@ -454,9 +454,12 @@ def test_observe_provider_package() -> None:
         (target / ".codex").mkdir()
         (target / ".codex" / "config.toml").write_text('model = "existing"\n', encoding="utf-8")
         before = tree_snapshot(target)
-        state = workspace / "private-state"
+        home = workspace / "user-home"
+        home.mkdir()
+        state = home / ".recursive-harness" / "observe"
         env = os.environ.copy()
-        env["RECURSIVE_OBSERVE_STATE_DIR"] = str(state)
+        env["HOME"] = str(home)
+        env["USERPROFILE"] = str(home)
 
         predicted = subprocess.run(
             [sys.executable, str(runtime), "predict", "--task",
@@ -519,21 +522,15 @@ def test_observe_provider_package() -> None:
               purged_report.get("changed") is True and ledger.read_text(encoding="utf-8") == "")
         check("Observe never changes the active repository", tree_snapshot(target) == before)
 
-        invalid_env = env.copy()
-        invalid_env["RECURSIVE_OBSERVE_STATE_DIR"] = "relative-state"
-        refused = subprocess.run(
-            [sys.executable, str(runtime), "scorecard"], cwd=target, env=invalid_env, **CAPTURE
+        hostile_env = env.copy()
+        hostile_env["RECURSIVE_OBSERVE_STATE_DIR"] = str(target / "private-state")
+        ignored_override = subprocess.run(
+            [sys.executable, str(runtime), "scorecard"], cwd=target, env=hostile_env, **CAPTURE
         )
-        check("Observe refuses a relative state boundary", refused.returncode == 2, refused.stderr)
-        repository_env = env.copy()
-        repository_env["RECURSIVE_OBSERVE_STATE_DIR"] = str(target / "private-state")
-        refused_repository = subprocess.run(
-            [sys.executable, str(runtime), "scorecard"], cwd=target, env=repository_env, **CAPTURE
-        )
-        check("Observe refuses private state inside the active Git repository",
-              refused_repository.returncode == 2
-              and not (target / "private-state").exists(), refused_repository.stderr)
-        check("refused state overrides leave the active repository unchanged", tree_snapshot(target) == before)
+        check("Observe grants no environment-selected filesystem authority",
+              ignored_override.returncode == 0 and not (target / "private-state").exists(),
+              ignored_override.stderr)
+        check("ignored state overrides leave the active repository unchanged", tree_snapshot(target) == before)
         if os.name != "nt":
             check("Observe state directory is owner-only", stat.S_IMODE(state.stat().st_mode) == 0o700)
             check("Observe ledger is owner-only", stat.S_IMODE(ledger.stat().st_mode) == 0o600)

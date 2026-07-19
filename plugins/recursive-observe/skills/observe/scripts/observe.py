@@ -11,78 +11,22 @@ import argparse
 import datetime as dt
 import json
 import math
-import os
-from pathlib import Path
 import re
 import sys
 import uuid
 
-try:
-    import private_state
-except ModuleNotFoundError:
-    repository_root = Path(__file__).resolve().parents[3]
-    sys.path.insert(0, str(repository_root))
-    import private_state
+import observe_store
 
 
-STATE_ENV = "RECURSIVE_OBSERVE_STATE_DIR"
 ID_PATTERN = re.compile(r"^[0-9a-f]{8}$")
-
-
-def _absolute_private_root(value: str) -> Path:
-    path = Path(value).expanduser()
-    if not path.is_absolute() or ".." in path.parts:
-        raise ValueError(f"{STATE_ENV} must be an absolute path without parent traversal")
-    return Path(os.path.abspath(path))
-
-
-def _nearest_repository_root(start: Path) -> Path | None:
-    for candidate in (start, *start.parents):
-        marker = candidate / ".git"
-        if marker.exists() or marker.is_symlink():
-            return candidate
-    return None
-
-
-def _outside_active_repository(path: Path) -> Path:
-    repository = _nearest_repository_root(Path.cwd().resolve())
-    if repository is None:
-        return path
-    resolved_path = path.resolve(strict=False)
-    resolved_repository = repository.resolve(strict=False)
-    try:
-        common = os.path.commonpath((resolved_path, resolved_repository))
-    except ValueError:
-        return path
-    if os.path.normcase(common) == os.path.normcase(str(resolved_repository)):
-        raise ValueError(f"{STATE_ENV} must be outside the active Git repository")
-    return path
-
-
-def state_root() -> Path:
-    configured = os.environ.get(STATE_ENV)
-    if configured:
-        return _outside_active_repository(_absolute_private_root(configured))
-    if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
-        base = _absolute_private_root(os.environ["LOCALAPPDATA"])
-        return _outside_active_repository(base / "RecursiveHarness" / "observe")
-    if os.environ.get("XDG_STATE_HOME"):
-        base = _absolute_private_root(os.environ["XDG_STATE_HOME"])
-    else:
-        base = Path.home() / ".local" / "state"
-    return _outside_active_repository(base / "recursive-harness" / "observe")
-
-
-def predictions_path(root: Path) -> Path:
-    return root / "predictions.jsonl"
 
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
-def read_predictions(root: Path) -> list[dict[str, object]]:
-    return private_state.read_jsonl(str(predictions_path(root)), root=str(root))
+def read_predictions() -> list[dict[str, object]]:
+    return observe_store.read_records()
 
 
 def _brier(records: list[dict[str, object]]) -> float | None:
@@ -96,8 +40,8 @@ def _brier(records: list[dict[str, object]]) -> float | None:
     return round(score, 12)
 
 
-def summary(root: Path) -> dict[str, object]:
-    records = read_predictions(root)
+def summary() -> dict[str, object]:
+    records = read_predictions()
     scored = [record for record in records if record.get("result") in ("hit", "miss")]
     pending = [record for record in records if record.get("result") is None]
     hits = sum(record.get("result") == "hit" for record in scored)
@@ -138,7 +82,6 @@ def cmd_predict(args: argparse.Namespace) -> int:
     if not math.isfinite(args.confidence) or not 0.0 <= args.confidence <= 1.0:
         print("confidence must be a finite number from 0 to 1", file=sys.stderr)
         return 2
-    root = state_root()
     prediction_id = uuid.uuid4().hex[:8]
     record = {
         "id": prediction_id,
@@ -152,7 +95,7 @@ def cmd_predict(args: argparse.Namespace) -> int:
     if not record["task"] or not record["expect"]:
         print("task and expect must be non-empty", file=sys.stderr)
         return 2
-    private_state.append_jsonl(str(predictions_path(root)), record, root=str(root))
+    observe_store.append_record(record)
     print(f"prediction logged: {prediction_id}")
     print(f"score later with this CLI: outcome {prediction_id} --result hit|miss")
     return 0
@@ -162,7 +105,6 @@ def cmd_outcome(args: argparse.Namespace) -> int:
     if not ID_PATTERN.fullmatch(args.id):
         print("prediction id must be eight lowercase hexadecimal characters", file=sys.stderr)
         return 2
-    root = state_root()
     matched = False
 
     def update(records: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -179,7 +121,7 @@ def cmd_outcome(args: argparse.Namespace) -> int:
             updated.append(item)
         return updated
 
-    private_state.transform_jsonl(str(predictions_path(root)), update, root=str(root))
+    observe_store.transform_records(update)
     if not matched:
         print(f"no prediction with id {args.id}", file=sys.stderr)
         return 1
@@ -188,7 +130,7 @@ def cmd_outcome(args: argparse.Namespace) -> int:
 
 
 def cmd_stats(args: argparse.Namespace) -> int:
-    report = summary(state_root())
+    report = summary()
     if args.json:
         print_json(report)
         return 0
@@ -210,7 +152,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
 
 
 def cmd_scorecard(args: argparse.Namespace) -> int:
-    report = summary(state_root())
+    report = summary()
     if args.json:
         print_json(report)
         return 0
@@ -228,26 +170,25 @@ def cmd_scorecard(args: argparse.Namespace) -> int:
     return 0
 
 
-def _privacy_report(root: Path) -> dict[str, object]:
-    records = read_predictions(root)
+def _privacy_report() -> dict[str, object]:
+    records = read_predictions()
     timestamps = sorted(str(record.get("ts", "")) for record in records if record.get("ts"))
     return {
         "schema_version": 1,
         "records": len(records),
         "oldest": timestamps[0] if timestamps else None,
         "newest": timestamps[-1] if timestamps else None,
-        "state_directory": str(root),
+        "state_directory": str(observe_store.state_directory()),
         "repository_writes": [],
         "contents_printed": False,
     }
 
 
 def cmd_privacy(args: argparse.Namespace) -> int:
-    root = state_root()
-    before = _privacy_report(root)
+    before = _privacy_report()
     changed = False
     if args.action == "purge" and args.apply:
-        private_state.rewrite_jsonl(str(predictions_path(root)), [], root=str(root))
+        observe_store.purge_records()
         changed = before["records"] > 0
     report = dict(before)
     report.update({"action": args.action, "apply": bool(args.apply), "changed": changed})
@@ -255,7 +196,7 @@ def cmd_privacy(args: argparse.Namespace) -> int:
         print_json(report)
     elif args.action == "audit":
         print(f"Observe privacy audit: {before['records']} record(s); contents printed: no")
-        print(f"State directory: {root}")
+        print(f"State directory: {observe_store.state_directory()}")
     elif args.apply:
         print(f"Observe privacy purge applied: {before['records']} record(s) removed")
     else:

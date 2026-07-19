@@ -10,9 +10,10 @@ leaving support as a maintainer-environment claim.
 - Consumer: Claude Code 2.1.200
 - Plugin: `recursive-observe@recursive-harness` 0.1.0, enabled at user scope
 - Package tree SHA-256:
-  `a6a667e5e15527c7f8aed5575e7f62e57d3dcdf272cc0c24c94c21135b12a0b1`
+  `2a3a37044fd4168281f0c3951047dff5eb75f3f5e683b2e6964611bfb7486005`
 - Target: a separate temporary Git repository with pre-existing `AGENTS.md` and `CLAUDE.md`
-- State: a separate temporary directory outside the target repository
+- State: the fixed Observe directory below a separate temporary user home, outside the
+  target repository
 
 The acceptance run used a new isolated `CLAUDE_CONFIG_DIR`, added the local Recursive
 marketplace, installed the plugin at user scope, and resolved the runtime from Claude's

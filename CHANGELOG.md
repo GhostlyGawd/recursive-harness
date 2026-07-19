@@ -17,6 +17,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   generic Agent Skill hosts, with a generated-preview Codex adapter, private user-local
   state, zero repository writes, SHA-256 source receipts, and explicit privacy deletion
   controls.
+- Narrowed Recursive Observe storage to one fixed ledger below the user's home directory;
+  the package accepts no caller-selected path and no longer copies the harness-wide storage
+  module into its distributable surface.
 - Allowed multiple reviewed proposal updates on one date when each change appends a distinct
   lifecycle-history row, preserving the enforcement requirement without inventing future dates.
 

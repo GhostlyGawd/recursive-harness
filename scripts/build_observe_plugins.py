@@ -28,10 +28,10 @@ MAPPINGS = {
         PLUGIN / "skills" / "observe" / "agents" / "openai.yaml",
     ROOT / "skills" / "observe" / "scripts" / "observe.py":
         PLUGIN / "skills" / "observe" / "scripts" / "observe.py",
+    ROOT / "skills" / "observe" / "scripts" / "observe_store.py":
+        PLUGIN / "skills" / "observe" / "scripts" / "observe_store.py",
     ROOT / "skills" / "observe" / "references" / "privacy.md":
         PLUGIN / "skills" / "observe" / "references" / "privacy.md",
-    ROOT / "private_state.py":
-        PLUGIN / "skills" / "observe" / "scripts" / "private_state.py",
     ROOT / "LICENSE": PLUGIN / "LICENSE",
 }
 CODEX_MANIFEST = {
@@ -188,6 +188,9 @@ def check() -> int:
 
 
 def build() -> int:
+    expected = set(expected_package_files())
+    for obsolete in actual_package_files() - expected:
+        obsolete.unlink()
     for source, target in MAPPINGS.items():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)

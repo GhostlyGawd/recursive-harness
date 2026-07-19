@@ -18,8 +18,9 @@ servers, or repository settings.
 The same plugin directory carries `.codex-plugin/plugin.json` and
 `.claude-plugin/plugin.json`; both expose the generated `skills/observe` copy. That copy is
 also the portable generic Agent Skill because it includes the state helper needed outside a
-harness checkout. The authoring source remains `skills/observe` plus the shared
-`private_state.py`; `canonical-source.json` binds every packaged file, including both
+harness checkout. The authoring source remains wholly under `skills/observe`; its narrow
+storage helper exposes only the fixed Observe ledger, not a caller-selected path.
+`canonical-source.json` binds every packaged file, including both
 provider manifests, to its reviewed SHA-256 hash.
 
 ## Install for Codex

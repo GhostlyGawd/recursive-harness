@@ -43,8 +43,8 @@ python3 <skill-dir>/scripts/observe.py scorecard --json
 
 ## Protect privacy
 
-Observe stores sanitized evidence in the user's state directory, never the working
-repository. `RECURSIVE_OBSERVE_STATE_DIR` may select another absolute private directory.
+Observe stores sanitized evidence below `~/.recursive-harness/observe`, never the working
+repository. The runtime intentionally accepts no state-path argument or environment override.
 Read [the privacy contract](references/privacy.md) when the user asks what is stored, where
 it lives, how long it remains, or how uninstall affects it.
 
