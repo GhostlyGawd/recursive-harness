@@ -124,6 +124,64 @@ with tempfile.TemporaryDirectory() as tmp:
     errors = pm.check_changed("HEAD~1", root)
     check("changed bodies must advance updated/history", any("without advancing" in e for e in errors))
 
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    path = setup(root)
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "fixture@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.name", "Fixture"], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "baseline"], check=True)
+    text = path.read_text(encoding="utf-8")
+    text = text.replace(
+        pm.HISTORY_END,
+        "| 2026-07-17 | approved | in-progress | second reviewed change on the same day |\n"
+        + pm.HISTORY_END,
+    )
+    path.write_text(text + "Second same-day body change.\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "reviewed same-day edit"], check=True)
+    errors = pm.check_changed("HEAD~1", root)
+    check("same-day body changes may append a distinct history row",
+          not any("without advancing" in error for error in errors))
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    path = setup(root)
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "fixture@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.name", "Fixture"], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "baseline"], check=True)
+    text = path.read_text(encoding="utf-8")
+    duplicate = "| 2026-07-17 | ready | not-started | fixture |\n"
+    path.write_text(
+        text.replace(pm.HISTORY_END, duplicate + pm.HISTORY_END) + "Unreviewed body change.\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "duplicate history"], check=True)
+    errors = pm.check_changed("HEAD~1", root)
+    check("duplicate same-day history rows do not authorize body changes",
+          any("without advancing" in error for error in errors))
+
+with tempfile.TemporaryDirectory() as tmp:
+    root = Path(tmp)
+    path = setup(root)
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "fixture@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.name", "Fixture"], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "baseline"], check=True)
+    text = path.read_text(encoding="utf-8")
+    trailing = "| 2026-07-17 | approved | in-progress | outside history boundary |\n"
+    path.write_text(text + trailing + "Unreviewed body change.\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "out-of-bound history"], check=True)
+    errors = pm.check_changed("HEAD~1", root)
+    check("rows outside the history marker do not authorize body changes",
+          any("without advancing" in error for error in errors))
+
 if failures:
     print(f"\n{len(failures)} failed: {', '.join(failures)}")
     raise SystemExit(1)

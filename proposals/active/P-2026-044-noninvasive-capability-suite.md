@@ -14,8 +14,8 @@ resolution: ""
 
 | Date | Decision | Implementation | Evidence |
 | --- | --- | --- | --- |
-| 2026-07-19 | approved | in-progress | Receipt-bound Claude Code 2.1.200 user-scope installation and cached-package execution passed; Codex remains generated preview pending its own consumer run |
 | 2026-07-19 | approved | in-progress | Owner approved the non-invasive sidecar and capability-plugin-suite implementation after identifying that the silo and project-contract model could conflict with existing agent setups |
+| 2026-07-19 | approved | in-progress | Receipt-bound Claude Code 2.1.200 user-scope installation and cached-package execution passed; Codex remains generated preview pending its own consumer run |
 <!-- proposal-history:end -->
 
 ## Problem

@@ -17,6 +17,8 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   generic Agent Skill hosts, with a generated-preview Codex adapter, private user-local
   state, zero repository writes, SHA-256 source receipts, and explicit privacy deletion
   controls.
+- Allowed multiple reviewed proposal updates on one date when each change appends a distinct
+  lifecycle-history row, preserving the enforcement requirement without inventing future dates.
 
 ## [0.1.2] - 2026-07-18
 
