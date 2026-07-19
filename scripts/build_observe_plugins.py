@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Generate or verify Recursive Observe provider packages from canonical sources.
 
+Verification rejects changed, missing, and unexpected package files so the receipt covers
+the complete distributable surface rather than only known paths.
+
 provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa;
 P-2026-044 Observe-first provider proof.
 """
