@@ -155,6 +155,61 @@ def test_materializer_never_probes_through_an_escaping_symlink() -> None:
         assert escaped_probes == [], f"filesystem probe escaped worktree: {escaped_probes}"
 
 
+def test_relative_registry_path_properties_are_platform_independent() -> None:
+    materializer = load_module(
+        "materialize_path_properties", HOOKS / "materialize_worktree_repos.py"
+    )
+    rng = random.Random(2026071901)
+    valid = [
+        "nested/repository",
+        "nested\\repository",
+        "mixed\\nested/repository",
+        "unicodé/路径",
+        "percent/%2e%2e-is-literal",
+        "missing/parents/are-valid",
+    ]
+    valid.extend(
+        f"generated/{''.join(rng.choice('abcXYZ019_-%') for _ in range(30))}"
+        for _ in range(100)
+    )
+    for value in valid:
+        parts = materializer._relative_parts(value)
+        assert parts
+        assert ".." not in parts
+
+    invalid = [
+        "", ".", "..", "../outside", "nested/../../outside", "nested\\..\\outside",
+        "/absolute", "\\absolute", "C:\\absolute", "C:/absolute",
+        "\\\\server\\share\\outside", "//server/share/outside", "nested//empty", "a\0b",
+    ]
+    for value in invalid:
+        assert materializer._relative_parts(value) is None, value
+
+
+def test_repository_root_properties_reject_prefix_collisions_and_traversal() -> None:
+    cartograph = load_module("cartograph_path_properties", ROOT / "cartograph" / "extract.py")
+    rng = random.Random(2026071902)
+    with tempfile.TemporaryDirectory() as raw:
+        root = Path(raw) / "authority"
+        root.mkdir()
+        original_root = cartograph.ROOT
+        cartograph.ROOT = str(root)
+        try:
+            inside = [root / "unicodé" / "路径", root / "%2e%2e" / "literal"]
+            inside.extend(
+                root / "generated" / "".join(rng.choice("abcXYZ019_-%") for _ in range(30))
+                for _ in range(100)
+            )
+            for path in inside:
+                assert cartograph._repo_path(str(path)) is not None
+            outside = root.parent / f"{root.name}-prefix-collision" / "file"
+            assert cartograph._repo_path(str(outside)) is None
+            assert cartograph._repo_path(str(root / ".." / "outside")) is None
+            assert cartograph._repo_path("a\0b") is None
+        finally:
+            cartograph.ROOT = original_root
+
+
 def test_untrusted_gitdir_pointer_cannot_certify_a_stale_worktree() -> None:
     guard = load_module(
         "worktree_isolation_boundary_contract", HOOKS / "guard_worktree_isolation.py"
