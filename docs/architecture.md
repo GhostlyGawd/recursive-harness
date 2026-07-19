@@ -84,7 +84,7 @@ The machine-readable [capability catalog](../capabilities/catalog.json) maps six
 Observe, Learn, Verify, Coordinate, Guard, and Lab. Observe is `generated-beta`: one
 canonical skill plus the shared private-state helper produces a self-contained generic
 Agent Skill, Claude and Codex manifests, and a source-hash receipt. Guard is a separate
-`generated-preview` Codex package that is inert without a reviewed repository policy and
+`generated-beta` local Codex package that is inert without a reviewed repository policy and
 can never arrive as a hidden dependency. Learn, Verify, Coordinate, and Lab remain
 `planned`, not published plugins. Advisory capabilities prohibit default repository writes
 and operational capabilities disclose their state.

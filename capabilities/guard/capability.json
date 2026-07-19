@@ -4,7 +4,7 @@
   "id": "recursive-guard",
   "display_name": "Recursive Guard",
   "capability_version": "0.1.0",
-  "packaging_status": "generated-preview",
+  "packaging_status": "generated-beta",
   "safety_class": "enforcement",
   "default_repository_writes": "never",
   "repository_writes": "reviewed-integration-only",
@@ -19,7 +19,7 @@
     {
       "provider": "codex",
       "path": "plugins/recursive-guard/.codex-plugin/plugin.json",
-      "status": "generated-preview"
+      "status": "generated-beta"
     }
   ]
 }

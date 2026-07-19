@@ -65,7 +65,11 @@ def main() -> int:
             "## Completion evidence",
         ):
             require(heading in text, f"{name} is missing {heading}")
-        require("- [ ]" in text, f"{name} needs executable task checkboxes")
+        if "Status: verified" in text:
+            require("- [x]" in text, f"{name} needs completed task checkboxes")
+            require("- [ ]" not in text, f"{name} is verified but still has open tasks")
+        else:
+            require("- [ ]" in text, f"{name} needs executable task checkboxes")
         for keyword in ("Given", "When", "Then"):
             require(re.search(rf"^\s*{keyword}\b", text, re.MULTILINE) is not None,
                     f"{name} is missing BDD keyword {keyword}")

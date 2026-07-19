@@ -19,8 +19,8 @@ their normal explicit decisions and reviews.
   `repo-audit` governance change aligns the portfolio records with that decision.
 - The approved non-invasive capability boundary is now defined in P-2026-044 and ADR 0013.
   Read-only inspection, canonical manifests, generated Observe/Specialization packages, and
-  the separately trusted Guard preview are delivered; broader package extraction and live
-  Codex consumer validation remain.
+  the separately trusted Guard package are delivered. Observe and Guard now have immutable-ref
+  Codex install/cache execution evidence; broader package extraction remains.
 
 ## P0 — consolidate ownership without duplicating the runtime
 
@@ -37,19 +37,19 @@ unless concrete threat or consumer evidence justifies their cost.
 
 ### 0.1 Define and prove the provider adapter contract
 
-**Delivered as experimental proofs:** the Specialization provider contract and the separate
-Guard policy contract now have shared fixtures, generated-source drift receipts, marketplace
-entries, and narrow Codex packages. Local Codex installation dogfood and release evidence
-remain required before widening compatibility claims.
+**Delivered as narrow proofs:** the Specialization provider contract and the separate Guard
+policy contract have shared fixtures, generated-source drift receipts, repository-catalog
+entries, and Codex packages. Observe and Guard additionally have local Codex installation
+dogfood; Specialization, hosted web, and public marketplace distribution remain unverified.
 
 Extract the smallest contract needed to expose canonical capabilities without copying them:
 capability/version metadata, lifecycle mapping, shared fixtures, unsupported-event
 disclosure, and install/upgrade/removal behavior. The existing Claude integration is the
 first adapter in substance even where its files predate the abstraction.
 
-The OpenAI/Codex proofs package only Specialization and Guard. Their provider packages expose
-and wire canonical capabilities without making the full harness portable. Do not claim broad
-agent support from these narrow proofs.
+The OpenAI/Codex proofs package Observe, Specialization, and Guard. Their provider packages
+expose and wire canonical capabilities without making the full harness portable. Do not
+claim broad agent support from these narrow proofs.
 
 ### 0.2 Extract the capability suite in risk order
 

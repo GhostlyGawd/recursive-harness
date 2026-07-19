@@ -10,7 +10,7 @@ servers, or repository settings.
 | Surface | Status | Evidence |
 | --- | --- | --- |
 | Generic Agent Skill | Generated beta | The generated, self-contained `plugins/recursive-observe/skills/observe` package validates and passes copied-package execution |
-| Codex plugin | Generated preview | Manifest validation, source receipt, copied-package execution, and coexistence fixture pass; a live Codex consumer run is still required |
+| Codex plugin | Generated beta | [Codex CLI 0.144.6 consumer acceptance](codex-consumer-acceptance.md), source receipt, installed-cache execution, and zero-write coexistence pass |
 | Claude Code plugin | Generated beta | [Claude Code 2.1.200 consumer acceptance](observe-claude-acceptance.md), source receipt, and coexistence fixture pass |
 | ChatGPT Work web / hosted Codex | Experimental | Plugin discovery is supported by the product, but state persistence and bundled Python execution still need live consumer evidence |
 | Claude Code web | Unverified | Do not assume local plugin state persists in a hosted session until a real acceptance run proves it |
@@ -25,14 +25,13 @@ provider manifests, to its reviewed SHA-256 hash.
 
 ## Install for Codex
 
-Add this Git repository as a marketplace, then install Recursive Observe from the plugin
-browser in a new session:
+Add this Git repository as a catalog at the tested immutable revision, then install
+Recursive Observe with the stable plugin CLI:
 
 ```bash
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref main
-codex
-# Enter /plugins, select the recursive-harness marketplace, install recursive-observe,
-# then start a new Codex session.
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+codex plugin add recursive-observe@recursive-harness
+codex plugin list
 ```
 
 In ChatGPT desktop, open **Plugins** in Work mode or Codex after the marketplace is
@@ -86,10 +85,9 @@ prove that the package and receipt match canonical sources. Rollback selects a r
 tag or commit in the marketplace; it never rewrites the consumer repository or deletes
 private state.
 
-Official host references: [Codex plugins](https://learn.chatgpt.com/docs/plugins),
-[Codex plugin authoring](https://learn.chatgpt.com/docs/build-plugins),
-[Claude Code plugins](https://code.claude.com/docs/en/plugins-reference), and
-[Claude marketplaces](https://code.claude.com/docs/en/plugin-marketplaces).
+The exact Codex commands and installed-cache behavior above are replayed by
+`scripts/record_codex_consumer_acceptance.py`. Public marketplace discovery remains a
+separate Phase 8 claim; this Git-backed catalog is deliberately not presented as that listing.
 
 <!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-044 Observe-first distribution. -->

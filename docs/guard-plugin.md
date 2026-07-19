@@ -6,19 +6,21 @@ no repository and enforces nothing.
 
 ## Status and boundary
 
-The 0.1.0 adapter is a generated preview for local Codex hosts. It bundles one
+The 0.1.0 adapter is a generated beta for local Codex hosts. It bundles one
 `PreToolUse` command hook, so Codex skips it until the operator reviews and trusts the exact
 hook definition. This matches Codex's non-managed plugin-hook trust model.
 
 The hook activates only when the current Git repository already contains a reviewed,
-regular `.recursive-guard.json`. No policy means no output and no effect. The preview covers
+regular `.recursive-guard.json`. No policy means no output and no effect. The beta covers
 supported `Bash`, `apply_patch`, `Edit`, and `Write` tool paths; it is a guardrail, not a
 sandbox, and does not replace repository permissions, branch protection, or CI.
 
 ## Install
 
-```text
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref main
+```bash
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+codex plugin add recursive-guard@recursive-harness
+codex plugin list
 ```
 
 Install **Recursive Guard** from the Recursive Harness marketplace, start a new task, open
@@ -52,6 +54,11 @@ With no policy, output is empty, every byte remains identical, and no file is ad
 fixtures exercise audit/enforce decisions, policy validation, package tampering, and an
 unexpected-payload rejection.
 
+The [Codex consumer acceptance](codex-consumer-acceptance.md) additionally proves a fresh
+official Codex CLI install from the immutable repository snapshot, complete cache receipt
+verification, exact no-policy no-op, audit warn/allow, enforcement denial, and zero retained
+consumer-repository changes.
+
 This is evidence for coexistence, not a universal-host claim. Claude Code and hosted web
 agents do not install this Codex hook package; use repository permissions and CI for shared
 enforcement on those surfaces.
@@ -61,7 +68,7 @@ enforcement on those surfaces.
 Disable or uninstall the plugin in the Codex Plugins browser to stop the hook. Repository
 policy remains repository-owned and untouched. Remove it only as a separate reviewed change.
 
-Official contract references: [Codex Hooks](https://developers.openai.com/codex/hooks) and
-[Codex plugins](https://developers.openai.com/codex/plugins).
+The tested command and hook contract is captured locally in the acceptance record and
+package receipt. No public-marketplace or hosted-web support is inferred from this local run.
 
 <!-- provenance: 2026-07-19 P-2026-044 guard acceptance slice. -->

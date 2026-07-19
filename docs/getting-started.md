@@ -125,10 +125,11 @@ with your normal Claude setup.
 Recursive Observe is the first namespaced provider package from the canonical
 [capability catalog](../capabilities/README.md). It has a source-hash receipt and a standalone
 coexistence fixture; follow the [Observe guide](observe-plugin.md) for user-scoped Claude,
-Codex marketplace, or generic Agent Skill installation. [Recursive Guard](guard-plugin.md)
-is a separate Codex preview that stays inert until a repository explicitly adds a reviewed
-policy and the operator separately trusts its hook. The remaining capability manifests are
-design contracts, not installable compatibility claims.
+Codex repository catalog, or generic Agent Skill installation. [Recursive Guard](guard-plugin.md)
+is a separate local Codex beta that stays inert until a repository explicitly adds a reviewed
+policy and the operator separately trusts its hook. The immutable-ref install and installed
+cache execution are recorded in [Codex consumer acceptance](codex-consumer-acceptance.md).
+The remaining capability manifests are design contracts, not installable compatibility claims.
 
 ## 5. Verify the working loop
 
