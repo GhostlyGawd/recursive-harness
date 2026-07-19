@@ -59,7 +59,8 @@ or updates `candidates/<domain-key>/` immediately. Never store transcripts or fu
 prompts. Multiple observations in one provider session add shapes but count as one
 recurrence. If a generic gap later resolves to an existing owner, `add` archives
 the generic draft and rebases from that owner. It rejects a domain already bound
-to a different target skill; resolve the collision instead of combining owners.
+to a different target skill, including a targetless gap observation; continue
+through the known owner or resolve the collision instead of clearing provenance.
 
 ## 3. Author and dogfood now
 

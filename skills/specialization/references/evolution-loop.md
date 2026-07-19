@@ -22,6 +22,8 @@ generic sibling candidate.
 If a generic gap is later traced to an existing owner, archive the generic draft
 and rebase the candidate from that owner. If the domain is already bound to a
 different owner, reject the target change and resolve the domain collision.
+Likewise reject a targetless gap observation for a bound domain so it cannot erase
+the known owner between two corrections.
 
 ## Dogfood sequence
 

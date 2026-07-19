@@ -301,6 +301,38 @@ def test_candidate_rejects_cross_owner_target_change_before_evidence():
         assert "name: owner-b" not in content
 
 
+def test_bound_candidate_rejects_gap_then_other_owner_without_evidence():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        source_a = _write_source(directory, "owner-a")
+        assert needs.cmd_add(_add_args(
+            domain="bound workflow", learning_kind="correction",
+            target_skill="owner-a", target_provenance="repo@a",
+            source_skill=str(source_a),
+        )) == 0
+        before = needs._all_needs()["bound-workflow"]
+        candidate = Path(before["candidate_dir"])
+
+        assert needs.cmd_add(_add_args(
+            domain="bound workflow", learning_kind="gap", session="session-2",
+            shape="misclassified observation without its known owner",
+        )) == 1
+        source_b = _write_source(directory, "owner-b")
+        assert needs.cmd_add(_add_args(
+            domain="bound workflow", learning_kind="correction", session="session-3",
+            shape="attempted owner replacement", target_skill="owner-b",
+            target_provenance="repo@b", source_skill=str(source_b),
+        )) == 1
+
+        after = needs._all_needs()["bound-workflow"]
+        manifest = json.loads(candidate.joinpath("candidate.json").read_text(encoding="utf-8"))
+        content = candidate.joinpath("SKILL.md").read_text(encoding="utf-8")
+        assert after["evidence_count"] == before["evidence_count"] == 1
+        assert manifest["target_skill"] == "owner-a"
+        assert manifest["target_provenance"] == "repo@a"
+        assert "name: owner-a" in content
+        assert "name: owner-b" not in content
+
+
 def test_new_evidence_reopens_candidate_and_old_proof_cannot_validate_revision():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
         assert needs.cmd_add(_add_args()) == 0

@@ -2,11 +2,11 @@
   "capability": "specialization",
   "canonical_repository": "GhostlyGawd/recursive-harness",
   "contract_version": 1,
-  "source_tree_sha256": "e1e24f81f5d6fb54f867da3ab2588dd5a14bf8e917f0d1237f602d084b5b6527",
+  "source_tree_sha256": "053e5d0148e2a937494ec476183af5e0bd8db5959cc963719aa8369b5b1a409d",
   "sources": {
     "skills/specialization/needs.py": {
       "packaged_path": "skills/specialization/scripts/needs.py",
-      "sha256": "e8306e4b3d57d89c35be3c49463c9d5217085c2e1a9590ceffef0caf0d546887"
+      "sha256": "1ac2e290c6b4429ba9fa25c31faf3f9558245842f3db3a9e36b712b562c002af"
     },
     "private_state.py": {
       "packaged_path": "skills/specialization/scripts/private_state.py",
@@ -14,7 +14,7 @@
     },
     "skills/specialization/references/evolution-loop.md": {
       "packaged_path": "skills/specialization/references/evolution-loop.md",
-      "sha256": "bdae4a201cee03aa46be0962eac11d7e0502bda9add42becd36883f97183adbf"
+      "sha256": "0950abf540cecd7e1e4f037ad79c8a06003bb6621f72eb7e9005acf902919fc0"
     }
   }
 }

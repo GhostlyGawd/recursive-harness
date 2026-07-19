@@ -48,7 +48,8 @@ the owner.
 updates the candidate immediately. It never needs prior-chat access and must not
 store transcripts or full prompts. A generic gap later matched to an existing
 owner is archived and rebased from that source. A domain already bound to another
-target is rejected rather than silently combining two owners.
+target, or later reported as a targetless gap, is rejected rather than clearing or
+silently combining owners. Continue through the known provenance owner.
 
 ## Author and dogfood now
 

@@ -357,10 +357,10 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
     revision = previous_revision + 1
     existing_target = manifest.get("target_skill") or None
     requested_target = record.get("target_skill") or None
-    if existing_target and requested_target and existing_target != requested_target:
+    if existing_target and existing_target != requested_target:
         raise ValueError(
             f"candidate already belongs to target skill {existing_target!r}; "
-            "use a distinct domain or resolve the provenance collision"
+            "continue with that owner or resolve the provenance collision"
         )
     rebase_from_source = bool(
         source_skill and previous_manifest and requested_target
@@ -483,10 +483,10 @@ def cmd_add(args):
         )
         existing_target = existing_manifest.get("target_skill") or None
         requested_target = args.target_skill.strip() or None
-        if existing_target and requested_target and existing_target != requested_target:
+        if existing_target and existing_target != requested_target:
             print(
                 f"candidate already belongs to target skill {existing_target!r}; "
-                "use a distinct domain or resolve the provenance collision",
+                "continue with that owner or resolve the provenance collision",
                 file=sys.stderr,
             )
             return 1
