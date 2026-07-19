@@ -42,7 +42,9 @@ name the former checkout ledger explicitly:
 
 Migration is idempotent and does not delete the former ledger.
 Each open imported need without a candidate receives a private draft so it can
-enter the same dogfood workflow as newly observed evidence.
+enter the same dogfood workflow as newly observed evidence. The importer accepts
+only the documented `state/skill_needs.jsonl` shape, discards stored candidate
+paths, and reconstructs private paths beneath the provider-neutral state root.
 
 ## Upgrade and rollback
 

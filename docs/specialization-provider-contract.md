@@ -16,7 +16,8 @@ The first observation of a reusable `gap`, `correction`, or `improvement` must:
 A `correction` or `improvement` must identify its target skill, canonical
 provenance, and a readable source `SKILL.md`; an adapter must not fall back to a
 new generic expert when those amendment inputs are absent or the target name does
-not match the source frontmatter.
+not match the source frontmatter. The source input must resolve to a literal
+`SKILL.md`; a `gap` cannot carry owner inputs.
 
 When later evidence proves that a generic gap belongs to an existing skill, the
 candidate must archive its prior draft and rebase from the named source. Once a
@@ -63,7 +64,9 @@ supports it.
 The `migrate --from-path <checkout>/state/skill_needs.jsonl` command idempotently
 imports an explicitly named former checkout-local ledger, activates private
 candidates for open imported needs, and leaves the source untouched. Provider
-packages never guess a checkout path.
+packages never guess a checkout path. Migration accepts only a literal
+`state/skill_needs.jsonl`, discards legacy candidate paths, and rebuilds candidate
+identity from a compact single-line domain before any filesystem access.
 
 ## Adapter contract
 

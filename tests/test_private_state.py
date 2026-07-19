@@ -118,6 +118,27 @@ def test_explicit_root_confines_extracted_consumers():
         assert ps.read_jsonl(path, root=d) == [{"id": 1}]
 
 
+def test_private_document_reads_are_confined_and_parsed():
+    with tempfile.TemporaryDirectory() as d:
+        root = os.path.join(d, "state")
+        text_path = os.path.join(root, "candidate", "SKILL.md")
+        json_path = os.path.join(root, "candidate", "candidate.json")
+        ps.atomic_write_text(text_path, "procedure\n", root=root)
+        ps.atomic_write_json(json_path, {"revision": 2}, root=root)
+        assert ps.read_text(text_path, root=root) == "procedure\n"
+        assert ps.read_json(json_path, root=root) == {"revision": 2}
+
+        outside = os.path.join(d, "outside.json")
+        with open(outside, "w", encoding="utf-8") as stream:
+            json.dump({"secret": True}, stream)
+        try:
+            ps.read_json(outside, root=root)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("private document read escaped its state root")
+
+
 def test_parent_traversal_is_refused_even_when_it_normalizes_inside_root():
     with tempfile.TemporaryDirectory() as d:
         root = os.path.join(d, "state")

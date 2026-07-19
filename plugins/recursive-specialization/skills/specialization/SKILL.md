@@ -41,8 +41,9 @@ For an existing skill, follow the provenance in its `SKILL.md` and add
 `--target-skill`, `--target-provenance`, and `--source-skill` pointing to the
 canonical source. All three are mandatory for a correction or improvement so a
 missing provenance owner cannot silently become a sibling skill; the target must
-also match the source frontmatter name. Never edit the installed plugin cache as
-the owner.
+also match the source frontmatter name, and the source must resolve to a literal
+`SKILL.md`. A `gap` cannot carry owner inputs. Never edit the installed plugin
+cache as the owner.
 
 `add` writes compact evidence to a provider-neutral private ledger and creates or
 updates the candidate immediately. It never needs prior-chat access and must not

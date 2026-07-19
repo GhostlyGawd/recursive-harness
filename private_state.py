@@ -344,6 +344,19 @@ def path_exists(path, *, root=None):
     return os.path.exists(path)
 
 
+def read_text(path, *, root=None):
+    """Read one UTF-8 document after enforcing the private-state boundary."""
+    path, boundary = _resolve_private_path(path, root=root)
+    with _locked(path, boundary):
+        with open(path, encoding="utf-8") as stream:
+            return stream.read()
+
+
+def read_json(path, *, root=None):
+    """Read one JSON document after enforcing the private-state boundary."""
+    return json.loads(read_text(path, root=root))
+
+
 def _replace(tmp, path):
     for attempt in range(_REPLACE_RETRIES):
         try:

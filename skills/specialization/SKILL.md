@@ -43,7 +43,8 @@ python3 skills/specialization/needs.py add \
 For an existing skill, follow its provenance to the canonical source and seed an
 amendment candidate from that source. Corrections and improvements require all
 three provenance arguments and a readable source skill; `add` rejects a generic
-sibling draft when any is missing or the target does not match source frontmatter:
+sibling draft when any is missing or the target does not match source frontmatter.
+The source must resolve to a literal `SKILL.md`; a `gap` cannot carry owner inputs:
 
 ```sh
 python3 skills/specialization/needs.py add \

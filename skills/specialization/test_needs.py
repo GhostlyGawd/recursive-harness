@@ -95,7 +95,8 @@ def _dogfood_args(selector, case, **overrides):
 
 
 def _write_source(directory, name="existing-skill"):
-    source = Path(directory) / f"{name}-SKILL.md"
+    source = Path(directory) / name / "SKILL.md"
+    source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(
         f"---\nname: {name}\ndescription: Existing behavior.\n---\n\n"
         "# Existing\n\nDo work.\n",
@@ -135,6 +136,14 @@ def test_domain_key_normalizes():
     assert needs._domain_key("React  State-Management!") == "react-state-management"
     assert needs._domain_key("React state management") == "react-state-management"
     assert needs._domain_key("") == "unknown"
+
+
+def test_domain_label_is_single_line_and_candidate_dir_is_confined():
+    assert needs._domain_label("  YAML\n---\tbreakout  ") == "YAML --- breakout"
+    with tempfile.TemporaryDirectory() as directory:
+        state = Path(directory) / "specialization"
+        candidate = Path(needs._candidate_dir("../../outside", str(state)))
+        assert candidate == state / "candidates" / "outside"
 
 
 def test_nid_stable_and_rederivable():
@@ -245,6 +254,23 @@ def test_existing_skill_feedback_requires_provenance_and_source():
         args.source_skill = str(_write_source(directory, "different-skill"))
         assert needs.cmd_add(args) == 1
         assert not state.joinpath("skill_needs.jsonl").exists()
+
+
+def test_gap_rejects_owner_inputs_and_source_requires_literal_skill_filename():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        source = _write_source(directory, "owner-skill")
+        assert needs.cmd_add(_add_args(
+            source_skill=str(source), target_skill="owner-skill",
+            target_provenance="repo@abc",
+        )) == 1
+
+        wrong_name = Path(directory) / "owner.md"
+        wrong_name.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        assert needs.cmd_add(_add_args(
+            learning_kind="correction", source_skill=str(wrong_name),
+            target_skill="owner-skill", target_provenance="repo@abc",
+        )) == 1
+        assert not Path(needs.resolve_state_dir(), "skill_needs.jsonl").exists()
 
 
 def test_gap_candidate_rebases_from_discovered_provenance_owner():
@@ -441,7 +467,8 @@ def test_parallel_nudge_claim_has_exactly_one_winner():
 
 def test_migration_and_add_do_not_lose_each_others_evidence():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
-        legacy = Path(directory) / "legacy-race.jsonl"
+        legacy = Path(directory) / "former-checkout" / "state" / "skill_needs.jsonl"
+        legacy.parent.mkdir(parents=True)
         legacy.write_text(json.dumps({
             "ts": "2026-06-27T00:00:00+00:00", "kind": "evidence",
             "domain": "Legacy race", "domain_key": "legacy-race", "session": "old-1",
@@ -500,7 +527,8 @@ def test_validation_racing_new_evidence_cannot_validate_old_revision():
 
 def test_migration_is_idempotent():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
-        legacy = Path(directory) / "legacy.jsonl"
+        legacy = Path(directory) / "former-checkout" / "state" / "skill_needs.jsonl"
+        legacy.parent.mkdir(parents=True)
         legacy.write_text(json.dumps({
             "ts": "2026-06-27T00:00:00+00:00", "kind": "evidence",
             "domain": "Legacy gap", "domain_key": "legacy-gap", "session": "old-1",
@@ -516,6 +544,32 @@ def test_migration_is_idempotent():
         migrated = needs._all_needs()["legacy-gap"]
         assert migrated["candidate_status"] == "drafting"
         assert Path(migrated["candidate_dir"], "SKILL.md").exists()
+
+
+def test_migration_rejects_wrong_shape_and_normalizes_hostile_paths():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        wrong = Path(directory) / "legacy.jsonl"
+        wrong.write_text("{}\n", encoding="utf-8")
+        assert needs.cmd_migrate(argparse.Namespace(from_path=str(wrong))) == 2
+
+        legacy = Path(directory) / "former-checkout" / "state" / "skill_needs.jsonl"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text(json.dumps({
+            "ts": "2026-06-27T00:00:00+00:00", "kind": "evidence",
+            "domain": "../../outside\n---", "domain_key": "../../outside",
+            "candidate_dir": str(Path(directory) / "outside"),
+            "session": "old-1", "shape": "legacy shape", "tags": [],
+            "category": "general",
+        }) + "\n", encoding="utf-8")
+        assert needs.cmd_migrate(argparse.Namespace(from_path=str(legacy))) == 0
+
+        migrated = needs._all_needs()["outside"]
+        state = Path(needs.resolve_state_dir())
+        assert Path(migrated["candidate_dir"]) == state / "candidates" / "outside"
+        assert Path(migrated["candidate_dir"], "SKILL.md").exists()
+        assert not (Path(directory) / "outside" / "SKILL.md").exists()
+        rows = needs._read(needs._ledger(), needs.resolve_state_dir())
+        assert all(row.get("candidate_dir") != str(Path(directory) / "outside") for row in rows)
 
 
 def test_malformed_lines_tolerated():

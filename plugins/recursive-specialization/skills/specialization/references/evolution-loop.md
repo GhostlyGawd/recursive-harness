@@ -18,6 +18,8 @@ For `correction` and `improvement`, target skill, provenance, and readable sourc
 are mandatory inputs, and the target must match the source frontmatter name. If
 the owner cannot be located, stop and resolve provenance; never substitute a
 generic sibling candidate.
+The source input resolves to a literal `SKILL.md`; targetless gaps never carry
+owner or source fields.
 
 If a generic gap is later traced to an existing owner, archive the generic draft
 and rebase the candidate from that owner. If the domain is already bound to a

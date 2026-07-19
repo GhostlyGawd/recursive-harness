@@ -85,11 +85,16 @@ def _transaction_file(state_dir=None):
 
 
 def _candidate_dir(domain_key, state_dir=None):
-    return os.path.join(_candidate_root(state_dir), domain_key)
+    return os.path.join(_candidate_root(state_dir), _domain_key(domain_key))
 
 
 def _domain_key(domain):
     return re.sub(r"[^a-z0-9]+", "-", (domain or "").lower()).strip("-") or "unknown"
+
+
+def _domain_label(domain):
+    """Keep untrusted domain text single-line before it enters YAML or a ledger."""
+    return " ".join(str(domain or "").split())[:200] or "unknown"
 
 
 def _nid(domain_key):
@@ -128,9 +133,10 @@ def _aggregate(records):
     """Fold evidence, candidate, dogfood, and status events by normalized domain."""
     needs = {}
     for record in sorted(records, key=lambda row: row.get("ts", "")):
-        domain_key = record.get("domain_key")
-        if not domain_key:
+        raw_domain = record.get("domain") or record.get("domain_key")
+        if not raw_domain:
             continue
+        domain_key = _domain_key(str(raw_domain))
         need = needs.setdefault(domain_key, {
             "nid": _nid(domain_key),
             "domain_key": domain_key,
@@ -277,24 +283,19 @@ def _resolve_selector(needs, selector):
     return hits[0] if len(hits) == 1 else None
 
 
-def _read_candidate_manifest(path):
-    if not os.path.exists(path):
+def _read_candidate_manifest(path, state_dir):
+    if not private_state.path_exists(path, root=state_dir):
         return {}
     try:
-        with open(path, encoding="utf-8") as stream:
-            value = json.load(stream)
+        value = private_state.read_json(path, root=state_dir)
         return value if isinstance(value, dict) else {}
     except (OSError, ValueError):
         return {}
 
 
-def _source_skill_name(path):
+def _source_skill_name(content):
     """Read the small frontmatter name needed to bind an amendment to its owner."""
-    try:
-        with open(path, encoding="utf-8") as stream:
-            lines = stream.read().splitlines()
-    except (OSError, UnicodeError):
-        return ""
+    lines = content.splitlines()
     if not lines or lines[0].strip() != "---":
         return ""
     for line in lines[1:]:
@@ -303,6 +304,30 @@ def _source_skill_name(path):
         if line.lower().startswith("name:"):
             return line.split(":", 1)[1].strip().strip("\"'")
     return ""
+
+
+def _resolve_named_input(path, filename, parent="", must_exist=True):
+    """Resolve one explicit read-only input and enforce its documented shape."""
+    raw = os.fspath(path)
+    if not isinstance(raw, str) or not raw.strip() or "\0" in raw:
+        raise ValueError(f"input must name {filename}")
+    resolved = os.path.realpath(os.path.abspath(os.path.expanduser(raw)))
+    if os.path.basename(resolved) != filename:
+        raise ValueError(f"input must name {filename}")
+    if parent and os.path.basename(os.path.dirname(resolved)) != parent:
+        raise ValueError(f"{filename} must be directly inside {parent}/")
+    if must_exist and not os.path.isfile(resolved):
+        raise ValueError(f"input must name a readable existing {filename}")
+    return resolved
+
+
+def _read_source_skill(path):
+    resolved = _resolve_named_input(path, "SKILL.md")
+    try:
+        with open(resolved, encoding="utf-8") as stream:
+            return stream.read()
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("input must name a readable existing SKILL.md") from exc
 
 
 def _candidate_seed(domain, domain_key, learning_kind, target_skill, event_id):
@@ -344,13 +369,13 @@ def _mark_source_candidate(source):
     return DRAFT_MARKER + "\n\n" + source
 
 
-def _ensure_candidate(record, source_skill="", state_dir=None):
+def _ensure_candidate(record, source_content="", state_dir=None):
     state = state_dir or resolve_state_dir()
     domain_key = record["domain_key"]
     directory = _candidate_dir(domain_key, state)
     manifest_path = os.path.join(directory, "candidate.json")
     skill_path = os.path.join(directory, "SKILL.md")
-    manifest = _read_candidate_manifest(manifest_path)
+    manifest = _read_candidate_manifest(manifest_path, state)
     previous_manifest = dict(manifest)
     created = not manifest
     previous_revision = int(manifest.get("revision", 0))
@@ -363,7 +388,7 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
             "continue with that owner or resolve the provenance collision"
         )
     rebase_from_source = bool(
-        source_skill and previous_manifest and requested_target
+        source_content and previous_manifest and requested_target
         and (not existing_target or previous_manifest.get("status") == "promoted")
     )
     evidence_ids = list(manifest.get("evidence_ids", []))
@@ -384,11 +409,10 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
     })
     manifest.pop("validated_at", None)
     manifest.pop("promoted_at", None)
-    if not os.path.exists(skill_path):
+    if not private_state.path_exists(skill_path, root=state):
         content = ""
-        if source_skill:
-            with open(source_skill, encoding="utf-8") as stream:
-                content = _mark_source_candidate(stream.read())
+        if source_content:
+            content = _mark_source_candidate(source_content)
         if not content:
             content = _candidate_seed(
                 record["domain"], domain_key, record["learning_kind"],
@@ -396,20 +420,17 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
             )
         private_state.atomic_write_text(skill_path, content, root=state)
     elif rebase_from_source:
-        with open(skill_path, encoding="utf-8") as stream:
-            content = stream.read()
+        content = private_state.read_text(skill_path, root=state)
         archive_path = os.path.join(
             directory, "revisions", f"revision-{previous_revision}-before-rebase-SKILL.md"
         )
         private_state.atomic_write_text(archive_path, content, root=state)
-        with open(source_skill, encoding="utf-8") as stream:
-            content = _mark_source_candidate(stream.read())
+        content = _mark_source_candidate(source_content)
         private_state.atomic_write_text(skill_path, content, root=state)
         manifest["rebased_at"] = _now()
         manifest["rebased_from_revision"] = previous_revision
     else:
-        with open(skill_path, encoding="utf-8") as stream:
-            content = stream.read()
+        content = private_state.read_text(skill_path, root=state)
         if DRAFT_MARKER not in content:
             private_state.atomic_write_text(
                 skill_path, _mark_source_candidate(content), root=state
@@ -441,10 +462,16 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
 
 def cmd_add(args):
     state = resolve_state_dir()
-    source_skill = (os.path.abspath(os.path.expanduser(args.source_skill))
-                    if args.source_skill else "")
+    source_content = ""
     if not args.domain.strip() or not args.shape.strip():
         print("domain and shape must contain non-whitespace evidence", file=sys.stderr)
+        return 1
+    if args.learning_kind == "gap" and any(str(value).strip() for value in (
+            args.target_skill, args.target_provenance, args.source_skill)):
+        print(
+            "a gap has no provenance owner; use correction or improvement to amend a skill",
+            file=sys.stderr,
+        )
         return 1
     if args.learning_kind in ("correction", "improvement"):
         missing = [name for name, value in (
@@ -459,17 +486,20 @@ def cmd_add(args):
                 file=sys.stderr,
             )
             return 1
-        if not os.path.isfile(source_skill):
-            print("--source-skill must name a readable existing SKILL.md", file=sys.stderr)
+        try:
+            source_content = _read_source_skill(args.source_skill)
+        except ValueError as exc:
+            print(f"--source-skill {exc}", file=sys.stderr)
             return 1
-        source_name = _source_skill_name(source_skill)
+        source_name = _source_skill_name(source_content)
         if source_name != args.target_skill.strip():
             print(
                 "--target-skill must match the name in --source-skill frontmatter",
                 file=sys.stderr,
             )
             return 1
-    domain_key = _domain_key(args.domain)
+    domain = _domain_label(args.domain)
+    domain_key = _domain_key(domain)
     session = (args.session or os.environ.get("CLAUDE_SESSION_ID")
                or os.environ.get("CODEX_SESSION_ID") or "unknown")
     provider = args.provider
@@ -479,7 +509,7 @@ def cmd_add(args):
         )
     with private_state.exclusive_lock(_transaction_file(state), root=state):
         existing_manifest = _read_candidate_manifest(
-            os.path.join(_candidate_dir(domain_key, state), "candidate.json")
+            os.path.join(_candidate_dir(domain_key, state), "candidate.json"), state
         )
         existing_target = existing_manifest.get("target_skill") or None
         requested_target = args.target_skill.strip() or None
@@ -494,7 +524,7 @@ def cmd_add(args):
             "ts": _now(),
             "kind": "evidence",
             "learning_kind": args.learning_kind,
-            "domain": args.domain.strip(),
+            "domain": domain,
             "domain_key": domain_key,
             "category": args.category,
             "tags": _parse_tags(args.tags),
@@ -508,7 +538,7 @@ def cmd_add(args):
         }
         record = _append(_ledger(state), record, state)
         try:
-            candidate_dir, created = _ensure_candidate(record, source_skill, state)
+            candidate_dir, created = _ensure_candidate(record, source_content, state)
         except (OSError, UnicodeError, ValueError) as exc:
             print(f"evidence logged but candidate creation failed: {exc}", file=sys.stderr)
             return 1
@@ -640,7 +670,7 @@ def cmd_candidate_dogfood(args):
             print("dogfood evidence fields must contain non-whitespace values", file=sys.stderr)
             return 1
         manifest = _read_candidate_manifest(
-            os.path.join(need["candidate_dir"], "candidate.json")
+            os.path.join(_candidate_dir(need["domain_key"], state), "candidate.json"), state
         )
         revision = int(manifest.get("revision", 1))
         record = _append(_ledger(state), {
@@ -678,12 +708,11 @@ def cmd_candidate_validate(args):
         if need["status"] != "open" or need["candidate_status"] != "drafting":
             print("validation requires an open drafting candidate", file=sys.stderr)
             return 1
-        directory = need["candidate_dir"] or _candidate_dir(need["domain_key"], state)
+        directory = _candidate_dir(need["domain_key"], state)
         skill_path = os.path.join(directory, "SKILL.md")
         try:
-            with open(skill_path, encoding="utf-8") as stream:
-                content = stream.read()
-        except OSError as exc:
+            content = private_state.read_text(skill_path, root=state)
+        except (OSError, ValueError) as exc:
             print(f"candidate SKILL.md unavailable: {exc}", file=sys.stderr)
             return 1
         if DRAFT_MARKER in content:
@@ -691,7 +720,7 @@ def cmd_candidate_validate(args):
                   file=sys.stderr)
             return 1
         manifest_path = os.path.join(directory, "candidate.json")
-        manifest = _read_candidate_manifest(manifest_path)
+        manifest = _read_candidate_manifest(manifest_path, state)
         revision = int(manifest.get("revision", 1))
         worked = [row for row in need["dogfoods"]
                   if row.get("outcome") == "worked"
@@ -763,7 +792,7 @@ def _status_write(selector, new_status, skill=None):
             manifest_path = os.path.join(
                 _candidate_dir(need["domain_key"], state), "candidate.json"
             )
-            manifest = _read_candidate_manifest(manifest_path)
+            manifest = _read_candidate_manifest(manifest_path, state)
             manifest["status"] = "promoted"
             manifest["promoted_at"] = _now()
             private_state.atomic_write_json(manifest_path, manifest, root=state)
@@ -780,6 +809,29 @@ def cmd_promoted(args):
     return _status_write(args.selector, "built", args.skill)
 
 
+def _normalize_legacy_record(value):
+    """Remove path-bearing legacy fields and rebuild stable identity from its domain."""
+    if not isinstance(value, dict):
+        return None
+    record = dict(value)
+    raw_domain = str(record.get("domain") or record.get("domain_key") or "").strip()
+    if not raw_domain:
+        return None
+    record["domain"] = _domain_label(record.get("domain") or raw_domain)
+    record["domain_key"] = _domain_key(record["domain"])
+    record.pop("candidate_dir", None)
+    record["schema_version"] = int(record.get("schema_version") or 1)
+    record["provider"] = str(record.get("provider") or "claude-legacy")
+    if record.get("learning_kind") not in LEARNING_KINDS:
+        record["learning_kind"] = "gap"
+    if record["learning_kind"] == "gap":
+        record.pop("target_skill", None)
+        record.pop("target_provenance", None)
+    record.pop("event_id", None)
+    record["event_id"] = _event_id(record)
+    return record
+
+
 def cmd_migrate(args):
     state = resolve_state_dir()
     if not args.from_path:
@@ -788,22 +840,28 @@ def cmd_migrate(args):
             file=sys.stderr,
         )
         return 2
-    source = os.path.abspath(os.path.expanduser(args.from_path))
+    try:
+        source = _resolve_named_input(
+            args.from_path, "skill_needs.jsonl", "state", must_exist=False
+        )
+    except ValueError as exc:
+        print(f"migration {exc}", file=sys.stderr)
+        return 2
     if not os.path.exists(source):
         print(f"no legacy ledger at {source}; nothing to migrate")
         return 0
+    if not os.path.isfile(source):
+        print("migration input must name a readable existing skill_needs.jsonl", file=sys.stderr)
+        return 2
     legacy = []
     with open(source, encoding="utf-8") as stream:
         for line in stream:
             try:
-                row = json.loads(line)
+                row = _normalize_legacy_record(json.loads(line))
             except (TypeError, ValueError):
                 continue
-            row.setdefault("schema_version", 1)
-            row.setdefault("provider", "claude-legacy")
-            row.setdefault("learning_kind", "gap")
-            row.setdefault("event_id", _event_id(row))
-            legacy.append(row)
+            if row:
+                legacy.append(row)
     with private_state.exclusive_lock(_transaction_file(state), root=state):
         target = _ledger(state)
         current = _read(target, state)
