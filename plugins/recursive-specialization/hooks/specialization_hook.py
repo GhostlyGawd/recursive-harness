@@ -5,14 +5,15 @@ provenance: 2026-07-18, first OpenAI/Codex provider proof; hook I/O verified
 against the official Codex Hooks contract on that date.
 """
 import json
-import os
 from pathlib import Path
+import re
 import sys
 
 
-PLUGIN_ROOT = Path(os.environ.get("PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = PLUGIN_ROOT / "skills" / "specialization" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+EVENT_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 try:
     import needs
@@ -37,12 +38,23 @@ def cli_invocation():
     return f'"{sys.executable}" "{cli_path()}"'
 
 
+def event_identifier(data, key):
+    """Keep host identifiers inert when they are embedded in hook context."""
+    value = data.get(key)
+    return value if isinstance(value, str) and EVENT_ID.fullmatch(value) else "unknown"
+
+
+def candidate_label(item):
+    """Use storage-safe identifiers, never free-form evidence, in model-facing context."""
+    return f"{item['nid']} [{item['domain_key']}]"
+
+
 def on_session_start(data):
     pending = [] if needs is None else needs.attention_items(threshold=needs.DEFAULT_REVIEW_THRESHOLD)
     suffix = ""
     if pending:
         first = pending[0]
-        suffix = (f" Pending: '{first['domain']}' is {first['attention']} at "
+        suffix = (f" Pending candidate {candidate_label(first)} is {first['attention']} at "
                   f"{first['candidate_dir']}.")
     emit_context("SessionStart", (
         "Recursive Specialization is active. It cannot browse prior chats; it uses one "
@@ -53,8 +65,8 @@ def on_session_start(data):
 
 
 def on_user_prompt(data):
-    session = data.get("session_id") or "unknown"
-    turn = data.get("turn_id") or "unknown"
+    session = event_identifier(data, "session_id")
+    turn = event_identifier(data, "turn_id")
     permission = data.get("permission_mode") or "default"
     if permission == "plan":
         instruction = (
@@ -76,7 +88,7 @@ def on_user_prompt(data):
 def on_stop(data):
     if data.get("stop_hook_active") or needs is None:
         return
-    session = data.get("session_id") or "unknown"
+    session = event_identifier(data, "session_id")
     pending = needs.attention_items(session=session, threshold=needs.DEFAULT_REVIEW_THRESHOLD)
     if not pending:
         return
@@ -84,7 +96,7 @@ def on_stop(data):
     if data.get("permission_mode") == "plan":
         print(json.dumps({
             "systemMessage": (
-                f"Specialization candidate '{first['domain']}' is {first['attention']}; "
+            f"Specialization candidate {candidate_label(first)} is {first['attention']}; "
                 "Plan Mode left it queued without mutation."
             )
         }))
@@ -97,19 +109,19 @@ def on_stop(data):
     if first["attention"] == "dogfood-now":
         reason = (
             f"Before finishing, complete the first-observation candidate for "
-            f"'{first['domain']}' at {first['candidate_dir']}. Replay the triggering case "
+            f"{candidate_label(first)} at {first['candidate_dir']}. Replay the triggering case "
             f"and record worked/partial/failed with `{cli_invocation()} candidate "
             f"dogfood {first['nid']} ...`."
         )
     elif first["attention"] == "promotion-ready":
         reason = (
-            f"Candidate '{first['domain']}' is proof-validated at {first['candidate_dir']}. "
+            f"Candidate {candidate_label(first)} is proof-validated at {first['candidate_dir']}. "
             "Surface it to the user and request approval before modifying its canonical "
             "provenance owner, installing it, pushing a branch, or opening a PR."
         )
     else:
         reason = (
-            f"Candidate '{first['domain']}' has recurred in {first['recurrence']} distinct "
+            f"Candidate {candidate_label(first)} has recurred in {first['recurrence']} distinct "
             "sessions without successful dogfood. Finish a falsifiable replay; recurrence "
             "raises urgency but is not proof."
         )
