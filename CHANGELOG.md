@@ -22,6 +22,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   module into its distributable surface.
 - Added a generated-preview Codex Specialization adapter with external private candidates,
   lifecycle hooks, a complete receipt-bound package surface, and explicit trust/removal limits.
+- Added Recursive Guard as a separately installed and separately trusted Codex preview. It is
+  inert without a reviewed repository policy, never rewrites existing agent configuration,
+  carries a complete source receipt, and is not an advisory-plugin dependency.
 - Allowed multiple reviewed proposal updates on one date when each change appends a distinct
   lifecycle-history row, preserving the enforcement requirement without inventing future dates.
 

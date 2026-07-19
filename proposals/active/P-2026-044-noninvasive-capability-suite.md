@@ -16,6 +16,7 @@ resolution: ""
 | --- | --- | --- | --- |
 | 2026-07-19 | approved | in-progress | Owner approved the non-invasive sidecar and capability-plugin-suite implementation after identifying that the silo and project-contract model could conflict with existing agent setups |
 | 2026-07-19 | approved | in-progress | Receipt-bound Claude Code 2.1.200 user-scope installation and cached-package execution passed; Codex remains generated preview pending its own consumer run |
+| 2026-07-19 | approved | in-progress | Added a separately installable and trusted Codex Guard preview with no-policy no-op behavior, receipt-bound packaging, two existing-config coexistence fixtures, and hosted workflow coverage |
 <!-- proposal-history:end -->
 
 ## Problem
@@ -86,9 +87,9 @@ consumer repository and cannot promote itself.
   [consumer acceptance evidence](../../docs/observe-claude-acceptance.md).
 - [ ] The Codex adapter passes a real receipt-bound consumer installation and execution; it
   remains generated preview until then.
-- [ ] `recursive-guard` remains separately installable, separately trusted, and never a
+- [x] `recursive-guard` remains separately installable, separately trusted, and never a
   dependency of advisory plugins.
-- [ ] At least two existing consumer configurations and one hosted GitHub workflow validate
+- [x] At least two existing consumer configurations and one hosted GitHub workflow validate
   portability before the README claims broad provider support.
 
 ## Non-goals

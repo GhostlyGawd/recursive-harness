@@ -37,8 +37,9 @@ but the full production integration today is the advanced Claude Code reference 
 Observe now ships as a generated-beta Claude and generic Agent Skill package plus a
 generated-preview Codex package. Recursive also includes an experimental, narrow OpenAI/Codex
 [Specialization adapter](docs/codex-specialization.md); it packages that canonical capability
-rather than making the entire harness installable. Learn, Verify, Coordinate, Guard, and Lab
-remain planned. See the [Observe guide](docs/observe-plugin.md),
+rather than making the entire harness installable. The separately trusted, no-op-by-default
+[Recursive Guard](docs/guard-plugin.md) is also available as a Codex preview. Learn, Verify,
+Coordinate, and Lab remain planned. See the [Observe guide](docs/observe-plugin.md),
 [capability catalog](capabilities/README.md), [architecture](docs/architecture.md), and
 [Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
 migration status.
@@ -154,7 +155,7 @@ repositories use reviewed immutable commits unless explicitly marked as developm
 | --- | --- | --- |
 | Compatibility inspection | No | You want a deterministic inventory of existing agent configuration before deciding anything |
 | Personal sidecar | No | You want explicit prediction, outcome, privacy, structure, or coordination commands while keeping the project's setup untouched |
-| Namespaced capability plugin | Observe: Claude/generic beta, Codex preview; others planned | You want prediction scoring inside Claude or Codex without adopting the full runtime |
+| Namespaced capability plugin | Observe: Claude/generic beta and Codex preview; Specialization and Guard: narrow Codex previews; others planned | You want one capability without adopting the full runtime or replacing provider configuration |
 | Reviewed repository integration | Exact proposed diff only | A team deliberately wants shared workflow or CI configuration in the repository |
 | Full Claude reference runtime | No target-source writes, but it selects a separate Claude configuration | You want the complete hooks, agents, skills, settings, and safety model and accept isolation from your normal Claude config |
 
@@ -187,6 +188,22 @@ The self-contained package is generated from one canonical skill plus the shared
 helper and carries a SHA-256 source receipt.
 See [Recursive Observe](docs/observe-plugin.md) for generic-skill installation, privacy,
 uninstall, and the honest hosted-web compatibility limits.
+
+### Add enforcement only through a separate trust decision
+
+Recursive Guard is a distinct Codex plugin, never a dependency of Observe or
+Specialization. Installing it changes no repository and produces no hook output until a
+repository owner reviews and commits `.recursive-guard.json`. Start with `audit`; use
+`enforce` only after testing one allowed and one protected operation.
+
+```bash
+# Add the same marketplace, then install recursive-guard separately from /plugins.
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref main
+```
+
+Review the exact hook in `/hooks` before trusting it. Guard covers supported local Bash and
+`apply_patch` paths; it is not a sandbox and does not replace GitHub permissions or CI. See
+[Recursive Guard](docs/guard-plugin.md) for the policy, coexistence proof, and removal path.
 
 ## Install in five minutes
 
@@ -244,7 +261,8 @@ backups, ignored state, and the checkout are retained for deliberate inspection.
 | Supported beta | Read-only inspection; personal sidecar CLI; full Claude install/account flow; hooks and review gates; Cartograph; proposal governance | Continuously tested on the supported baseline; breaking changes remain possible before 1.0 and require aligned docs/evidence |
 | Optional | Fleet MCP adapter and Mission Control TUI | Tested separately with pinned dependency snapshots; not required for the core loop |
 | Generated beta / preview | Recursive Observe for Claude and generic Agent Skills is generated beta; Codex is generated preview | Generated artifacts, source receipt, validation, standalone runtime, and coexistence fixtures pass; live Codex and hosted-state validation remain open |
-| Planned | Learn, Verify, Coordinate, Guard, and Lab provider packages | Capability manifests exist; provider packages and broad compatibility claims require generated artifacts and consumer evidence |
+| Generated preview | Recursive Guard for Codex | Separately installed and trusted; inert without a reviewed repository policy; receipt-bound and coexistence-tested, but not a sandbox |
+| Planned | Learn, Verify, Coordinate, and Lab provider packages | Capability manifests exist; provider packages and broad compatibility claims require generated artifacts and consumer evidence |
 | Experimental | Product/venture workflows, extraction proposals, and product-build tooling | Available for evaluation without a compatibility promise |
 | Internal/legacy | Raw state schemas, graph internals, calibration storage, and `--global-legacy` install | Not a public integration surface; legacy install is a guarded migration path only |
 

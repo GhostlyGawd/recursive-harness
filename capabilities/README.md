@@ -8,7 +8,8 @@ current Claude reference runtime is already a universal package. Each manifest m
 namespaced capability to its canonical sources, safety class, state behavior, event needs,
 default behavior, and any separately invoked repository-write policy.
 
-The manifests are source maps, not installable plugins. `packaging_status: planned` and an
+The manifests are source maps; only entries naming generated provider packages are installable.
+`packaging_status: planned` and an
 empty `provider_packages` list mean exactly that. Provider artifacts must be generated from
 these canonical paths, include source-hash receipts, and pass shared plus provider-specific
 coexistence fixtures before their status changes.
@@ -20,6 +21,11 @@ The extraction order is deliberate:
 3. `recursive-coordinate` — explicit runtime operations;
 4. `recursive-guard` — separate high-trust integration;
 5. `recursive-lab` — experimental and capability-specific.
+
+Observe currently ships as generated beta/preview packages. Guard ships as a separate Codex
+preview with its own trust decision and is inert until a repository explicitly adopts a
+reviewed policy. The other catalog entries remain design contracts unless their manifest says
+otherwise.
 
 Existing consumer instructions, agents, skills, hooks, and provider settings remain
 authoritative. `default_repository_writes: never` means ordinary activation is read-only;

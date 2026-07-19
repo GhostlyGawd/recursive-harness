@@ -568,11 +568,16 @@ def test_observe_provider_package() -> None:
               and codex_marketplace["plugins"][0]["policy"]["installation"] == "AVAILABLE"
               and codex_marketplace["plugins"][0]["source"]["path"] == "./plugins/recursive-observe")
         codex_plugins = {item["name"]: item for item in codex_marketplace["plugins"]}
-        check("Codex marketplace preserves both opt-in packages",
-              set(codex_plugins) == {"recursive-observe", "recursive-specialization"}
+        check("Codex marketplace preserves all opt-in packages",
+              set(codex_plugins) == {
+                  "recursive-observe", "recursive-specialization", "recursive-guard"
+              }
               and codex_plugins["recursive-specialization"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-specialization"]["source"]["path"]
-              == "./plugins/recursive-specialization")
+              == "./plugins/recursive-specialization"
+              and codex_plugins["recursive-guard"]["policy"]["installation"] == "AVAILABLE"
+              and codex_plugins["recursive-guard"]["source"]["path"]
+              == "./plugins/recursive-guard")
         check("Claude marketplace points to the same package",
               claude_marketplace["plugins"][0]["name"] == "recursive-observe"
               and claude_marketplace["plugins"][0]["source"] == "./plugins/recursive-observe")
@@ -620,7 +625,10 @@ def test_capability_catalog() -> None:
     }
     by_id = {manifest["id"]: manifest for manifest in manifests}
     check("capability catalog defines the complete approved suite", set(by_id) == expected)
-    planned = [manifest for manifest in manifests if manifest["id"] != "recursive-observe"]
+    planned = [
+        manifest for manifest in manifests
+        if manifest["id"] not in {"recursive-observe", "recursive-guard"}
+    ]
     check("unbuilt capability manifests remain truthful plans",
           all(manifest["packaging_status"] == "planned" and manifest["provider_packages"] == []
               for manifest in planned))
@@ -628,6 +636,13 @@ def test_capability_catalog() -> None:
           by_id["recursive-observe"]["packaging_status"] == "generated-beta"
           and {item["provider"] for item in by_id["recursive-observe"]["provider_packages"]}
           == {"agent-skills", "claude-code", "codex"})
+    check("Guard names only its generated Codex preview",
+          by_id["recursive-guard"]["packaging_status"] == "generated-preview"
+          and by_id["recursive-guard"]["provider_packages"] == [{
+              "provider": "codex",
+              "path": "plugins/recursive-guard/.codex-plugin/plugin.json",
+              "status": "generated-preview",
+          }])
     check("every canonical capability component exists",
           all((ROOT / component).exists()
               for manifest in manifests for component in manifest["canonical_components"]))

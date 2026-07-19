@@ -1,0 +1,41 @@
+{
+  "capability": "recursive-guard",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "provider_manifests": [
+    ".codex-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "1acc5a4096ff47391a0c61ba814fc435ff404f60976a1e0afafef7ae5c389717",
+  "package_tree_sha256": "73aaebc1686deda7b157e8e2126c33643407d0bf9339fe1e2e51583c52563aa5",
+  "package_files": {
+    ".codex-plugin/plugin.json": "3357cbca54746a1e4aa1935ed88e153813015ef8bc363e129450d7f44a289978",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "hooks/hooks.json": "8cfb27c237ddeaad954e021876394e58605ba7f8ca8915c6326a74852cc90665",
+    "skills/guard/SKILL.md": "6781dd9400fd18f15afe3be1fe36ac5c2dc3d40b2d6df01627a64393bbd878c4",
+    "skills/guard/agents/openai.yaml": "d722ddc4b34988a3ee203fed1d524b8899b883fc936ca3b7f0c8d959efc1ae95",
+    "skills/guard/references/policy.md": "1ed50941d8c732db33e52f023438860521f45c3103e08698f2fcf3dd192db486",
+    "skills/guard/scripts/guard_hook.py": "ca5b43691a6a4efc4ce277bc3160cc1429ec94c1c2cc0021af90b2e40716687b"
+  },
+  "sources": {
+    "skills/guard/SKILL.md": {
+      "packaged_path": "skills/guard/SKILL.md",
+      "sha256": "6781dd9400fd18f15afe3be1fe36ac5c2dc3d40b2d6df01627a64393bbd878c4"
+    },
+    "skills/guard/agents/openai.yaml": {
+      "packaged_path": "skills/guard/agents/openai.yaml",
+      "sha256": "d722ddc4b34988a3ee203fed1d524b8899b883fc936ca3b7f0c8d959efc1ae95"
+    },
+    "skills/guard/references/policy.md": {
+      "packaged_path": "skills/guard/references/policy.md",
+      "sha256": "1ed50941d8c732db33e52f023438860521f45c3103e08698f2fcf3dd192db486"
+    },
+    "skills/guard/scripts/guard_hook.py": {
+      "packaged_path": "skills/guard/scripts/guard_hook.py",
+      "sha256": "ca5b43691a6a4efc4ce277bc3160cc1429ec94c1c2cc0021af90b2e40716687b"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

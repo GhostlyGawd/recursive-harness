@@ -1,0 +1,19 @@
+{
+  "description": "No-op-by-default protection for explicitly reviewed repository paths.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'skills','guard','scripts','guard_hook.py'),run_name='__main__')\"",
+            "commandWindows": "python -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'skills','guard','scripts','guard_hook.py'),run_name='__main__')\"",
+            "timeout": 10,
+            "statusMessage": "Checking reviewed Recursive Guard policy"
+          }
+        ]
+      }
+    ]
+  }
+}

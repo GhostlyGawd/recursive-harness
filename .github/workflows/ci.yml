@@ -39,6 +39,7 @@ jobs:
           python3 tests/test_hooks.py
           python3 tests/test_post_merge_return_to_trunk.py
           python3 tests/test_pre_merge_ci_gate.py
+          python3 skills/guard/test_guard.py
       - name: Kernel-injection & session-start hook tests
         if: ${{ !cancelled() }}
         run: |
