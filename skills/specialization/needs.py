@@ -853,7 +853,7 @@ def cmd_migrate(args):
     if not os.path.isfile(source):
         print("migration input must name a readable existing skill_needs.jsonl", file=sys.stderr)
         return 2
-    legacy = []
+    parsed = []
     with open(source, encoding="utf-8") as stream:
         for line in stream:
             try:
@@ -861,7 +861,14 @@ def cmd_migrate(args):
             except (TypeError, ValueError):
                 continue
             if row:
-                legacy.append(row)
+                parsed.append(row)
+    quarantined_domains = {
+        row["domain_key"] for row in parsed
+        if row.get("kind") == "evidence"
+        and row.get("learning_kind") in ("correction", "improvement")
+    }
+    quarantined = [row for row in parsed if row["domain_key"] in quarantined_domains]
+    legacy = [row for row in parsed if row["domain_key"] not in quarantined_domains]
     with private_state.exclusive_lock(_transaction_file(state), root=state):
         target = _ledger(state)
         current = _read(target, state)
@@ -885,12 +892,19 @@ def cmd_migrate(args):
         receipt_name = private_state.safe_filename_id(source, "migration") + ".json"
         private_state.atomic_write_json(os.path.join(state, "migrations", receipt_name), {
             "source": source,
-            "source_records": len(legacy),
+            "source_records": len(parsed),
             "imported_records": len(imported),
+            "quarantined_records": len(quarantined),
+            "quarantined_domains": sorted(quarantined_domains),
             "completed_at": _now(),
         }, root=state)
-    print(f"migration complete: imported {len(imported)} of {len(legacy)} legacy records; "
-          f"activated {activated} candidates")
+    print(f"migration complete: imported {len(imported)} of {len(parsed)} legacy records; "
+          f"activated {activated} candidates; quarantined {len(quarantined)} records")
+    if quarantined:
+        print(
+            "  re-record quarantined correction/improvement domains through their "
+            "provenance owner and literal SKILL.md"
+        )
     return 0
 
 

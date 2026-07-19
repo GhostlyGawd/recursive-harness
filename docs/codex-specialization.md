@@ -45,6 +45,8 @@ Each open imported need without a candidate receives a private draft so it can
 enter the same dogfood workflow as newly observed evidence. The importer accepts
 only the documented `state/skill_needs.jsonl` shape, discards stored candidate
 paths, and reconstructs private paths beneath the provider-neutral state root.
+Domains containing correction or improvement evidence are quarantined and counted
+in the migration receipt; re-record them with their literal owner `SKILL.md`.
 
 ## Upgrade and rollback
 

@@ -66,7 +66,9 @@ imports an explicitly named former checkout-local ledger, activates private
 candidates for open imported needs, and leaves the source untouched. Provider
 packages never guess a checkout path. Migration accepts only a literal
 `state/skill_needs.jsonl`, discards legacy candidate paths, and rebuilds candidate
-identity from a compact single-line domain before any filesystem access.
+identity from a compact single-line domain before any filesystem access. A domain
+containing correction or improvement evidence is quarantined because migration
+cannot prove its source `SKILL.md`; re-record it through the provenance owner.
 
 ## Adapter contract
 

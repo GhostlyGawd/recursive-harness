@@ -572,6 +572,53 @@ def test_migration_rejects_wrong_shape_and_normalizes_hostile_paths():
         assert all(row.get("candidate_dir") != str(Path(directory) / "outside") for row in rows)
 
 
+def test_migration_quarantines_domains_with_unverifiable_amendments():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        legacy = Path(directory) / "former-checkout" / "state" / "skill_needs.jsonl"
+        legacy.parent.mkdir(parents=True)
+        rows = [
+            {
+                "ts": "2026-06-27T00:00:00+00:00", "kind": "evidence",
+                "domain": "Owner claim", "domain_key": "owner-claim",
+                "learning_kind": "gap", "session": "old-1", "shape": "first gap",
+            },
+            {
+                "ts": "2026-06-28T00:00:00+00:00", "kind": "evidence",
+                "domain": "Owner claim", "domain_key": "owner-claim",
+                "learning_kind": "correction", "target_skill": "trusted-owner",
+                "target_provenance": "trusted/repo@abc", "session": "old-2",
+                "shape": "unverifiable owner amendment",
+            },
+            {
+                "ts": "2026-06-29T00:00:00+00:00", "kind": "candidate",
+                "domain": "Owner claim", "domain_key": "owner-claim",
+                "action": "drafting", "candidate_dir": "../../trusted-owner",
+            },
+            {
+                "ts": "2026-06-30T00:00:00+00:00", "kind": "evidence",
+                "domain": "Safe legacy gap", "domain_key": "safe-legacy-gap",
+                "learning_kind": "gap", "session": "old-3", "shape": "safe gap",
+            },
+        ]
+        legacy.write_text(
+            "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+        )
+
+        assert needs.cmd_migrate(argparse.Namespace(from_path=str(legacy))) == 0
+        migrated = needs._all_needs()
+        assert "owner-claim" not in migrated
+        assert migrated["safe-legacy-gap"]["candidate_status"] == "drafting"
+        state = Path(needs.resolve_state_dir())
+        assert not (state / "candidates" / "owner-claim").exists()
+        receipts = list((state / "migrations").glob("*.json"))
+        assert len(receipts) == 1
+        receipt = json.loads(receipts[0].read_text(encoding="utf-8"))
+        assert receipt["source_records"] == 4
+        assert receipt["imported_records"] == 1
+        assert receipt["quarantined_records"] == 3
+        assert receipt["quarantined_domains"] == ["owner-claim"]
+
+
 def test_malformed_lines_tolerated():
     with tempfile.TemporaryDirectory() as directory:
         ledger = Path(directory) / "state" / "skill_needs.jsonl"
