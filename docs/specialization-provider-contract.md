@@ -74,8 +74,12 @@ cannot prove its source `SKILL.md`; re-record it through the provenance owner.
 
 An adapter must:
 
-- package byte-equivalent `needs.py`, `private_state.py`, and the shared evidence
-  reference, verified by `scripts/build_codex_specialization_plugin.py --check`;
+- package the canonical `needs.py` with only its local storage-module import rewritten,
+  a byte-equivalent `private_state.py` under the collision-resistant
+  `specialization_state.py` name, and the shared evidence reference;
+- bind every manifest, hook, skill file, runtime, reference, and license in the generated
+  package receipt and reject missing, changed, or unexpected payloads with
+  `scripts/build_codex_specialization_plugin.py --check`;
 - pass the canonical ledger tests and provider lifecycle fixtures;
 - inject exact provider/session/turn identity into the active agent;
 - fail open on malformed hook input or unavailable local state;

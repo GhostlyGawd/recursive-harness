@@ -567,6 +567,12 @@ def test_observe_provider_package() -> None:
               codex_marketplace["plugins"][0]["name"] == "recursive-observe"
               and codex_marketplace["plugins"][0]["policy"]["installation"] == "AVAILABLE"
               and codex_marketplace["plugins"][0]["source"]["path"] == "./plugins/recursive-observe")
+        codex_plugins = {item["name"]: item for item in codex_marketplace["plugins"]}
+        check("Codex marketplace preserves both opt-in packages",
+              set(codex_plugins) == {"recursive-observe", "recursive-specialization"}
+              and codex_plugins["recursive-specialization"]["policy"]["installation"] == "AVAILABLE"
+              and codex_plugins["recursive-specialization"]["source"]["path"]
+              == "./plugins/recursive-specialization")
         check("Claude marketplace points to the same package",
               claude_marketplace["plugins"][0]["name"] == "recursive-observe"
               and claude_marketplace["plugins"][0]["source"] == "./plugins/recursive-observe")

@@ -3,7 +3,8 @@
 `recursive-specialization` installs only the Specialization capability. It does
 not install Recursive Harness as a whole.
 
-Version 0.1 supports local Codex hosts in the ChatGPT desktop app, CLI, and IDE.
+Version 0.1 is a generated preview designed for local Codex hosts in the ChatGPT desktop
+app, CLI, and IDE; live consumer acceptance is still required before promotion to beta.
 It requires Python 3 on the host. ChatGPT web, Codex cloud, automatic prior-chat
 import, and cross-device state synchronization are not supported.
 

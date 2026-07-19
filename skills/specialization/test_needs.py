@@ -10,6 +10,7 @@ import json
 import multiprocessing as mp
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -638,6 +639,41 @@ def test_codex_packaged_runtime_matches_canonical_when_generated():
     result = subprocess.run([sys.executable, str(script), "--check"], cwd=ROOT,
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_codex_package_receipt_binds_complete_surface():
+    plugin = ROOT / "plugins" / "recursive-specialization"
+    receipt = json.loads((plugin / "canonical-source.json").read_text(encoding="utf-8"))
+    packaged = set(receipt.get("package_files", {}))
+    assert ".codex-plugin/plugin.json" in packaged
+    assert "hooks/specialization_hook.py" in packaged
+    assert "skills/specialization/scripts/specialization_state.py" in packaged
+    assert "LICENSE" in packaged
+    assert "skills/specialization/scripts/private_state.py" not in packaged
+
+    with tempfile.TemporaryDirectory() as directory:
+        copied = Path(directory) / "recursive-specialization"
+        shutil.copytree(plugin, copied)
+        (copied / ".codex-plugin" / "plugin.json").write_text(
+            '{"name":"tampered"}\n', encoding="utf-8"
+        )
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_codex_specialization_plugin.py"),
+             "--check", "--plugin-dir", str(copied)],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 1
+        assert "drift: plugins/recursive-specialization/.codex-plugin/plugin.json" in result.stderr
+        assert "Traceback" not in result.stderr
+
+        (copied / "unexpected-payload.txt").write_text("not receipted\n", encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_codex_specialization_plugin.py"),
+             "--check", "--plugin-dir", str(copied)],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 1
+        assert "unexpected packaged file: unexpected-payload.txt" in result.stderr
 
 
 def test_codex_packaged_migration_requires_explicit_legacy_path():

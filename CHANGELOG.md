@@ -20,6 +20,8 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Narrowed Recursive Observe storage to one fixed ledger below the user's home directory;
   the package accepts no caller-selected path and no longer copies the harness-wide storage
   module into its distributable surface.
+- Added a generated-preview Codex Specialization adapter with external private candidates,
+  lifecycle hooks, a complete receipt-bound package surface, and explicit trust/removal limits.
 - Allowed multiple reviewed proposal updates on one date when each change appends a distinct
   lifecycle-history row, preserving the enforcement requirement without inventing future dates.
 
