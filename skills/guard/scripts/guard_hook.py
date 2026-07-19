@@ -12,17 +12,35 @@ import sys
 
 POLICY_NAME = ".recursive-guard.json"
 MAX_POLICY_BYTES = 65536
+MAX_EVENT_CHARS = 1048576
+MAX_COMMAND_CHARS = 524288
 MUTATION = re.compile(
     r"(?i)(?:^|[;&|\s])(?:rm|mv|cp|install|touch|truncate|tee|dd|sed\s+-i|"
-    r"git\s+(?:checkout|restore|clean)|set-content|add-content|out-file|"
-    r"remove-item|move-item|copy-item|new-item)(?:\s|$)|(?:^|[^<])>{1,2}(?!>)"
+    r"chmod|chown|ln|python\d*|perl|ruby|node|bash|zsh|pwsh|powershell|cmd|"
+    r"git\s+(?:apply|checkout|restore|clean|mv|rm)|set-content|add-content|out-file|"
+    r"remove-item|move-item|copy-item|new-item|attrib|icacls)(?:\s|$)|"
+    r"(?:^|[^<])>{1,2}(?!>)"
 )
-PATCH_PATH = re.compile(r"^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$", re.MULTILINE)
+PATCH_PREFIXES = (
+    "*** Add File:",
+    "*** Update File:",
+    "*** Delete File:",
+    "*** Move to:",
+)
 ALLOWED_KEYS = {"schema_version", "mode", "protected_paths"}
 
 
 class PolicyError(ValueError):
     pass
+
+
+def _object_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value: dict[str, object] = {}
+    for key, item in pairs:
+        if key in value:
+            raise PolicyError(f"policy contains duplicate key: {key}")
+        value[key] = item
+    return value
 
 
 def _repository_root() -> Path | None:
@@ -35,11 +53,17 @@ def _repository_root() -> Path | None:
 
 
 def _normalize_policy_path(value: object) -> str:
-    if not isinstance(value, str) or not value.strip() or "\0" in value:
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or any(ord(character) < 32 for character in value)
+    ):
         raise PolicyError("protected paths must be non-empty strings")
     raw = value.strip().replace("\\", "/")
-    if raw.startswith("/") or re.match(r"^[A-Za-z]:", raw):
+    if raw.startswith("/") or (len(raw) >= 2 and raw[0].isalpha() and raw[1] == ":"):
         raise PolicyError("protected paths must be repository-relative")
+    if ".." in raw.split("/"):
+        raise PolicyError("protected paths must not contain parent traversal")
     normalized = os.path.normpath(raw).replace("\\", "/")
     if normalized in ("", ".", "..") or normalized.startswith("../"):
         raise PolicyError("protected paths must not traverse parents")
@@ -53,12 +77,28 @@ def _load_policy(root: Path) -> tuple[dict[str, object] | None, str | None]:
     try:
         if path.is_symlink() or getattr(os.path, "isjunction", lambda unused: False)(path):
             raise PolicyError("policy must be a regular file, not a link or junction")
-        if path.stat().st_size > MAX_POLICY_BYTES:
+        before = path.lstat()
+        if before.st_size > MAX_POLICY_BYTES:
             raise PolicyError("policy exceeds 64 KiB")
-        value = json.loads(path.read_text(encoding="utf-8"))
+        with path.open("rb") as stream:
+            raw = stream.read(MAX_POLICY_BYTES + 1)
+        after = path.lstat()
+        identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+        identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+        if (
+            identity_before != identity_after
+            or path.is_symlink()
+            or getattr(os.path, "isjunction", lambda unused: False)(path)
+        ):
+            raise PolicyError("policy changed while it was being read")
+        if len(raw) > MAX_POLICY_BYTES:
+            raise PolicyError("policy exceeds 64 KiB")
+        value = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=_object_without_duplicates
+        )
         if not isinstance(value, dict) or set(value) - ALLOWED_KEYS:
             raise PolicyError("policy has an invalid object shape or unknown keys")
-        if value.get("schema_version") != 1:
+        if type(value.get("schema_version")) is not int or value["schema_version"] != 1:
             raise PolicyError("policy schema_version must be 1")
         if value.get("mode") not in ("audit", "enforce"):
             raise PolicyError("policy mode must be audit or enforce")
@@ -97,13 +137,22 @@ def _is_protected(relative: str, protected: list[str]) -> bool:
 
 
 def _command_mentions(command: str, protected: list[str]) -> str | None:
-    normalized = command.replace("\\", "/")
+    normalized = command.replace("\\", "/").casefold()
+    left_word = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_.-")
+    right_boundary = frozenset("/ \t\r\n\"'`;:,)")
     for item in protected:
-        pattern = re.compile(
-            r"(?i)(?<![A-Za-z0-9_.-])" + re.escape(item) + r"(?=$|[/\s\"'`;:,\)])"
-        )
-        if pattern.search(normalized):
-            return item
+        needle = item.casefold()
+        offset = 0
+        while True:
+            index = normalized.find(needle, offset)
+            if index < 0:
+                break
+            end = index + len(needle)
+            left_ok = index == 0 or normalized[index - 1] not in left_word
+            right_ok = end == len(normalized) or normalized[end] in right_boundary
+            if left_ok and right_ok:
+                return item
+            offset = index + 1
     return None
 
 
@@ -116,7 +165,11 @@ def _targeted_path(data: dict[str, object], protected: list[str], root: Path) ->
         return None
     if tool == "Bash":
         command = tool_input.get("command")
-        if not isinstance(command, str) or not MUTATION.search(command):
+        if not isinstance(command, str):
+            return None
+        if len(command) > MAX_COMMAND_CHARS:
+            return "an oversized Bash command"
+        if not MUTATION.search(command):
             return None
         return _command_mentions(command, protected)
     for key in ("file_path", "path"):
@@ -125,10 +178,15 @@ def _targeted_path(data: dict[str, object], protected: list[str], root: Path) ->
             return relative
     command = tool_input.get("command")
     if tool == "apply_patch" and isinstance(command, str):
-        for raw in PATCH_PATH.findall(command):
-            relative = _relative_input_path(root, raw)
-            if relative and _is_protected(relative, protected):
-                return relative
+        if len(command) > MAX_COMMAND_CHARS:
+            return "an oversized apply_patch command"
+        for line in command.splitlines():
+            for prefix in PATCH_PREFIXES:
+                if line.startswith(prefix):
+                    relative = _relative_input_path(root, line[len(prefix):].strip())
+                    if relative and _is_protected(relative, protected):
+                        return relative
+                    break
     return None
 
 
@@ -142,13 +200,15 @@ def _deny(reason: str) -> None:
     }))
 
 
+def _uninspectable(mode: object, reason: str) -> None:
+    message = f"Recursive Guard could not inspect this tool call: {reason}."
+    if mode == "enforce":
+        _deny(message)
+    else:
+        print(json.dumps({"systemMessage": "AUDIT ONLY: " + message}))
+
+
 def main() -> int:
-    try:
-        data = json.load(sys.stdin)
-    except (TypeError, ValueError):
-        return 0
-    if not isinstance(data, dict) or data.get("hook_event_name") != "PreToolUse":
-        return 0
     root = _repository_root()
     if root is None:
         return 0
@@ -157,6 +217,17 @@ def main() -> int:
         _deny(f"Recursive Guard policy is invalid: {error}")
         return 0
     if policy is None:
+        return 0
+    raw_event = sys.stdin.read(MAX_EVENT_CHARS + 1)
+    if len(raw_event) > MAX_EVENT_CHARS:
+        _uninspectable(policy["mode"], "hook input exceeds 1 MiB")
+        return 0
+    try:
+        data = json.loads(raw_event)
+    except (TypeError, ValueError, RecursionError):
+        _uninspectable(policy["mode"], "hook input is not valid JSON")
+        return 0
+    if not isinstance(data, dict) or data.get("hook_event_name") != "PreToolUse":
         return 0
     targeted = _targeted_path(data, policy["protected_paths"], root)
     if not targeted:

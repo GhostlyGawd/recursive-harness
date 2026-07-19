@@ -9,14 +9,17 @@ Schema version 1 accepts exactly:
 - `mode`: `audit` or `enforce`;
 - `protected_paths`: one to 64 non-empty repository-relative paths with no parent traversal.
 
-Unknown keys are rejected. The policy file is always protected after it loads. Directory
-entries protect their descendants. Invalid, oversized, linked, or unreadable policies deny
-matched write-capable tools until the owner repairs the policy outside the guarded agent.
+Unknown and duplicate keys are rejected. Boolean schema versions and any parent-traversal
+segment are invalid. The policy file is always protected after it loads. Directory entries
+protect their descendants. Invalid, oversized, linked, unreadable, or concurrently changed
+policies deny matched write-capable tools until the owner repairs the policy outside the
+guarded agent.
 
 The preview observes Codex `Bash`, `apply_patch`, `Edit`, and `Write` aliases. File-edit
-tools are checked lexically against the repository boundary. Bash checking covers common
-mutation verbs and redirections when the command names a protected path. It is intentionally
-conservative and is not a complete shell parser or OS sandbox.
+tools are checked lexically against the repository boundary. Patch moves and common shell
+mutation verbs, redirections, and interpreter invocations are checked when the command names
+a protected path. Oversized or malformed hook input fails closed in `enforce` and warns in
+`audit`. This is intentionally conservative and is not a complete shell parser or OS sandbox.
 
 `audit` returns a visible warning and permits the tool call. `enforce` returns Codex's
 documented `PreToolUse` deny shape. No policy, no Git repository, or a read-only/unrelated

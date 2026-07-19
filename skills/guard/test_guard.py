@@ -58,6 +58,18 @@ def invoke(hook: Path, cwd: Path, tool: str, tool_input: dict[str, object]) -> s
     )
 
 
+def invoke_raw(hook: Path, cwd: Path, payload: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(hook)],
+        cwd=cwd,
+        input=payload,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+
+
 def policy(root: Path, mode: str = "enforce", paths: list[str] | None = None) -> None:
     write(root, ".recursive-guard.json", json.dumps({
         "schema_version": 1,
@@ -104,6 +116,7 @@ class GuardBehaviorTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
             self.assertEqual(snapshot(root), before)
+            self.assertEqual(invoke_raw(HOOK, root, "{malformed").stdout, "")
 
     def test_enforce_returns_current_codex_deny_shape_for_apply_patch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -135,6 +148,27 @@ class GuardBehaviorTests(unittest.TestCase):
                 "command": "Remove-Item .codex/config.toml"
             })
             for result in (file_result, shell_result):
+                self.assertEqual(
+                    decision(result)["hookSpecificOutput"]["permissionDecision"], "deny"
+                )
+
+    def test_enforce_blocks_move_destination_and_interpreter_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repository(Path(directory), {
+                "AGENTS.md": "preserve\n",
+                "src/source.md": "move me\n",
+            })
+            policy(root)
+            moved = invoke(HOOK, root, "apply_patch", {
+                "command": (
+                    "*** Begin Patch\n*** Update File: src/source.md\n"
+                    "*** Move to: AGENTS.md\n@@\n-old\n+new\n*** End Patch\n"
+                )
+            })
+            interpreted = invoke(HOOK, root, "Bash", {
+                "command": "python -c \"open('AGENTS.md','w').write('x')\""
+            })
+            for result in (moved, interpreted):
                 self.assertEqual(
                     decision(result)["hookSpecificOutput"]["permissionDecision"], "deny"
                 )
@@ -178,6 +212,9 @@ class GuardBehaviorTests(unittest.TestCase):
         invalid_values = [
             "{not-json",
             json.dumps({"schema_version": 1, "mode": "enforce", "protected_paths": ["../outside"]}),
+            json.dumps({"schema_version": 1, "mode": "enforce", "protected_paths": ["a/../AGENTS.md"]}),
+            json.dumps({"schema_version": True, "mode": "enforce", "protected_paths": ["AGENTS.md"]}),
+            '{"schema_version":1,"schema_version":1,"mode":"enforce","protected_paths":["AGENTS.md"]}',
             json.dumps({
                 "schema_version": 1,
                 "mode": "enforce",
@@ -192,6 +229,31 @@ class GuardBehaviorTests(unittest.TestCase):
                 output = decision(invoke(HOOK, root, "Bash", {"command": "echo safe"}))
                 self.assertEqual(output["hookSpecificOutput"]["permissionDecision"], "deny")
                 self.assertIn("policy is invalid", output["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_active_policy_handles_uninspectable_input_by_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repository(Path(directory))
+            policy(root, mode="enforce")
+            malformed = decision(invoke_raw(HOOK, root, "{malformed"))
+            oversized = decision(invoke_raw(HOOK, root, " " * (1048576 + 1)))
+            for output in (malformed, oversized):
+                self.assertEqual(output["hookSpecificOutput"]["permissionDecision"], "deny")
+                self.assertIn("could not inspect", output["hookSpecificOutput"]["permissionDecisionReason"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = repository(Path(directory))
+            policy(root, mode="audit")
+            malformed = decision(invoke_raw(HOOK, root, "{malformed"))
+            self.assertIn("AUDIT ONLY", malformed["systemMessage"])
+
+    def test_oversized_command_is_not_an_enforcement_bypass(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repository(Path(directory))
+            policy(root, mode="enforce")
+            output = decision(invoke(HOOK, root, "Bash", {
+                "command": "echo x " + ("x" * 524289)
+            }))
+            self.assertEqual(output["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_linked_policy_fails_closed_when_supported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
