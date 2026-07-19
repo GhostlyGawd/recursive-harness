@@ -438,6 +438,166 @@ def test_noninvasive_project_inspection() -> None:
                   == '{"secret":"DO_NOT_PRINT"}\n')
 
 
+def test_observe_provider_package() -> None:
+    with tempfile.TemporaryDirectory(prefix="recursive-observe-") as raw_tmp:
+        workspace = Path(raw_tmp)
+        installed = workspace / "installed-plugin"
+        shutil.copytree(ROOT / "plugins" / "recursive-observe", installed)
+        runtime = installed / "skills" / "observe" / "scripts" / "observe.py"
+        target = workspace / "existing-project"
+        target.mkdir()
+        initialized = subprocess.run(["git", "init", "-q"], cwd=target, **CAPTURE)
+        check("Observe coexistence fixture initializes a real Git repository",
+              initialized.returncode == 0, initialized.stderr)
+        (target / "AGENTS.md").write_text("existing instructions\n", encoding="utf-8")
+        (target / "CLAUDE.md").write_text("existing Claude instructions\n", encoding="utf-8")
+        (target / ".codex").mkdir()
+        (target / ".codex" / "config.toml").write_text('model = "existing"\n', encoding="utf-8")
+        before = tree_snapshot(target)
+        home = workspace / "user-home"
+        home.mkdir()
+        state = home / ".recursive-harness" / "observe"
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        env["USERPROFILE"] = str(home)
+
+        predicted = subprocess.run(
+            [sys.executable, str(runtime), "predict", "--task",
+             "Authorization: Bearer should-not-persist",
+             "--expect", "fixture passes", "--confidence", "0.8"],
+            cwd=target,
+            env=env,
+            **CAPTURE,
+        )
+        prediction_id = ""
+        if predicted.stdout.startswith("prediction logged: "):
+            prediction_id = predicted.stdout.splitlines()[0].split()[-1]
+        check("standalone Observe package records a prediction", predicted.returncode == 0 and len(prediction_id) == 8,
+              predicted.stdout + predicted.stderr)
+        ledger = state / "predictions.jsonl"
+        persisted = ledger.read_text(encoding="utf-8") if ledger.exists() else ""
+        check("Observe redacts sensitive-shaped prediction text before persistence",
+              "should-not-persist" not in persisted and "[REDACTED]" in persisted, persisted)
+
+        scored = subprocess.run(
+            [sys.executable, str(runtime), "outcome", prediction_id, "--result", "hit",
+             "--notes", "api_key=should-not-persist"],
+            cwd=target,
+            env=env,
+            **CAPTURE,
+        )
+        scorecard = subprocess.run(
+            [sys.executable, str(runtime), "scorecard", "--json"], cwd=target, env=env, **CAPTURE
+        )
+        report = json.loads(scorecard.stdout) if scorecard.returncode == 0 else {}
+        check("Observe scores the observed outcome", scored.returncode == 0 and report.get("scored") == 1,
+              scored.stdout + scored.stderr + scorecard.stdout + scorecard.stderr)
+        check("Observe redacts sensitive-shaped outcome notes before persistence",
+              "should-not-persist" not in ledger.read_text(encoding="utf-8"))
+        check("Observe exposes calibration without prediction contents",
+              report.get("hit_rate") == 1.0
+              and abs(report.get("brier", 1.0) - 0.04) < 0.000001
+              and "should-not-persist" not in scorecard.stdout)
+
+        dry_run = subprocess.run(
+            [sys.executable, str(runtime), "privacy", "purge", "--json"],
+            cwd=target,
+            env=env,
+            **CAPTURE,
+        )
+        dry_report = json.loads(dry_run.stdout) if dry_run.returncode == 0 else {}
+        check("Observe privacy purge is dry-run by default",
+              dry_report.get("apply") is False
+              and dry_report.get("records") == 1
+              and json.loads(ledger.read_text(encoding="utf-8"))["result"] == "hit")
+
+        purged = subprocess.run(
+            [sys.executable, str(runtime), "privacy", "purge", "--apply", "--json"],
+            cwd=target,
+            env=env,
+            **CAPTURE,
+        )
+        purged_report = json.loads(purged.stdout) if purged.returncode == 0 else {}
+        check("Observe deletes private evidence only with explicit apply",
+              purged_report.get("changed") is True and ledger.read_text(encoding="utf-8") == "")
+        check("Observe never changes the active repository", tree_snapshot(target) == before)
+
+        hostile_env = env.copy()
+        hostile_env["RECURSIVE_OBSERVE_STATE_DIR"] = str(target / "private-state")
+        ignored_override = subprocess.run(
+            [sys.executable, str(runtime), "scorecard"], cwd=target, env=hostile_env, **CAPTURE
+        )
+        check("Observe grants no environment-selected filesystem authority",
+              ignored_override.returncode == 0 and not (target / "private-state").exists(),
+              ignored_override.stderr)
+        check("ignored state overrides leave the active repository unchanged", tree_snapshot(target) == before)
+        if os.name != "nt":
+            check("Observe state directory is owner-only", stat.S_IMODE(state.stat().st_mode) == 0o700)
+            check("Observe ledger is owner-only", stat.S_IMODE(ledger.stat().st_mode) == 0o600)
+
+        drift = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_observe_plugins.py"), "--check"], **CAPTURE
+        )
+        check("Observe provider package matches its canonical sources", drift.returncode == 0, drift.stderr)
+        codex_manifest = json.loads((installed / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        claude_manifest = json.loads((installed / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        check("Observe package exposes both provider manifests",
+              codex_manifest["name"] == "recursive-observe"
+              and claude_manifest["name"] == "recursive-observe")
+        receipt = json.loads((installed / "canonical-source.json").read_text(encoding="utf-8"))
+        package_hashes = receipt.get("package_files", {})
+        check("Observe receipt binds both provider manifests",
+              package_hashes.get(".codex-plugin/plugin.json")
+              == hashlib.sha256(
+                  (installed / ".codex-plugin" / "plugin.json").read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest()
+              and package_hashes.get(".claude-plugin/plugin.json")
+              == hashlib.sha256(
+                  (installed / ".claude-plugin" / "plugin.json").read_bytes().replace(b"\r\n", b"\n")
+              ).hexdigest())
+        check("Observe package contains no hooks or repository settings",
+              not (installed / "hooks").exists() and not (installed / "settings.json").exists())
+        codex_marketplace = json.loads(
+            (ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8")
+        )
+        claude_marketplace = json.loads(
+            (ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
+        )
+        check("Codex marketplace keeps installation opt-in",
+              codex_marketplace["plugins"][0]["name"] == "recursive-observe"
+              and codex_marketplace["plugins"][0]["policy"]["installation"] == "AVAILABLE"
+              and codex_marketplace["plugins"][0]["source"]["path"] == "./plugins/recursive-observe")
+        check("Claude marketplace points to the same package",
+              claude_marketplace["plugins"][0]["name"] == "recursive-observe"
+              and claude_marketplace["plugins"][0]["source"] == "./plugins/recursive-observe")
+        (installed / ".codex-plugin" / "plugin.json").write_text(
+            '{"name":"tampered"}\n', encoding="utf-8"
+        )
+        tampered = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_observe_plugins.py"),
+             "--check", "--plugin-dir", str(installed)],
+            **CAPTURE,
+        )
+        check("Observe drift gate rejects a changed provider manifest",
+              tampered.returncode == 1
+              and "drift: plugins/recursive-observe/.codex-plugin/plugin.json" in tampered.stderr
+              and "Traceback" not in tampered.stderr, tampered.stdout + tampered.stderr)
+        shutil.copyfile(
+            ROOT / "plugins" / "recursive-observe" / ".codex-plugin" / "plugin.json",
+            installed / ".codex-plugin" / "plugin.json",
+        )
+        (installed / "unexpected-payload.txt").write_text("not receipted\n", encoding="utf-8")
+        extra_file = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_observe_plugins.py"),
+             "--check", "--plugin-dir", str(installed)],
+            **CAPTURE,
+        )
+        check("Observe drift gate rejects an unreceipted package file",
+              extra_file.returncode == 1
+              and "unexpected packaged file: unexpected-payload.txt" in extra_file.stderr,
+              extra_file.stdout + extra_file.stderr)
+
+
 def test_capability_catalog() -> None:
     catalog = json.loads((ROOT / "capabilities" / "catalog.json").read_text(encoding="utf-8"))
     manifests = [
@@ -454,9 +614,14 @@ def test_capability_catalog() -> None:
     }
     by_id = {manifest["id"]: manifest for manifest in manifests}
     check("capability catalog defines the complete approved suite", set(by_id) == expected)
-    check("capability manifests are canonical maps rather than false package claims",
+    planned = [manifest for manifest in manifests if manifest["id"] != "recursive-observe"]
+    check("unbuilt capability manifests remain truthful plans",
           all(manifest["packaging_status"] == "planned" and manifest["provider_packages"] == []
-              for manifest in manifests))
+              for manifest in planned))
+    check("Observe names only its generated provider packages",
+          by_id["recursive-observe"]["packaging_status"] == "generated-beta"
+          and {item["provider"] for item in by_id["recursive-observe"]["provider_packages"]}
+          == {"agent-skills", "claude-code", "codex"})
     check("every canonical capability component exists",
           all((ROOT / component).exists()
               for manifest in manifests for component in manifest["canonical_components"]))
@@ -472,8 +637,12 @@ def test_capability_catalog() -> None:
           by_id["recursive-guard"]["safety_class"] == "enforcement"
           and by_id["recursive-guard"]["repository_writes"] == "reviewed-integration-only")
     check("catalog makes existing configuration authoritative",
-          catalog["existing_configuration_authoritative"] is True
-          and catalog["marketplace_generated"] is False)
+          catalog["existing_configuration_authoritative"] is True)
+    check("catalog names both provider marketplaces",
+          catalog["marketplaces"] == {
+              "claude-code": ".claude-plugin/marketplace.json",
+              "codex": ".agents/plugins/marketplace.json",
+          })
 
 
 def test_market_surface() -> None:
@@ -528,6 +697,7 @@ def main() -> int:
     test_account_initialization()
     test_powershell_launcher()
     test_noninvasive_project_inspection()
+    test_observe_provider_package()
     test_capability_catalog()
     test_market_surface()
     if FAILURES:

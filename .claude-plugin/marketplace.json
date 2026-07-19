@@ -1,0 +1,19 @@
+{
+  "name": "recursive-harness",
+  "owner": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "metadata": {
+    "description": "Non-invasive, evidence-backed agent capabilities from Recursive Harness."
+  },
+  "plugins": [
+    {
+      "name": "recursive-observe",
+      "source": "./plugins/recursive-observe",
+      "description": "Score predictions with private sidecar state and zero repository writes.",
+      "version": "0.1.0",
+      "tags": ["agents", "calibration", "privacy"]
+    }
+  ]
+}

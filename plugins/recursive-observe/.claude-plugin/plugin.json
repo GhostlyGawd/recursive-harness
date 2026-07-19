@@ -1,0 +1,19 @@
+{
+  "name": "recursive-observe",
+  "version": "0.1.0",
+  "description": "Score predictions with private sidecar state and zero repository writes.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/observe-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "calibration",
+    "privacy",
+    "predictions"
+  ],
+  "skills": "./skills/"
+}

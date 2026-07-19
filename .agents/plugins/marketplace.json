@@ -1,0 +1,20 @@
+{
+  "name": "recursive-harness",
+  "interface": {
+    "displayName": "Recursive Harness"
+  },
+  "plugins": [
+    {
+      "name": "recursive-observe",
+      "source": {
+        "source": "local",
+        "path": "./plugins/recursive-observe"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

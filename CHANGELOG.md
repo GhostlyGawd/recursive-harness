@@ -13,6 +13,15 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   personal-sidecar adoption the public default.
 - Added versioned source manifests for the planned Observe, Learn, Verify, Coordinate,
   Guard, and Lab capability packages without claiming that provider plugins already ship.
+- Added the first generated-beta capability package: Recursive Observe for Claude Code and
+  generic Agent Skill hosts, with a generated-preview Codex adapter, private user-local
+  state, zero repository writes, SHA-256 source receipts, and explicit privacy deletion
+  controls.
+- Narrowed Recursive Observe storage to one fixed ledger below the user's home directory;
+  the package accepts no caller-selected path and no longer copies the harness-wide storage
+  module into its distributable surface.
+- Allowed multiple reviewed proposal updates on one date when each change appends a distinct
+  lifecycle-history row, preserving the enforcement requirement without inventing future dates.
 
 ## [0.1.2] - 2026-07-18
 

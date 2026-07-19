@@ -2,13 +2,11 @@
 
 ## Identity
 
-The shelf for plugins: packages bigger than one skill (their own skills/,
-commands/, optionally a plugin-level SKILL.md). As of 2026-07-02 it holds ZERO
-tracked content — both residents are vendored-live nested repos, gitignored
-with their own GitHub remotes: `prospector/` (a modular venture discovery &
-validation engine → evidence-grounded venture charters) and `wraithworld/`
-(the operating system for the saint.wraith music venture). This README is the
-first file the trunk tracks here.
+The shelf for provider and multi-skill packages. `recursive-observe/` is the first tracked
+provider package: one generated, hook-free bundle with Claude Code and Codex manifests over
+the canonical `skills/observe` capability and shared private-state helper. Its packaged
+skill is also the self-contained generic Agent Skill distribution. `prospector/` and `wraithworld/` remain
+vendored-live nested repositories with their own histories and are gitignored here.
 
 ## Why (provenance)
 
@@ -34,8 +32,9 @@ must not be a budget-bypass.
 - **Worktree materialization:** `hooks/materialize_worktree_repos.py` clones
   each `worktree-repos.json` entry into new worktrees (nested repos don't
   ride `.worktreeinclude`); no-op in the primary checkout, fails open.
-- A plugin's git history, issues, and product learnings live in ITS repo; the
-  trunk sees only the mount point.
+- A vendored-live plugin's history and product learnings live in its repository. A tracked
+  provider package stays in this trunk and carries a canonical-source receipt so generated
+  packaging cannot become a second brain.
 
 ## Operations (how to extend correctly)
 
@@ -48,7 +47,11 @@ must not be a budget-bypass.
   vendor-and-COMMIT path).
 - Adding a first-party (tracked) plugin: no ignore rule; every skill/command
   inside must pass the budgets — run `python3 lint/lint_harness.py` and
-  expect NO `note:` skip line for it.
+  expect NO `note:` skip line for it. Provider packages must additionally name their
+  canonical capability and prove generated-source parity.
+- Rebuild Observe with `python3 scripts/build_observe_plugins.py`; verify drift with
+  `python3 scripts/build_observe_plugins.py --check`. Edit canonical sources, never the
+  generated package copy.
 - Verify either way: lint output names each gitignored plugin as skipped
   (surfaced, never silent), and `python3 tests/test_materialize_worktree_repos.py`
   covers the materialization contract.
@@ -63,8 +66,13 @@ must not be a budget-bypass.
 - The boundary discipline is the learning surface: plugin-internal lessons
   stay in the plugin's repo; anything about HOW the trunk hosts plugins
   (ignore rules, materialization, lint parity) routes here via /retro.
+- A provider cache cannot import files outside its package. Observe therefore copies its
+  runtime and privacy dependency with a hash receipt while keeping one editable source.
 
 <!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 18
 (criterion 1): department README for plugins/, researched from the .gitignore
 rule comments, lint_harness.py check_plugins, the two plugins' own READMEs,
 worktree-repos.json, and hooks/materialize_worktree_repos.py. -->
+
+<!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
+P-2026-044 added the first portable capability package. -->

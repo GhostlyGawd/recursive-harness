@@ -1,0 +1,33 @@
+{
+  "name": "recursive-observe",
+  "version": "0.1.0",
+  "description": "Score predictions with private sidecar state and zero repository writes.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/observe-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "calibration",
+    "privacy",
+    "predictions"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Observe",
+    "shortDescription": "Score outcomes without touching repositories.",
+    "longDescription": "Record falsifiable expectations, score real outcomes, inspect calibration, and audit or delete sanitized private evidence without changing the active repository.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Private local state",
+      "Prediction scoring",
+      "Calibration",
+      "Privacy controls"
+    ],
+    "defaultPrompt": "Use Recursive Observe to record and score a falsifiable prediction for this task."
+  }
+}

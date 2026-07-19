@@ -23,6 +23,11 @@ NAME_RE = re.compile(r"^(P-(\d{4})-(\d{3}))-([a-z0-9]+(?:-[a-z0-9]+)*)$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 HISTORY_END = "<!-- proposal-history:end -->"
+HISTORY_HEADING = "## Status history"
+HISTORY_ROW_RE = re.compile(
+    r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*([a-z-]+)\s*\|\s*([a-z-]+)\s*\|\s*(.*?)\s*\|\s*$",
+    re.MULTILINE,
+)
 
 
 def _records_dir(root: Path) -> Path:
@@ -87,6 +92,18 @@ def lifecycle_for(meta: dict[str, str]) -> str:
     return "active"
 
 
+def history_entries(body: str) -> list[tuple[str, str, str, str]]:
+    """Read only table rows inside the bounded status-history section."""
+    marker = body.find(HISTORY_END)
+    if marker < 0:
+        return []
+    before_marker = body[:marker]
+    heading = before_marker.rfind(HISTORY_HEADING)
+    if heading < 0:
+        return []
+    return [tuple(match.groups()) for match in HISTORY_ROW_RE.finditer(before_marker[heading:])]
+
+
 def validate(root: Path = ROOT, stale_days: int = 90) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -135,13 +152,12 @@ def validate(root: Path = ROOT, stale_days: int = 90) -> tuple[list[str], list[s
                 errors.append(f"{rel}: invalid {key_date} date {raw!r}")
         if expected == "resolved" and not meta.get("resolution"):
             errors.append(f"{rel}: resolved records require resolution evidence")
-        history_rows = re.findall(
-            r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*([a-z-]+)\s*\|\s*([a-z-]+)\s*\|",
-            body, re.MULTILINE,
-        )
+        history_rows = history_entries(body)
         if not history_rows:
             errors.append(f"{rel}: missing status history row")
-        elif history_rows[-1] != (meta.get("updated"), meta.get("status"), meta.get("implementation")):
+        elif history_rows[-1][:3] != (
+            meta.get("updated"), meta.get("status"), meta.get("implementation")
+        ):
             errors.append(f"{rel}: latest status history does not match current metadata")
         if HISTORY_END not in body:
             errors.append(f"{rel}: missing proposal history marker")
@@ -267,7 +283,17 @@ def check_changed(base: str, root: Path = ROOT) -> list[str]:
         except ValueError:
             continue
         if old_body != new_body and old_meta.get("updated") == new_meta.get("updated"):
-            errors.append(f"{rel}: content changed without advancing updated/status history")
+            old_history = history_entries(old_body)
+            new_history = history_entries(new_body)
+            appended = new_history[len(old_history):]
+            history_appended = (
+                len(new_history) > len(old_history)
+                and new_history[:len(old_history)] == old_history
+                and len(set(appended)) == len(appended)
+                and not set(appended).intersection(old_history)
+            )
+            if not history_appended:
+                errors.append(f"{rel}: content changed without advancing updated/status history")
     return errors
 
 
