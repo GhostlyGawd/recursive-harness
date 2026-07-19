@@ -247,6 +247,60 @@ def test_existing_skill_feedback_requires_provenance_and_source():
         assert not state.joinpath("skill_needs.jsonl").exists()
 
 
+def test_gap_candidate_rebases_from_discovered_provenance_owner():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        assert needs.cmd_add(_add_args(domain="same domain")) == 0
+        initial = needs._all_needs()["same-domain"]
+        candidate = Path(initial["candidate_dir"])
+        assert "name: same-domain-expert" in candidate.joinpath("SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        source = _write_source(directory, "owner-skill")
+        assert needs.cmd_add(_add_args(
+            domain="same domain", learning_kind="correction",
+            shape="discovered the existing owner was incomplete", session="session-2",
+            target_skill="owner-skill",
+            target_provenance="GhostlyGawd/recursive-harness@owner123",
+            source_skill=str(source),
+        )) == 0
+        amended = needs._all_needs()["same-domain"]
+        manifest = json.loads(candidate.joinpath("candidate.json").read_text(encoding="utf-8"))
+        content = candidate.joinpath("SKILL.md").read_text(encoding="utf-8")
+        archive = candidate / "revisions" / "revision-1-before-rebase-SKILL.md"
+        assert amended["evidence_count"] == 2
+        assert manifest["target_skill"] == "owner-skill"
+        assert manifest["revision"] == 2
+        assert "name: owner-skill" in content
+        assert needs.DRAFT_MARKER in content
+        assert "name: same-domain-expert" in archive.read_text(encoding="utf-8")
+
+
+def test_candidate_rejects_cross_owner_target_change_before_evidence():
+    with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
+        source_a = _write_source(directory, "owner-a")
+        assert needs.cmd_add(_add_args(
+            domain="shared wording", learning_kind="correction",
+            target_skill="owner-a", target_provenance="repo@a",
+            source_skill=str(source_a),
+        )) == 0
+        source_b = _write_source(directory, "owner-b")
+        assert needs.cmd_add(_add_args(
+            domain="shared wording", learning_kind="correction", session="session-2",
+            shape="unrelated owner feedback", target_skill="owner-b",
+            target_provenance="repo@b", source_skill=str(source_b),
+        )) == 1
+        need = needs._all_needs()["shared-wording"]
+        manifest = json.loads(
+            Path(need["candidate_dir"], "candidate.json").read_text(encoding="utf-8")
+        )
+        content = Path(need["candidate_dir"], "SKILL.md").read_text(encoding="utf-8")
+        assert need["evidence_count"] == 1
+        assert manifest["target_skill"] == "owner-a"
+        assert "name: owner-a" in content
+        assert "name: owner-b" not in content
+
+
 def test_new_evidence_reopens_candidate_and_old_proof_cannot_validate_revision():
     with tempfile.TemporaryDirectory() as directory, Env(RECURSIVE_HARNESS_STATE_HOME=directory):
         assert needs.cmd_add(_add_args()) == 0

@@ -46,7 +46,9 @@ the owner.
 
 `add` writes compact evidence to a provider-neutral private ledger and creates or
 updates the candidate immediately. It never needs prior-chat access and must not
-store transcripts or full prompts.
+store transcripts or full prompts. A generic gap later matched to an existing
+owner is archived and rebased from that source. A domain already bound to another
+target is rejected rather than silently combining two owners.
 
 ## Author and dogfood now
 

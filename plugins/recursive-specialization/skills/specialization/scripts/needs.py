@@ -351,8 +351,21 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
     manifest_path = os.path.join(directory, "candidate.json")
     skill_path = os.path.join(directory, "SKILL.md")
     manifest = _read_candidate_manifest(manifest_path)
+    previous_manifest = dict(manifest)
     created = not manifest
-    revision = int(manifest.get("revision", 0)) + 1
+    previous_revision = int(manifest.get("revision", 0))
+    revision = previous_revision + 1
+    existing_target = manifest.get("target_skill") or None
+    requested_target = record.get("target_skill") or None
+    if existing_target and requested_target and existing_target != requested_target:
+        raise ValueError(
+            f"candidate already belongs to target skill {existing_target!r}; "
+            "use a distinct domain or resolve the provenance collision"
+        )
+    rebase_from_source = bool(
+        source_skill and previous_manifest and requested_target
+        and (not existing_target or previous_manifest.get("status") == "promoted")
+    )
     evidence_ids = list(manifest.get("evidence_ids", []))
     if record["event_id"] not in evidence_ids:
         evidence_ids.append(record["event_id"])
@@ -370,7 +383,7 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
         "updated_at": _now(),
     })
     manifest.pop("validated_at", None)
-    private_state.atomic_write_json(manifest_path, manifest, root=state)
+    manifest.pop("promoted_at", None)
     if not os.path.exists(skill_path):
         content = ""
         if source_skill:
@@ -382,6 +395,18 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
                 record.get("target_skill", ""), record["event_id"]
             )
         private_state.atomic_write_text(skill_path, content, root=state)
+    elif rebase_from_source:
+        with open(skill_path, encoding="utf-8") as stream:
+            content = stream.read()
+        archive_path = os.path.join(
+            directory, "revisions", f"revision-{previous_revision}-before-rebase-SKILL.md"
+        )
+        private_state.atomic_write_text(archive_path, content, root=state)
+        with open(source_skill, encoding="utf-8") as stream:
+            content = _mark_source_candidate(stream.read())
+        private_state.atomic_write_text(skill_path, content, root=state)
+        manifest["rebased_at"] = _now()
+        manifest["rebased_from_revision"] = previous_revision
     else:
         with open(skill_path, encoding="utf-8") as stream:
             content = stream.read()
@@ -389,6 +414,7 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
             private_state.atomic_write_text(
                 skill_path, _mark_source_candidate(content), root=state
             )
+    private_state.atomic_write_json(manifest_path, manifest, root=state)
     prior = _all_needs(state).get(domain_key, {})
     if prior.get("status") == "built":
         _append(_ledger(state), {
@@ -408,6 +434,7 @@ def _ensure_candidate(record, source_skill="", state_dir=None):
         "candidate_dir": os.path.join("candidates", domain_key),
         "candidate_revision": revision,
         "source_event_id": record["event_id"],
+        "rebased_from_source": rebase_from_source,
     }, state)
     return directory, created
 
@@ -451,6 +478,18 @@ def cmd_add(args):
             "codex" if os.environ.get("CODEX_SESSION_ID") else "unknown"
         )
     with private_state.exclusive_lock(_transaction_file(state), root=state):
+        existing_manifest = _read_candidate_manifest(
+            os.path.join(_candidate_dir(domain_key, state), "candidate.json")
+        )
+        existing_target = existing_manifest.get("target_skill") or None
+        requested_target = args.target_skill.strip() or None
+        if existing_target and requested_target and existing_target != requested_target:
+            print(
+                f"candidate already belongs to target skill {existing_target!r}; "
+                "use a distinct domain or resolve the provenance collision",
+                file=sys.stderr,
+            )
+            return 1
         record = {
             "ts": _now(),
             "kind": "evidence",
@@ -470,7 +509,7 @@ def cmd_add(args):
         record = _append(_ledger(state), record, state)
         try:
             candidate_dir, created = _ensure_candidate(record, source_skill, state)
-        except (OSError, UnicodeError) as exc:
+        except (OSError, UnicodeError, ValueError) as exc:
             print(f"evidence logged but candidate creation failed: {exc}", file=sys.stderr)
             return 1
         need = _all_needs(state)[domain_key]
@@ -721,6 +760,13 @@ def _status_write(selector, new_status, skill=None):
                 "candidate_dir": os.path.join("candidates", need["domain_key"]),
                 "skill": skill or None,
             }, state)
+            manifest_path = os.path.join(
+                _candidate_dir(need["domain_key"], state), "candidate.json"
+            )
+            manifest = _read_candidate_manifest(manifest_path)
+            manifest["status"] = "promoted"
+            manifest["promoted_at"] = _now()
+            private_state.atomic_write_json(manifest_path, manifest, root=state)
     print(f"need {need['nid']} [{need['domain_key']}] -> {new_status}"
           + (f" -> {skill}" if skill else ""))
     return 0

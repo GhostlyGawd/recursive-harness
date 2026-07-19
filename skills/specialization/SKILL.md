@@ -57,7 +57,9 @@ python3 skills/specialization/needs.py add \
 `add` appends compact evidence to the provider-neutral private ledger and creates
 or updates `candidates/<domain-key>/` immediately. Never store transcripts or full
 prompts. Multiple observations in one provider session add shapes but count as one
-recurrence.
+recurrence. If a generic gap later resolves to an existing owner, `add` archives
+the generic draft and rebases from that owner. It rejects a domain already bound
+to a different target skill; resolve the collision instead of combining owners.
 
 ## 3. Author and dogfood now
 

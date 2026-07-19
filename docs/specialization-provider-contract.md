@@ -18,6 +18,11 @@ provenance, and a readable source `SKILL.md`; an adapter must not fall back to a
 new generic expert when those amendment inputs are absent or the target name does
 not match the source frontmatter.
 
+When later evidence proves that a generic gap belongs to an existing skill, the
+candidate must archive its prior draft and rebase from the named source. Once a
+candidate is bound to one target skill, a different target for the same domain is
+rejected before evidence is written; adapters never relabel content silently.
+
 Promotion is proof-gated. A candidate becomes `validated` after worked dogfood
 with concrete verification; a new capability requires two distinct worked cases
 for its current revision and must show that the procedure generalizes. Recurrence

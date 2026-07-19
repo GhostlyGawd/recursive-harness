@@ -19,6 +19,10 @@ are mandatory inputs, and the target must match the source frontmatter name. If
 the owner cannot be located, stop and resolve provenance; never substitute a
 generic sibling candidate.
 
+If a generic gap is later traced to an existing owner, archive the generic draft
+and rebase the candidate from that owner. If the domain is already bound to a
+different owner, reject the target change and resolve the domain collision.
+
 ## Dogfood sequence
 
 1. Preserve the triggering input, expected behavior, and observed failure as a
