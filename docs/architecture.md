@@ -11,7 +11,9 @@ non-invasive sidecar: inspect without reading contents, preserve existing config
 and invoke explicit capabilities without adding repository policy. The kernel, procedures,
 and evidence model are canonical; provider lifecycle events, installation metadata, and
 host-specific commands belong in generated adapters. OpenAI/Codex and other adapters must
-prove this boundary before the product claims general multi-agent compatibility.
+prove this boundary before the product claims general multi-agent compatibility. The
+experimental OpenAI/Codex Specialization plugin is a narrow second-provider proof, not a
+claim that the whole harness supports Codex or agents generally.
 
 ## System boundaries
 
@@ -90,6 +92,11 @@ The detailed Agentic Dev OS adoption and rejection decisions live in the
 [consolidation map](comparisons/agentic-dev-os.md). It is the drain checklist for that
 repository, not a reason to preserve two active control planes.
 
+The first extracted contract is [Specialization](specialization-provider-contract.md).
+`skills/specialization/` owns its semantics and tests. The generated package under
+`plugins/recursive-specialization/` maps Codex lifecycle events and carries a source-hash
+receipt; CI rejects drift between its runtime and the canonical files.
+
 ## Runtime lifecycle
 
 The shipped Claude adapter uses `settings.json` and `templates/account-settings.json` to
@@ -102,7 +109,7 @@ paths, while hook code remains linked to the current checkout.
 | `UserPromptSubmit` | Record likely correction signals locally when enabled |
 | `PreToolUse` | Protect enforcement paths, worktree boundaries, concurrent sessions, trunk leases, reverts, and red-PR merges |
 | `PostToolUse` | Refresh coordination leases and record selected skill use |
-| `Stop` | Surface retro cadence and specialization gaps |
+| `Stop` | Surface retro cadence plus first-observation candidate dogfood and promotion-ready specialization work |
 | `SessionEnd` | Summarize/reap local coordination state and release ownership |
 
 Hook provenance is traced in [memory/nudge-provenance.md](../memory/nudge-provenance.md).
@@ -114,6 +121,7 @@ the ignored local override file.
 | Store | Lifetime | Contents | Authority |
 | --- | --- | --- | --- |
 | `state/` | Hot, local, ignored | Predictions, corrections, follow-ups, failures, approvals, leases, skill use, and Fleet events | Operational evidence; never durable policy by itself |
+| Platform user-state directory | Hot, local, provider-neutral | Specialization evidence, private candidates, dogfood receipts, and migration receipts | Shared operational evidence for local provider adapters; never canonical policy |
 | `.claude-private/` | Local, ignored | Generated account settings and Claude Code session stores | Runtime configuration and transcripts |
 | `memory/` | Cold, versioned | Decisions, evidence-backed user model, calibration/heal rollups, and provenance | Reviewed durable knowledge |
 | `evals/` | Versioned | Regression fixtures and last replay evidence | Selection evidence; replay is interactive |

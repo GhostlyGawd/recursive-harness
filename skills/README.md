@@ -17,8 +17,9 @@ Seeded in `c72ba4a` (v0.1.0, ADR 0001) with the six kernel procedures:
 routing-learnings, calibration, stuck-detection, retrospection,
 harness-authoring, eval-capture. Growth since comes three ways: the learning
 loop — /retro routes "procedure" learnings here (kernel directive 2); the
-specialization loop (`ab271ed`) — recurring domain gaps logged by
-`skills/specialization/needs.py` get promoted into expert skills; and vendored
+specialization loop (`ab271ed`) — first-observation gaps and skill feedback
+logged by `skills/specialization/needs.py` become private candidates that are
+dogfooded before promotion; and vendored
 imports of third-party skills (currently loop-prompt-architect) via skill
 `vendoring-skills`, which is import, not authoring. Each non-seed skill
 carries a `provenance:` line naming the session and trigger that birthed it
@@ -31,8 +32,9 @@ carries a `provenance:` line naming the session and trigger that birthed it
   descriptions are written pushy about WHEN, not just what.
 - **Measurement:** every fire is logged by `hooks/log_skill_use.py` to
   `state/skill_usage.jsonl`; `bin/harness skill-stats` rolls it up for
-  /meta-retro; `hooks/stop_skill_gap_gate.py` surfaces promotable needs
-  (recurrence ≥ threshold) at session stop.
+  /meta-retro; `hooks/stop_skill_gap_gate.py` surfaces candidates that need
+  dogfood, candidates whose proof is promotion-ready, and repeated unvalidated
+  needs at session stop.
 - **Budgets (lint-enforced):** description ≤ 600 chars (B2 — always-loaded,
   every char taxes every session), body ≤ 200 non-empty lines (B3 — overflow
   goes to `references/` with explicit "read references/X.md when Y" pointers),
@@ -68,10 +70,12 @@ carries a `provenance:` line naming the session and trigger that birthed it
 - Two overlapping skills split the trigger and both rot — hence the
   duplication check being step 1 of authoring.
 - Skill-shaped gaps (a domain faced from scratch, no skill covering it) are
-  logged as needs via `python3 skills/specialization/needs.py add`; recurrence
-  across sessions promotes the need into an expert skill.
-- Corrections about a skill's content route through /retro into an edit of
-  THAT skill (bumping its provenance), never a parallel note.
+  logged via `python3 skills/specialization/needs.py add`; the first observation
+  creates a private candidate for immediate dogfood. Recurrence raises review
+  urgency but is not promotion proof.
+- Corrections and improvements amend a candidate seeded from the skill that owns
+  the provenance, then dogfood the amended candidate before proposing a change
+  to that canonical skill; never create a parallel note or sibling skill.
 
 <!-- provenance: 2026-07-02, session 018UbVEr… — codification loop iteration 9
 (LOOP-CODIFY.md criterion 1): department README for skills/, researched from

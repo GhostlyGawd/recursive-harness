@@ -68,9 +68,9 @@ capability equivalence, not a claim that code was copied from Agentic Dev OS.
   consolidation branch.
 - [ ] A reviewed proposal defines the R0-R3 risk/scope adaptation without weakening the
   enforcement boundary.
-- [ ] A provider contract and shared fixtures exist before OpenAI/Codex compatibility is
+- [x] A provider contract and shared fixtures exist before OpenAI/Codex compatibility is
   claimed.
-- [ ] One OpenAI/Codex adapter exposes specialization from the canonical source and
+- [x] One OpenAI/Codex adapter exposes specialization from the canonical source and
   documents install, upgrade, removal, unsupported lifecycle events, and test evidence.
 - [ ] Every material Agentic Dev OS capability is adopted, rejected, or deliberately
   deferred before that repository is considered fully drained.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Specialization"
+  short_description: "Turn first-use gaps and feedback into tested experts"
+  default_prompt: "Use $specialization to capture this capability gap or improve the skill that just failed."
+policy:
+  allow_implicit_invocation: true

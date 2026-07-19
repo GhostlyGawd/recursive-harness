@@ -3,7 +3,8 @@
 
 Stdlib only; runnable directly so CI needs no package installation.
 
-provenance: 2026-07-17, user-approved security/privacy roadmap implementation.
+provenance: 2026-07-17, user-approved security/privacy roadmap implementation;
+2026-07-18 strengthened process cleanup during Windows contention regression work.
 """
 import datetime as dt
 import contextlib
@@ -72,7 +73,7 @@ def test_concurrent_append_keeps_every_record_parseable_and_unique():
             process.start()
         for process in processes:
             process.join(20)
-            assert process.exitcode == 0
+        assert [process.exitcode for process in processes] == [0, 0, 0, 0]
         records = ps.read_jsonl(path)
         assert len(records) == 200
         assert {record["id"] for record in records} == set(range(200))

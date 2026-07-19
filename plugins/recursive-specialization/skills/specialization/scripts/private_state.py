@@ -42,8 +42,7 @@ _VALUE_PATTERNS = (
     (re.compile(r"(?i)\b(https?://[^\s:/@]+):([^\s/@]+)@"), r"\1:[REDACTED]@"),
     (re.compile(
         r"(?i)\b(api[_-]?key|authorization|client[_-]?secret|credential|passwd|password|"
-        r"private[_-]?key|refresh[_-]?token|secret|token)(\s*[:=]\s*)"
-        r"(?:(?:bearer|basic)\s+)?([^\s,;]+)"
+        r"private[_-]?key|refresh[_-]?token|secret|token)(\s*[:=]\s*)([^\s,;]+)"
     ), r"\1\2[REDACTED]"),
 )
 
