@@ -65,6 +65,31 @@ def test_frozen_baseline_is_complete() -> None:
     }
 
 
+def test_cartograph_does_not_follow_repository_symlinks_outside_its_root() -> None:
+    cartograph = load_module("cartograph_boundary_contract", ROOT / "cartograph" / "extract.py")
+    with tempfile.TemporaryDirectory() as raw:
+        temp = Path(raw)
+        selected_root = temp / "selected"
+        outside = temp / "outside"
+        (selected_root / "skills").mkdir(parents=True)
+        outside.mkdir()
+        (selected_root / "settings.json").write_text('{"hooks": {}}\n', encoding="utf-8")
+        (outside / "SKILL.md").write_text(
+            "---\nname: escaped-private-skill\n---\nmust not be read\n", encoding="utf-8"
+        )
+        try:
+            (selected_root / "skills" / "escaped").symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            return
+        original_root = cartograph.ROOT
+        cartograph.ROOT = str(selected_root)
+        try:
+            graph, *_ = cartograph.build()
+        finally:
+            cartograph.ROOT = original_root
+        assert "skill:escaped-private-skill" not in graph.nodes
+
+
 def test_materializer_never_probes_through_an_escaping_symlink() -> None:
     materializer = load_module(
         "materialize_boundary_contract", HOOKS / "materialize_worktree_repos.py"
