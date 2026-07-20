@@ -334,7 +334,8 @@ class GuardPackageTests(unittest.TestCase):
         marketplace = json.loads(MARKETPLACE.read_text(encoding="utf-8"))
         names = [entry["name"] for entry in marketplace["plugins"]]
         self.assertEqual(names, [
-            "recursive-observe", "recursive-specialization", "recursive-guard"
+            "recursive-observe", "recursive-learn", "recursive-specialization",
+            "recursive-guard",
         ])
         for entry in marketplace["plugins"]:
             self.assertEqual(entry["policy"]["installation"], "AVAILABLE")
