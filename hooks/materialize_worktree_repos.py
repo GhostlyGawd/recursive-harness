@@ -28,6 +28,7 @@ worktrees (prediction 55b1735b miss), generalized into a registry-driven
 materialization methodology so the harness knows what to do for ANY such sub-repo.
 """
 import json
+import ntpath
 import os
 import shutil
 import stat
@@ -50,6 +51,34 @@ def _contained(root, path):
                                    _norm(os.path.realpath(path)))) == _norm(os.path.realpath(root))
     except ValueError:
         return False
+
+
+def _lexically_contained(root, path):
+    """True when ``path`` is lexically below ``root`` on the same filesystem."""
+    try:
+        return os.path.commonpath((_norm(root), _norm(path))) == _norm(root)
+    except (TypeError, ValueError):
+        return False
+
+
+def _relative_parts(value):
+    """Portable, canonical child components for a tracked registry path.
+
+    Both slash styles are separators regardless of the current OS. This prevents
+    a manifest that is safe on Linux from becoming a drive/UNC/traversal path when
+    the same reviewed commit is installed on Windows.
+    """
+    if not isinstance(value, str) or not value or "\0" in value:
+        return None
+    drive, _ = ntpath.splitdrive(value)
+    normalized = value.replace("\\", "/")
+    if drive or normalized.startswith("/"):
+        return None
+    parts = tuple(normalized.split("/"))
+    if (not parts or any(not part or part in (".", "..") for part in parts)
+            or any(":" in part or part.endswith((".", " ")) for part in parts)):
+        return None
+    return parts
 
 
 def _commit_ref(value):
@@ -151,28 +180,42 @@ def materialize(cwd):
             if not ref and not development:
                 sys.stderr.write(f"[materialize] refusing unpinned source: {rel!r}\n")
                 continue
-            target = os.path.join(worktree_root, rel)
+            parts = _relative_parts(rel)
+            if not parts:
+                sys.stderr.write(f"[materialize] refusing invalid path: {rel!r}\n")
+                continue
+            target = os.path.join(worktree_root, *parts)
             # containment [security]: a careless `../` or absolute `path` in the
             # registry must NEVER write outside the worktree (it would land in the
             # user's real .claude/worktrees tree or anywhere on disk). Lexical check
             # (no symlink resolution, per harness-authoring): require target under root.
-            nroot = os.path.normcase(os.path.normpath(os.path.abspath(worktree_root)))
-            ntarget = os.path.normcase(os.path.normpath(os.path.abspath(target)))
-            if os.path.isabs(rel) or (ntarget != nroot and
-                                      not ntarget.startswith(nroot + os.sep)):
+            if not _lexically_contained(worktree_root, target):
                 sys.stderr.write(f"[materialize] refusing out-of-worktree path: {rel!r}\n")
                 continue
-            if os.path.exists(target):  # never clobber [F4]
-                continue
-            local_src = os.path.join(primary_root, rel)
-            source = local_src if os.path.isdir(local_src) else remote
-            if not source:
-                continue
-            if not _contained(worktree_root, os.path.dirname(target)):
+            # Validate the containing path BEFORE any target probe. os.path.exists
+            # follows symlinks, so the old ordering let a tracked registry entry
+            # probe outside the worktree through an in-tree symlink even though the
+            # later clone was refused. lexists preserves the no-clobber contract
+            # without following a final target symlink.
+            target_parent = os.path.dirname(target)
+            if not _contained(worktree_root, target_parent):
                 sys.stderr.write(f"[materialize] refusing symlink escape: {rel!r}\n")
                 continue
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            if not _contained(worktree_root, os.path.dirname(target)):
+            if os.path.lexists(target):  # never clobber [F4]
+                continue
+            local_src = os.path.join(primary_root, *parts)
+            # A gitignored local development copy is an optimization, not an
+            # authority expansion. Never follow a primary-checkout symlink outside
+            # the primary root; fall back to the reviewed remote instead.
+            local_source_ok = (_lexically_contained(primary_root, local_src)
+                               and _contained(primary_root, local_src)
+                               # CODEQL-TRIAGE: both checks confine local_src to primary_root.
+                               and os.path.isdir(local_src))
+            source = local_src if local_source_ok else remote
+            if not source:
+                continue
+            os.makedirs(target_parent, exist_ok=True)
+            if not _contained(worktree_root, target_parent):
                 sys.stderr.write(f"[materialize] refusing symlink escape: {rel!r}\n")
                 continue
             r = _clone_at(source, target, ref)

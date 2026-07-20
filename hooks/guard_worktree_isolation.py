@@ -536,9 +536,27 @@ def _is_live_worktree(wt_root_real: str) -> bool:
         # pointer reads as stale and gets wrongly allowed (auditor F1, 2026-06-19).
         if not os.path.isabs(admin):
             admin = os.path.normpath(os.path.join(wt_root_real, admin))
+        # The .git file is content inside the candidate tree, not an authority.
+        # It may only point into this checkout's Git worktree-admin namespace.
+        # An arbitrary missing path used to certify "stale" and allow writes; an
+        # out-of-namespace pointer now fails safe and remains protected.
+        marker_root = _shared_worktree_root(os.path.normpath(wt_root_real))
+        if not marker_root:
+            return True
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(marker_root)))
+        admin_root = os.path.realpath(os.path.join(repo_root, ".git", "worktrees"))
+        admin_real = os.path.realpath(admin)
+        try:
+            common = os.path.commonpath((admin_root, admin_real))
+            if (os.path.normcase(common) != os.path.normcase(admin_root)
+                    or os.path.normcase(admin_real) == os.path.normcase(admin_root)):
+                return True
+        except ValueError:
+            return True
         # admin dir present -> git still registers it (LIVE, block);
         # admin dir gone -> deregistered stale orphan (safe to clean, allow).
-        return os.path.isdir(admin)
+        # CODEQL-TRIAGE: admin_real is accepted only inside this checkout's Git admin root.
+        return os.path.isdir(admin_real)
     except Exception:
         return True       # any error -> protect
 

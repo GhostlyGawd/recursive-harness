@@ -226,6 +226,7 @@ check(
     f"{len(unwired)} unwired & un-excused: {sorted(unwired)}",
 )
 
+# CODEQL-TRIAGE: referenced contains test paths parsed from this checkout's reviewed CI file.
 dangling = sorted(r for r in referenced if not os.path.exists(os.path.join(ROOT, r)))
 check(
     "no dangling test reference in ci.yml (renamed/deleted test still named)",

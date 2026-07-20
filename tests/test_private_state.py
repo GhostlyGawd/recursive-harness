@@ -18,6 +18,7 @@ import stat
 import sys
 import tempfile
 import types
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -170,6 +171,25 @@ def test_symlink_escape_is_refused_without_touching_the_target():
         else:
             raise AssertionError("symlink escape was accepted")
         assert not os.path.exists(os.path.join(outside, "events.jsonl"))
+
+
+def test_extended_length_alias_is_the_same_private_state_authority():
+    """Windows realpath may add ``\\?\\`` during a concurrent path check."""
+    with tempfile.TemporaryDirectory() as d:
+        root = os.path.join(d, "state")
+        parent = os.path.join(root, "specialization")
+        path = os.path.join(parent, "transaction.lock")
+        os.makedirs(parent)
+        original_realpath = os.path.realpath
+
+        def aliased_realpath(value):
+            resolved = original_realpath(value)
+            if os.path.normcase(os.path.abspath(value)) == os.path.normcase(os.path.abspath(parent)):
+                return "\\\\?\\" + resolved
+            return resolved
+
+        with mock.patch.object(ps.os.path, "realpath", side_effect=aliased_realpath):
+            ps._assert_no_link_escape(path, root)
 
 
 def test_retention_dry_run_then_apply_preserves_records_and_is_idempotent():

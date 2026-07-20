@@ -79,7 +79,10 @@ def gitwalk_root(norm_path: str) -> str:
     repo / main-checkout root. Falls back to ``norm_path`` (under-isolate, safe)."""
     d = norm_path
     for _ in range(MAX_WALK):
-        if os.path.exists(os.path.join(d, ".git")):
+        # lexists recognizes a Git marker without following an attacker-controlled
+        # final symlink merely to answer the ancestor-walk question.
+        # CODEQL-TRIAGE: this bounded ancestor probe never opens or follows the marker.
+        if os.path.lexists(os.path.join(d, ".git")):
             return d
         parent = os.path.dirname(d)
         if parent == d:

@@ -201,8 +201,8 @@ def _map_path(repo_root: str) -> str:
 
 def _load_map(repo_root: str) -> dict:
     try:
-        with open(_map_path(repo_root), encoding="utf-8") as f:
-            m = json.load(f)
+        state_root = os.path.join(repo_root, "state")
+        m = private_state.read_json(_map_path(repo_root), root=state_root)
         if isinstance(m, dict):
             # keep only well-formed entries
             return {k: v for k, v in m.items()
@@ -216,7 +216,7 @@ def _save_map(repo_root: str, m: dict) -> None:
     """Atomically persist the private map; any failure is swallowed (fail-open)."""
     try:
         path = _map_path(repo_root)
-        private_state.atomic_write_json(path, m)
+        private_state.atomic_write_json(path, m, root=os.path.join(repo_root, "state"))
     except Exception:
         pass
 
@@ -304,6 +304,18 @@ def _concurrent_live_session(data, now):
         if not isinstance(tp, str) or not tp:
             return None
         tp = _normalize(tp)
+        is_junction = getattr(os.path, "isjunction", lambda unused: False)
+        if not tp.lower().endswith(".jsonl"):
+            return None
+        # CODEQL-TRIAGE: tp is a host-granted transcript capability; links are rejected.
+        if os.path.islink(tp):
+            return None
+        # CODEQL-TRIAGE: junction rejection prevents transcript capability redirection.
+        if is_junction(tp):
+            return None
+        # CODEQL-TRIAGE: only a regular host-granted transcript file is accepted.
+        if not os.path.isfile(tp):
+            return None
         bucket = os.path.dirname(tp)
         my_base = os.path.normcase(os.path.basename(tp))
         if not bucket or not os.path.isdir(bucket):
@@ -317,7 +329,15 @@ def _concurrent_live_session(data, now):
             if not name.endswith(".jsonl") or os.path.normcase(name) == my_base:
                 continue
             try:
-                mtime = os.path.getmtime(os.path.join(bucket, name))
+                peer_path = os.path.join(bucket, name)
+                # CODEQL-TRIAGE: bucket is the accepted transcript's own directory.
+                if os.path.islink(peer_path):
+                    continue
+                # CODEQL-TRIAGE: peer junctions are rejected before metadata access.
+                if is_junction(peer_path):
+                    continue
+                # CODEQL-TRIAGE: peer_path is a same-bucket JSONL entry, not an open/read.
+                mtime = os.path.getmtime(peer_path)
             except OSError:
                 continue
             age = now - mtime
