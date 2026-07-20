@@ -19,6 +19,7 @@ resolution: ""
 | 2026-07-19 | approved | in-progress | Phase 3 implementation completed locally: reproducible Recursive Learn package, property/coexistence tests, and real generic, Claude Code 2.1.200, and official Codex 0.144.6 consumer installs passed; protected-main receipt remains pending |
 | 2026-07-19 | approved | in-progress | Phase 3 verified on protected `main`: PR #254 merged at `639bfbc`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-03-live-receipt.json` binds the package and consumer evidence |
 | 2026-07-20 | approved | in-progress | Phase 4 implementation completed locally: stateless Recursive Verify packages, read-only/path-boundary properties, exact diff-only proposal output, and real generic, Claude Code 2.1.200, and official Codex 0.144.6 consumer installs passed; protected-main receipt remains pending |
+| 2026-07-20 | approved | in-progress | Phase 4 verified on protected `main`: PR #256 merged at `2de791a`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-04-live-receipt.json` binds the stateless package and consumer evidence |
 <!-- proposal-history:end -->
 
 ## Problem
