@@ -6,11 +6,11 @@ approval. Proposal P-2026-042 records that approval for `v0.1.2` readiness work.
 
 ## Current readiness snapshot — 2026-07-20
 
-- Root `VERSION`, the README, compatibility guide, changelog, package manifests, and
-  release notes agree on the `v0.1.2` candidate; the latest published tag remains
-  `v0.1.0` until the protected candidate is verified.
-- No GitHub Release is published yet. Publication and its independent consumer receipt
-  remain the final gates in this phase.
+- Root `VERSION`, the README, compatibility guide, changelog, package manifests, release
+  notes, repository description, immutable tag, and GitHub Release agree on `v0.1.2`.
+- The published archives were independently downloaded and verified against the shared
+  checksum sidecar, embedded manifest, tagged revision, version output, and non-global
+  install/uninstall path.
 - PR #240 supplied the root MIT license, changelog, deterministic archives,
   checksums, upgrade/rollback guidance, and non-destructive uninstall.
 - PR #241 supplied the security hardening, immutable nested-repository revisions,
@@ -26,8 +26,8 @@ approval. Proposal P-2026-042 records that approval for `v0.1.2` readiness work.
 - Protected `main` requires the full Linux/Windows/macOS/minimum-Git/optional-surface
   and Python/Actions CodeQL check set plus conversation resolution.
 
-The remaining version/tag gap makes publication a deliberate final step after
-security, compatibility, documentation, and protected checks are green.
+The durable machine-readable evidence is the
+[phase 7 live receipt](evidence/release/phase-07-live-receipt.json).
 
 ## 1. Scope and governance
 
@@ -60,24 +60,24 @@ security, compatibility, documentation, and protected checks are green.
 
 ## 4. Reproducible verification
 
-- [ ] Run lint, the complete test suite, eval dry-run, Cartograph check, and the latest
+- [x] Run lint, the complete test suite, eval dry-run, Cartograph check, and the latest
       interactive replay required by the enforcement policy.
-- [ ] Verify a fresh clone through install → account initialization → doctor.
+- [x] Verify a fresh clone through install → account initialization → doctor.
 - [x] Build archives twice and confirm byte-identical outputs; validate the embedded manifest
       and published SHA-256 sidecar.
-- [ ] Verify an upgrade from the previous tag, including settings backup and regeneration.
-- [ ] Verify rollback and non-destructive uninstall with retained-data inspection.
-- [ ] Verify Windows PowerShell 5.1/7 session-store cutover and the supported Bash path.
-- [ ] Record the exact commit SHA, tool/runtime versions, and check URLs used as evidence.
+- [x] Verify an upgrade from the previous tag, including settings backup and regeneration.
+- [x] Verify rollback and non-destructive uninstall with retained-data inspection.
+- [x] Verify Windows PowerShell 5.1/7 session-store cutover and the supported Bash path.
+- [x] Record the exact commit SHA, tool/runtime versions, and check URLs used as evidence.
 
 ## 5. Publication and rollback
 
-- [ ] Merge only a green, reviewed release PR; fast-forward the maintainer checkout afterward.
-- [ ] Build assets from the reviewed commit with `python3 scripts/build_release.py`.
-- [ ] Create the tag and GitHub Release from that exact commit; upload both archives and the
+- [x] Merge only a green, reviewed release PR; fast-forward the maintainer checkout afterward.
+- [x] Build assets from the reviewed commit with `python3 scripts/build_release.py`.
+- [x] Create the tag and GitHub Release from that exact commit; upload both archives and the
       checksum sidecar.
-- [ ] Re-read the published notes and assets for privacy leaks before announcing them.
-- [ ] Keep the prior tag and settings backups intact. If verification fails, stop distribution,
+- [x] Re-read the published notes and assets for privacy leaks before announcing them.
+- [x] Keep the prior tag and settings backups intact. If verification fails, stop distribution,
       document the issue, and fix forward; do not move an already published tag silently.
 
 ## Exit criteria

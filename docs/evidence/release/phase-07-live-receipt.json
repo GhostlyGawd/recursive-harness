@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-20T21:33:36Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "pull_request": 262,
+  "release": {
+    "tag": "v0.1.2",
+    "revision": "5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4",
+    "previous_tag": "v0.1.0",
+    "previous_revision": "c72ba4abacb8d9c9a3a62aa6ed91cac7bbd26b05",
+    "published_at": "2026-07-20T21:31:07Z",
+    "draft": false,
+    "prerelease": false,
+    "release_url": "https://github.com/GhostlyGawd/recursive-harness/releases/tag/v0.1.2"
+  },
+  "assets": {
+    "recursive-harness-v0.1.2.sha256": {
+      "sha256": "cda043acf9bf08cbcbe18e17c996d81d614ae3ffd345144844362233a3daf905",
+      "bytes": 193
+    },
+    "recursive-harness-v0.1.2.tar.gz": {
+      "sha256": "59a4bf140bad52c9a02a8e534abb4393d756314fc669ff64bf4aec221f7554de",
+      "bytes": 2672620
+    },
+    "recursive-harness-v0.1.2.zip": {
+      "sha256": "8e8b54a905e8debfcc71e97807dfdc84da64c3f7779c95e5ea9e9a2cf2f31be9",
+      "bytes": 3007670
+    }
+  },
+  "clean_builds": {
+    "independent_clones": 2,
+    "byte_identical": true,
+    "committed_tree_clean_after_build": true,
+    "embedded_manifest_revision": "5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4",
+    "license_and_provider_receipts_present": true,
+    "private_or_generated_state_present": false
+  },
+  "protected_main": {
+    "ci_run_id": 29780158920,
+    "ci_url": "https://github.com/GhostlyGawd/recursive-harness/actions/runs/29780158920",
+    "ci_conclusion": "success",
+    "jobs": {
+      "lint-and-test": 88479213071,
+      "windows-distribution": 88479213091,
+      "macos-distribution": 88479213038,
+      "minimum-git": 88479213126,
+      "optional-surfaces": 88479213072
+    },
+    "codeql_run_id": 29780157677,
+    "codeql_url": "https://github.com/GhostlyGawd/recursive-harness/actions/runs/29780157677",
+    "codeql_conclusion": "success",
+    "codeql_python_job_id": 88479215163,
+    "codeql_actions_job_id": 88479215209,
+    "required_checks_strict": true
+  },
+  "security": {
+    "live_open_codeql_alerts": 0,
+    "live_open_secret_scanning_alerts": 0,
+    "live_open_dependabot_alerts": 0,
+    "mission_control_dependency_audit": "no-known-vulnerabilities",
+    "fleet_mcp_dependency_audit": "no-known-vulnerabilities",
+    "candidate_diff_credential_pattern_scan": "clean"
+  },
+  "migration_and_compatibility": {
+    "actual_v0_1_0_upgrade": true,
+    "settings_regeneration": true,
+    "rollback_to_actual_v0_1_0": true,
+    "interrupted_upgrade_preserved_prior_revision": true,
+    "private_data_preserved": true,
+    "non_destructive_uninstall": true,
+    "windows_powershell_5_1": true,
+    "windows_powershell_7": true,
+    "macos": true,
+    "minimum_git": "2.39.0"
+  },
+  "public_consumer_verification": {
+    "exact_assets": true,
+    "downloaded_checksums": true,
+    "manifest_payloads": true,
+    "zip_tar_parity": true,
+    "safe_members": true,
+    "version_output": "harness 0.1.2",
+    "fresh_non_global_install": true,
+    "non_destructive_uninstall": true,
+    "runtime": "GNU Bash 5.2.37 via Git Bash on Windows",
+    "initial_shell_note": "PowerShell PATH did not expose Git Bash; replay passed unchanged after adding the documented Git Bash runtime to PATH"
+  },
+  "tool_versions": {
+    "python": "3.12.10",
+    "git": "2.53.0.windows.2",
+    "github_cli": "2.89.0",
+    "claude_code": "2.1.200",
+    "codex_cli": "0.144.6"
+  },
+  "metadata": {
+    "description": "Portable, evidence-driven agent development harness for Codex, Claude Code, and generic Agent Skills. Active beta v0.1.2.",
+    "topics": [
+      "agent-skills",
+      "ai-agents",
+      "claude-code",
+      "codex",
+      "developer-tools",
+      "python"
+    ],
+    "homepage": null
+  },
+  "phase_gate": {
+    "red_first_contract": true,
+    "all_60_tracked_test_entrypoints": true,
+    "eval_dry_run": true,
+    "cartograph": true,
+    "proposal_enforcement": true,
+    "operator_links_and_commands": true,
+    "protected_main_green": true,
+    "published_asset_consumer_replay": true,
+    "result": "verified"
+  }
+}
