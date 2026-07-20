@@ -555,8 +555,7 @@ def _is_live_worktree(wt_root_real: str) -> bool:
             return True
         # admin dir present -> git still registers it (LIVE, block);
         # admin dir gone -> deregistered stale orphan (safe to clean, allow).
-        # CODEQL-SUPPRESS: admin_real is accepted only inside this checkout's Git admin root.
-        # lgtm[py/path-injection]
+        # CODEQL-TRIAGE: admin_real is accepted only inside this checkout's Git admin root.
         return os.path.isdir(admin_real)
     except Exception:
         return True       # any error -> protect

@@ -81,8 +81,7 @@ def gitwalk_root(norm_path: str) -> str:
     for _ in range(MAX_WALK):
         # lexists recognizes a Git marker without following an attacker-controlled
         # final symlink merely to answer the ancestor-walk question.
-        # CODEQL-SUPPRESS: this bounded ancestor probe never opens or follows the marker.
-        # lgtm[py/path-injection]
+        # CODEQL-TRIAGE: this bounded ancestor probe never opens or follows the marker.
         if os.path.lexists(os.path.join(d, ".git")):
             return d
         parent = os.path.dirname(d)

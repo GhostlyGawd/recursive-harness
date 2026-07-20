@@ -303,22 +303,6 @@ def test_every_baseline_alert_has_one_reviewed_resolution() -> None:
         assert resolution["reason"]
 
 
-def test_every_source_suppression_has_an_adjacent_boundary_justification() -> None:
-    """Keep scanner limitations visible at each sink instead of hiding the query globally."""
-    sites: list[str] = []
-    for relative in run(["git", "ls-files", "*.py"], ROOT).splitlines():
-        path = ROOT / relative
-        lines = path.read_text(encoding="utf-8").splitlines()
-        for index, line in enumerate(lines):
-            if line.strip() != "# lgtm[py/path-injection]":
-                continue
-            site = f"{relative}:{index + 1}"
-            sites.append(site)
-            assert index > 0, site
-            assert "CODEQL-SUPPRESS:" in lines[index - 1], site
-    assert sites, "expected evidence-backed path-injection suppressions"
-
-
 def main() -> int:
     tests = [value for name, value in sorted(globals().items()) if name.startswith("test_")]
     failures = []

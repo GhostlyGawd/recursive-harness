@@ -209,8 +209,7 @@ def materialize(cwd):
             # the primary root; fall back to the reviewed remote instead.
             local_source_ok = (_lexically_contained(primary_root, local_src)
                                and _contained(primary_root, local_src)
-                               # CODEQL-SUPPRESS: both checks confine local_src to primary_root.
-                               # lgtm[py/path-injection]
+                               # CODEQL-TRIAGE: both checks confine local_src to primary_root.
                                and os.path.isdir(local_src))
             source = local_src if local_source_ok else remote
             if not source:

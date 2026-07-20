@@ -179,13 +179,11 @@ def new_main_tree():
     _TMPDIRS.append(d)
     os.mkdir(os.path.join(d, ".git"))
     os.makedirs(os.path.join(d, "hooks"), exist_ok=True)
-    # CODEQL-SUPPRESS: d is a test-owned temporary fixture and _HOOK_SRC is reviewed code.
-    # lgtm[py/path-injection]
+    # CODEQL-TRIAGE: d is a test-owned temporary fixture and _HOOK_SRC is reviewed code.
     shutil.copyfile(_HOOK_SRC, os.path.join(d, "hooks", "guard_worktree_session.py"))
     # Guard B hard-imports its sibling _wtpaths (shared worktree-path helpers, 3939d8),
     # so the isolated copy needs it alongside or the subprocess dies on ImportError.
-    # CODEQL-SUPPRESS: both source and destination are test-owned fixture capabilities.
-    # lgtm[py/path-injection]
+    # CODEQL-TRIAGE: both source and destination are test-owned fixture capabilities.
     shutil.copyfile(
         os.path.join(os.path.dirname(_HOOK_SRC), "_wtpaths.py"),
         os.path.join(d, "hooks", "_wtpaths.py"),

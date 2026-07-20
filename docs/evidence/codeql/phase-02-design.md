@@ -34,15 +34,14 @@ silently expanding a declared capability.
    vulnerabilities simply because they can name an arbitrary path.
 6. Every false-positive or test-only resolution is individual. No alert is bulk-dismissed.
 
-## Source suppression policy
+## Scanner triage policy
 
 CodeQL does not currently recognize this repository's `realpath` plus `commonpath` containment
-helpers as taint sanitizers. A narrow `# lgtm[py/path-injection]` suppression is therefore allowed
-only immediately before an individually reviewed sink and only when the preceding line starts with
-`CODEQL-SUPPRESS:` and states the exact authority. Suppressions are also used for the four disposable
-eval-grader sinks and three test-fixture sinks already classified `used_in_tests`. The executable
-contract `test_every_source_suppression_has_an_adjacent_boundary_justification` rejects anonymous
-suppressions. The query remains enabled repository-wide; there is no path, suite, or query exclusion.
+helpers as taint sanitizers. Each residual alert is therefore triaged through GitHub's alert API with
+its own `false positive` or `used in tests` classification, exact authority, and test evidence. A
+`CODEQL-TRIAGE:` comment at the sink keeps the same boundary visible during code review. The query
+remains enabled repository-wide; there is no source suppression, path exclusion, suite exclusion, or
+bulk dismissal.
 
 ## Red-to-green evidence
 

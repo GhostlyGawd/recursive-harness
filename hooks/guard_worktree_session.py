@@ -307,16 +307,13 @@ def _concurrent_live_session(data, now):
         is_junction = getattr(os.path, "isjunction", lambda unused: False)
         if not tp.lower().endswith(".jsonl"):
             return None
-        # CODEQL-SUPPRESS: tp is a host-granted transcript capability; links are rejected.
-        # lgtm[py/path-injection]
+        # CODEQL-TRIAGE: tp is a host-granted transcript capability; links are rejected.
         if os.path.islink(tp):
             return None
-        # CODEQL-SUPPRESS: junction rejection prevents transcript capability redirection.
-        # lgtm[py/path-injection]
+        # CODEQL-TRIAGE: junction rejection prevents transcript capability redirection.
         if is_junction(tp):
             return None
-        # CODEQL-SUPPRESS: only a regular host-granted transcript file is accepted.
-        # lgtm[py/path-injection]
+        # CODEQL-TRIAGE: only a regular host-granted transcript file is accepted.
         if not os.path.isfile(tp):
             return None
         bucket = os.path.dirname(tp)
@@ -333,16 +330,13 @@ def _concurrent_live_session(data, now):
                 continue
             try:
                 peer_path = os.path.join(bucket, name)
-                # CODEQL-SUPPRESS: bucket is the accepted transcript's own directory.
-                # lgtm[py/path-injection]
+                # CODEQL-TRIAGE: bucket is the accepted transcript's own directory.
                 if os.path.islink(peer_path):
                     continue
-                # CODEQL-SUPPRESS: peer junctions are rejected before metadata access.
-                # lgtm[py/path-injection]
+                # CODEQL-TRIAGE: peer junctions are rejected before metadata access.
                 if is_junction(peer_path):
                     continue
-                # CODEQL-SUPPRESS: peer_path is a same-bucket JSONL entry, not an open/read.
-                # lgtm[py/path-injection]
+                # CODEQL-TRIAGE: peer_path is a same-bucket JSONL entry, not an open/read.
                 mtime = os.path.getmtime(peer_path)
             except OSError:
                 continue
