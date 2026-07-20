@@ -1,0 +1,93 @@
+{
+  "accepted_date": "2026-07-20",
+  "external_actions": {
+    "performed": 0,
+    "previewed": 3
+  },
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "limitations": {
+    "hosted_web": "not tested",
+    "model_output_quality": "not tested",
+    "model_skill_selection": "not tested",
+    "mutation_connector": "not shipped",
+    "public_marketplace": "not tested",
+    "receipts": "caller-attested, not independently verified"
+  },
+  "package_tree_sha256": "f18129c12a9f7eec806dbadc14e09170f445d75565e3f77bb0b2a903083574c5",
+  "providers": {
+    "agent-skills": {
+      "brainstorm_preview": true,
+      "copied_package_execution": true,
+      "exact_target_action_preview": true,
+      "external_actions_performed": 0,
+      "file_count": 8,
+      "network_requests": 0,
+      "package_tree_sha256": "f18129c12a9f7eec806dbadc14e09170f445d75565e3f77bb0b2a903083574c5",
+      "receipt_verified": true,
+      "refreshed": true,
+      "repository_writes": 0,
+      "roadmap_preview": true,
+      "unavailable_connector": "blocked-with-retry-or-discard",
+      "uninstalled": true
+    },
+    "claude-code": {
+      "brainstorm_preview": true,
+      "consumer": "Claude Code",
+      "exact_target_action_preview": true,
+      "external_actions_performed": 0,
+      "file_count": 8,
+      "installed": true,
+      "network_requests": 0,
+      "package_tree_sha256": "f18129c12a9f7eec806dbadc14e09170f445d75565e3f77bb0b2a903083574c5",
+      "receipt_verified": true,
+      "refreshed": true,
+      "repository_writes": 0,
+      "roadmap_preview": true,
+      "scope": "isolated-user",
+      "unavailable_connector": "blocked-with-retry-or-discard",
+      "uninstalled": true,
+      "version": "2.1.200"
+    },
+    "codex": {
+      "brainstorm_preview": true,
+      "consumer_package": "@openai/codex",
+      "exact_target_action_preview": true,
+      "external_actions_performed": 0,
+      "file_count": 8,
+      "installed": true,
+      "network_requests": 0,
+      "package_tree_sha256": "f18129c12a9f7eec806dbadc14e09170f445d75565e3f77bb0b2a903083574c5",
+      "receipt_verified": true,
+      "refreshed": true,
+      "repository_writes": 0,
+      "roadmap_preview": true,
+      "scope": "isolated-user",
+      "unavailable_connector": "blocked-with-retry-or-discard",
+      "uninstalled": true,
+      "version": "0.144.6"
+    }
+  },
+  "repository": {
+    "after_sha256": "a2cf0605949b54c81d5ee98062ef89cc953f51ad5750f5c750f6c3ed62180307",
+    "before_sha256": "a2cf0605949b54c81d5ee98062ef89cc953f51ad5750f5c750f6c3ed62180307",
+    "existing_files": 9,
+    "writes": 0
+  },
+  "result": "accepted-experimental",
+  "schema_version": 1,
+  "uninstall": {
+    "project_files_changed": 0,
+    "providers": 3
+  },
+  "upgrade": {
+    "claude_same_version_refresh": true,
+    "codex_same_catalog_reinstall": true,
+    "generic_same_version_refresh": true,
+    "prior_version": "not-applicable-first-Lab-package",
+    "project_files_changed": 0,
+    "version_upgrade": "not-testable-without-a-prior-Lab-package"
+  }
+}

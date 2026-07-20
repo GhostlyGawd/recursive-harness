@@ -85,9 +85,9 @@ Observe, Learn, Verify, Coordinate, Guard, and Lab. Observe, Learn, Verify, and 
 `generated-beta` generic Agent Skill, Claude, and Codex packages with canonical-source receipts
 and isolated consumer evidence. Guard is a separate `generated-beta` local Codex package that is
 inert without a reviewed repository policy and can never arrive as a hidden dependency.
-Coordinate is local-only and makes no distributed or remote-service claim. Lab remains `planned`,
-not a published plugin. Advisory capabilities prohibit default repository writes and operational
-capabilities disclose their state.
+Coordinate is local-only and makes no distributed or remote-service claim. Lab is a separate
+`generated-experimental`, stateless, preview-only package with no mutation connector. Advisory
+capabilities prohibit default repository writes and operational capabilities disclose their state.
 
 The detailed Agentic Dev OS adoption and rejection decisions live in the
 [consolidation map](comparisons/agentic-dev-os.md). It is the drain checklist for that

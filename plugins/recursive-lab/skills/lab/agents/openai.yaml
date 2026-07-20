@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Lab (Experimental)"
+  short_description: "Preview ideas and roadmaps without changing the project."
+  default_prompt: "Use $lab to prepare an experimental preview only; preserve existing project instructions and disclose one exact target before any separately confirmed mutation."

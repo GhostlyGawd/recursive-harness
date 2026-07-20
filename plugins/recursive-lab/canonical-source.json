@@ -1,0 +1,48 @@
+{
+  "capability": "recursive-lab",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "safety_class": "experimental",
+  "provider_manifests": [
+    ".codex-plugin/plugin.json",
+    ".claude-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "d026fd03ec601dd1e5012377aa84098366de4073a836fbf9817a73b20fdeb72c",
+  "package_tree_sha256": "f18129c12a9f7eec806dbadc14e09170f445d75565e3f77bb0b2a903083574c5",
+  "package_files": {
+    ".claude-plugin/plugin.json": "6c84b54402756f81b8f9e38b655440f19032ec171758917e3a7e7ed6e450f317",
+    ".codex-plugin/plugin.json": "9e67ef6e20d523dd44a9a44ab7d0c39ca06e295deb31ddd3fbe23d8e726d95ef",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "skills/lab/SKILL.md": "2b7537962bfa887c91e666b1d1a8de579ce05b285a984ba90de6fcc9ee978b8d",
+    "skills/lab/agents/openai.yaml": "b9b97cd13b184c4a472f5036952796b9751f5b9f97967cedb1a482d41e36d40f",
+    "skills/lab/references/security.md": "e85a283019fba79059037521e594e0d25041ffaf0312d2aa8f77bd9c6827f9aa",
+    "skills/lab/references/workflows.md": "f56c2443f32e5e7074ef9bd530a79cb0a67d09dc3b287994ec4bb3b4e2e891c9",
+    "skills/lab/scripts/lab.py": "ebc372c7bc46879e075b4b1f129b96f6e5fd10b884be803369230b65ac5367eb"
+  },
+  "sources": {
+    "skills/lab/SKILL.md": {
+      "packaged_path": "skills/lab/SKILL.md",
+      "sha256": "2b7537962bfa887c91e666b1d1a8de579ce05b285a984ba90de6fcc9ee978b8d"
+    },
+    "skills/lab/agents/openai.yaml": {
+      "packaged_path": "skills/lab/agents/openai.yaml",
+      "sha256": "b9b97cd13b184c4a472f5036952796b9751f5b9f97967cedb1a482d41e36d40f"
+    },
+    "skills/lab/scripts/lab.py": {
+      "packaged_path": "skills/lab/scripts/lab.py",
+      "sha256": "ebc372c7bc46879e075b4b1f129b96f6e5fd10b884be803369230b65ac5367eb"
+    },
+    "skills/lab/references/workflows.md": {
+      "packaged_path": "skills/lab/references/workflows.md",
+      "sha256": "f56c2443f32e5e7074ef9bd530a79cb0a67d09dc3b287994ec4bb3b4e2e891c9"
+    },
+    "skills/lab/references/security.md": {
+      "packaged_path": "skills/lab/references/security.md",
+      "sha256": "e85a283019fba79059037521e594e0d25041ffaf0312d2aa8f77bd9c6827f9aa"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

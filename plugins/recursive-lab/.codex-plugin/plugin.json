@@ -1,0 +1,34 @@
+{
+  "name": "recursive-lab",
+  "version": "0.1.0",
+  "description": "Experimentally preview ideas and roadmaps without changing the project.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/lab-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "experimental",
+    "brainstorm",
+    "roadmap",
+    "privacy"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Lab (Experimental)",
+    "shortDescription": "Preview ideas and roadmaps without project changes.",
+    "longDescription": "Generate experimental brainstorm and roadmap previews, then bind any separately confirmed host action to one exact target. No mutation connector is included.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Experimental brainstorm previews",
+      "Experimental roadmap previews",
+      "Exact-target approval records",
+      "Caller-attested closure receipts"
+    ],
+    "defaultPrompt": "Use Recursive Lab in experimental preview mode. Preserve existing project instructions and do not mutate any target without separate explicit confirmation."
+  }
+}

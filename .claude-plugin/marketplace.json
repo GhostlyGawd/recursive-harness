@@ -35,6 +35,13 @@
       "description": "Coordinate local agents with atomic claims and private handoffs.",
       "version": "0.1.0",
       "tags": ["agents", "coordination", "worktrees", "privacy"]
+    },
+    {
+      "name": "recursive-lab",
+      "source": "./plugins/recursive-lab",
+      "description": "Experimentally preview ideas and roadmaps without changing the project.",
+      "version": "0.1.0",
+      "tags": ["agents", "experimental", "brainstorm", "roadmap", "privacy"]
     }
   ]
 }

@@ -571,7 +571,7 @@ def test_observe_provider_package() -> None:
         check("Codex marketplace preserves all opt-in packages",
               set(codex_plugins) == {
                   "recursive-observe", "recursive-learn", "recursive-verify", "recursive-coordinate",
-                  "recursive-specialization", "recursive-guard"
+                  "recursive-lab", "recursive-specialization", "recursive-guard"
               }
               and codex_plugins["recursive-learn"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-learn"]["source"]["path"]
@@ -582,6 +582,9 @@ def test_observe_provider_package() -> None:
               and codex_plugins["recursive-coordinate"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-coordinate"]["source"]["path"]
               == "./plugins/recursive-coordinate"
+              and codex_plugins["recursive-lab"]["policy"]["installation"] == "AVAILABLE"
+              and codex_plugins["recursive-lab"]["source"]["path"]
+              == "./plugins/recursive-lab"
               and codex_plugins["recursive-specialization"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-specialization"]["source"]["path"]
               == "./plugins/recursive-specialization"
@@ -596,7 +599,9 @@ def test_observe_provider_package() -> None:
               and claude_marketplace["plugins"][2]["name"] == "recursive-verify"
               and claude_marketplace["plugins"][2]["source"] == "./plugins/recursive-verify"
               and claude_marketplace["plugins"][3]["name"] == "recursive-coordinate"
-              and claude_marketplace["plugins"][3]["source"] == "./plugins/recursive-coordinate")
+              and claude_marketplace["plugins"][3]["source"] == "./plugins/recursive-coordinate"
+              and claude_marketplace["plugins"][4]["name"] == "recursive-lab"
+              and claude_marketplace["plugins"][4]["source"] == "./plugins/recursive-lab")
         (installed / ".codex-plugin" / "plugin.json").write_text(
             '{"name":"tampered"}\n', encoding="utf-8"
         )
@@ -641,16 +646,6 @@ def test_capability_catalog() -> None:
     }
     by_id = {manifest["id"]: manifest for manifest in manifests}
     check("capability catalog defines the complete approved suite", set(by_id) == expected)
-    planned = [
-        manifest for manifest in manifests
-        if manifest["id"] not in {
-            "recursive-observe", "recursive-learn", "recursive-verify",
-            "recursive-coordinate", "recursive-guard"
-        }
-    ]
-    check("unbuilt capability manifests remain truthful plans",
-          all(manifest["packaging_status"] == "planned" and manifest["provider_packages"] == []
-              for manifest in planned))
     check("Observe names only its generated provider packages",
           by_id["recursive-observe"]["packaging_status"] == "generated-beta"
           and {item["provider"] for item in by_id["recursive-observe"]["provider_packages"]}
@@ -675,6 +670,13 @@ def test_capability_catalog() -> None:
           == {"agent-skills", "claude-code", "codex"}
           and all(item["status"] == "generated-beta"
                   for item in by_id["recursive-coordinate"]["provider_packages"]))
+    check("Lab names only its generated experimental provider packages",
+          by_id["recursive-lab"]["packaging_status"] == "generated-experimental"
+          and by_id["recursive-lab"]["safety_class"] == "experimental"
+          and {item["provider"] for item in by_id["recursive-lab"]["provider_packages"]}
+          == {"agent-skills", "claude-code", "codex"}
+          and all(item["status"] == "generated-experimental"
+                  for item in by_id["recursive-lab"]["provider_packages"]))
     check("Guard names only its generated Codex beta",
           by_id["recursive-guard"]["packaging_status"] == "generated-beta"
           and by_id["recursive-guard"]["provider_packages"] == [{
