@@ -2,7 +2,7 @@
 
 Phase: 6
 
-Status: implementation complete; protected-main receipt pending
+Status: verified
 
 Package experimental brainstorm, roadmap, venture, and other incubation workflows without
 allowing experiments to inherit production claims or hidden mutation authority.
@@ -19,7 +19,7 @@ allowing experiments to inherit production claims or hidden mutation authority.
   damage Observe, Learn, Verify, Coordinate, or Guard.
 - [x] Validate install, same-version refresh/reinstall, and uninstall in consumers with existing
   tools and docs. This is the first Lab version, so no prior-version upgrade can yet be claimed.
-- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+- [x] Merge the exact package and consumer receipt through protected checks and record the live
   protected-main and CodeQL receipt.
 
 ## TDD
@@ -63,4 +63,6 @@ pass, and all public surfaces say experimental.
   `docs/evidence/lab-consumer-acceptance.json`.
 - Byte-identical existing-project hashes, zero repository writes, zero external actions, and honest
   unsupported model/hosted/version-upgrade claims: `docs/lab-plugin.md`.
-- Live protected-main and CodeQL receipt: pending merge of this exact implementation.
+- `docs/evidence/lab/phase-06-live-receipt.json` binds PR #260 and main commit `13fa650`
+  to successful Linux, Windows, macOS, minimum-Git, optional-surface, Actions CodeQL, and Python
+  CodeQL jobs. The live main query returned zero open CodeQL alerts. Phase 6 is verified.
