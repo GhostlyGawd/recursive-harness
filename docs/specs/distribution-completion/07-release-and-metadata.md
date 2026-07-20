@@ -2,6 +2,8 @@
 
 Phase: 7
 
+Status: verified
+
 Produce and publish a reproducible v0.1.2 release whose assets, compatibility evidence,
 documentation, and live repository metadata agree.
 
