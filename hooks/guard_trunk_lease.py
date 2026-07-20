@@ -295,9 +295,8 @@ def _lease_dir(toplevel: str):
 
 def _read_lease(lease_dir: str, sid: str):
     try:
-        with open(os.path.join(lease_dir, _sanitize_sid(sid) + ".json"),
-                  encoding="utf-8") as f:
-            d = json.load(f)
+        path = os.path.join(lease_dir, _sanitize_sid(sid) + ".json")
+        d = private_state.read_json(path, root=lease_dir)
         return d.get("fp") if isinstance(d, dict) else None
     except (OSError, ValueError):
         return None
@@ -310,7 +309,7 @@ def _write_lease(lease_dir: str, sid: str, fp) -> None:
     try:
         path = os.path.join(lease_dir, _sanitize_sid(sid) + ".json")
         private_state.atomic_write_json(
-            path, {"fp": fp, "ts": time.time(), "session_id": sid})
+            path, {"fp": fp, "ts": time.time(), "session_id": sid}, root=lease_dir)
         _sweep(lease_dir)
     except Exception:
         pass

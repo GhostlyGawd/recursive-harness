@@ -47,14 +47,19 @@ _SCRATCH_IN_CMD = re.compile(rf"(?:^|[\s'\"=/\\]){_SCRATCH_NAMES}\.md(?![\w-])",
 _WRITE_VERB = writer_regex()
 
 
-def is_scratchpad(path: str, root: str):
-    """The scratchpad basename if `path` is a scratchpad-shaped file INSIDE the harness repo, else
-    None. realpath-resolved + repo-scoped so an alias or an out-of-repo path cannot confuse it."""
+def _scratchpad_target(path: str, root: str):
+    """Return ``(basename, canonical_path)`` for an in-root scratchpad target."""
     real = realpath_in_root(path, root)
     if not real:
         return None
     base = os.path.basename(real)
-    return base if _SCRATCH_RE.match(base) else None
+    return (base, real) if _SCRATCH_RE.match(base) else None
+
+
+def is_scratchpad(path: str, root: str):
+    """The scratchpad basename for an in-root target, retained as the public predicate."""
+    target = _scratchpad_target(path, root)
+    return target[0] if target else None
 
 
 def classify(tool_name: str, tool_input: dict, root: str, exists=os.path.exists):
@@ -64,9 +69,11 @@ def classify(tool_name: str, tool_input: dict, root: str, exists=os.path.exists)
     ti = tool_input or {}
     if tool_name == "Write":
         path = ti.get("file_path", "") or ""
-        kind = is_scratchpad(path, root)
-        if kind and not exists(path):
-            return (kind, path)
+        target = _scratchpad_target(path, root)
+        if target:
+            kind, canonical = target
+            if not exists(canonical):
+                return (kind, canonical)
     elif tool_name == "Bash":
         # Scan the WHOLE (separator-normalised) command for a scratchpad BASENAME next to a write
         # verb. We do NOT token-split (a spaced repo path defeats that) and do NOT re-resolve the

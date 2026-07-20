@@ -62,7 +62,11 @@ def realpath_in_root(path: str, root: str):
         rroot = os.path.realpath(root)
     except OSError:
         return None
-    if not real.startswith(rroot + os.sep) and real != rroot:
+    try:
+        common = os.path.commonpath((rroot, real))
+    except ValueError:
+        return None
+    if os.path.normcase(common) != os.path.normcase(rroot):
         return None
     return real
 

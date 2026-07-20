@@ -58,10 +58,45 @@ import sys
 import tarfile
 import tempfile
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = DEFAULT_ROOT
+
+
+def _repo_path(path):
+    """Canonical path when ``path`` stays inside the selected repository.
+
+    Repository contents are data, not authority: a tracked symlink must not make
+    Cartograph read private files outside ``--root``. Explicit CLI baseline and
+    output paths use separate helpers because the operator intentionally grants
+    those capabilities.
+    """
+    if not isinstance(path, str) or not path or "\0" in path:
+        return None
+    try:
+        root_real = os.path.realpath(os.path.abspath(ROOT))
+        candidate = os.path.realpath(os.path.abspath(path))
+        common = os.path.commonpath((root_real, candidate))
+    except (OSError, TypeError, ValueError):
+        return None
+    return candidate if os.path.normcase(common) == os.path.normcase(root_real) else None
+
+
+def _explicit_read(path):
+    """Read an operator-selected file capability (for ``--baseline PATH``)."""
+    if not isinstance(path, str) or not path or "\0" in path:
+        return ""
+    try:
+        with open(os.path.abspath(path), encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except (OSError, UnicodeError):
+        return ""
 
 
 def read(path):
+    """Read repository data only after resolving it inside the selected root."""
+    path = _repo_path(path)
+    if not path:
+        return ""
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
             return fh.read()
@@ -79,13 +114,15 @@ def rel(path):
 
 
 def listfiles(subdir, ext):
-    d = os.path.join(ROOT, subdir)
-    if not os.path.isdir(d):
+    d = _repo_path(os.path.join(ROOT, subdir))
+    if not d or not os.path.isdir(d):
         return []
-    return sorted(
-        os.path.join(d, f) for f in os.listdir(d)
-        if f.endswith(ext) and os.path.isfile(os.path.join(d, f))
-    )
+    files = []
+    for name in os.listdir(d):
+        candidate = _repo_path(os.path.join(d, name))
+        if name.endswith(ext) and candidate and os.path.isfile(candidate):
+            files.append(candidate)
+    return sorted(files)
 
 
 def ignored_files(root):
@@ -456,10 +493,10 @@ def build(tracked_only=False):
 
     # --- discover artifact nodes + the "known name" sets we match against -----
     skill_files = {}
-    skills_dir = os.path.join(ROOT, "skills")
-    for d in (sorted(os.listdir(skills_dir)) if os.path.isdir(skills_dir) else []):
-        sk = os.path.join(skills_dir, d, "SKILL.md")
-        if os.path.isfile(sk) and _tracked(sk):
+    skills_dir = _repo_path(os.path.join(ROOT, "skills"))
+    for d in (sorted(os.listdir(skills_dir)) if skills_dir and os.path.isdir(skills_dir) else []):
+        sk = _repo_path(os.path.join(skills_dir, d, "SKILL.md"))
+        if sk and os.path.isfile(sk) and _tracked(sk):
             fm = frontmatter(read(sk))
             m = re.search(r"^name:\s*(\S+)", fm, re.M)
             name = m.group(1) if m else d
@@ -513,25 +550,28 @@ def build(tracked_only=False):
 
     # config + kernel + lint + evals
     for cfg in ("settings.json", "autonomy.json", "features.json"):
-        p = os.path.join(ROOT, cfg)
-        if os.path.isfile(p) and _tracked(p):
+        p = _repo_path(os.path.join(ROOT, cfg))
+        if p and os.path.isfile(p) and _tracked(p):
             g.node(f"config:{cfg}", "config", cfg, cfg)
     g.node("kernel:CLAUDE.md", "kernel", "CLAUDE.md (kernel)", "CLAUDE.md")
-    if os.path.isfile(os.path.join(ROOT, "lint", "lint_harness.py")):
+    lint_path = _repo_path(os.path.join(ROOT, "lint", "lint_harness.py"))
+    if lint_path and os.path.isfile(lint_path):
         g.node("lint:lint_harness", "lint", "lint_harness.py", "lint/lint_harness.py")
     # Eval-corpus CASES, one node per evals/corpus/<slug>/ dir (mirrors ADR per-file
     # discovery above). SDD Phase A: a requirement/spec `verified_by:` pointer resolves to an
     # eval-corpus CASE (Decision E), so the per-case node is what the verified_by edge lands
     # on - the single evals:corpus node had nothing for a clause-level pointer to attach to.
     eval_cases = set()
-    corpus_dir = os.path.join(ROOT, "evals", "corpus")
-    if os.path.isdir(corpus_dir):
+    corpus_dir = _repo_path(os.path.join(ROOT, "evals", "corpus"))
+    if corpus_dir and os.path.isdir(corpus_dir):
         for d in sorted(os.listdir(corpus_dir)):
-            if os.path.isdir(os.path.join(corpus_dir, d)):
+            case_dir = _repo_path(os.path.join(corpus_dir, d))
+            if case_dir and os.path.isdir(case_dir):
                 eval_cases.add(d)
                 g.node(f"evals:{d}", "evals", f"evals/corpus/{d}",
                        file=f"evals/corpus/{d}")
-    elif os.path.isdir(os.path.join(ROOT, "evals")):
+    elif ((evals_dir := _repo_path(os.path.join(ROOT, "evals")))
+          and os.path.isdir(evals_dir)):
         # corpus dir absent but evals/ present - keep a single coarse node as a hygiene
         # fallback so the `evals` type does not silently vanish on a corpus-less checkout.
         g.node("evals:corpus", "evals", "evals/ (regression corpus)", "evals")
@@ -897,7 +937,7 @@ def load_baseline(path):
     if not path or not os.path.isfile(path):
         return set()
     try:
-        data = json.loads(read(path))
+        data = json.loads(_explicit_read(path))
     except json.JSONDecodeError:
         return set()
     if not isinstance(data, dict):
@@ -1199,7 +1239,8 @@ def render_text(g, warnings, notes, wired):
 # --------------------------------------------------------------- Phase 2: live overlay
 def read_jsonl(path):
     rows = []
-    if not os.path.isfile(path):
+    path = _repo_path(path)
+    if not path or not os.path.isfile(path):
         return rows
     for line in read(path).splitlines():
         line = line.strip()
@@ -1219,7 +1260,7 @@ def compute_overlay(g):
     Everything here is live machine-state, not structure — the renderer shows
     it as a toggleable overlay so it never masquerades as topology.
     """
-    state = os.path.join(ROOT, "state")
+    state = _repo_path(os.path.join(ROOT, "state")) or os.path.join(ROOT, "state")
     usage = read_jsonl(os.path.join(state, "skill_usage.jsonl"))
     fires = {}
     for rec in usage:
@@ -1277,12 +1318,20 @@ def heal_health():
     as a missing vital sign - acceptable only because this is advisory/non-blocking; the gate,
     the ledger writes, and the /retro feed never route through here."""
     try:
-        heal_dir = os.path.join(ROOT, "skills", "auto-healer")
+        # Import executable helper code only from this reviewed installation. A
+        # foreign --root supplies ledger data, never a Python import capability.
+        heal_dir = os.path.realpath(os.path.join(DEFAULT_ROOT, "skills", "auto-healer"))
+        trusted_root = os.path.realpath(DEFAULT_ROOT)
+        if (os.path.commonpath((trusted_root, heal_dir)) != trusted_root
+                or not os.path.isdir(heal_dir)):
+            return None
         if heal_dir not in sys.path:
             sys.path.insert(0, heal_dir)
         import heal  # single-source the repo-key derivation AND the failure predicates
         key = heal._repo_key(root=ROOT)
-        d = os.path.join(ROOT, "state", "heal", key)
+        d = _repo_path(os.path.join(ROOT, "state", "heal", key))
+        if not d:
+            return None
         bugs = read_jsonl(os.path.join(d, "bugs.jsonl"))
         attempts = read_jsonl(os.path.join(d, "attempts.jsonl"))
         if not bugs:
@@ -2662,8 +2711,8 @@ def git_inflight():
     except (OSError, subprocess.SubprocessError):
         pass
     # session_owners.json: keys are absolute, lower-cased repo paths -> {session_id, pid, ...}
-    owners_path = os.path.join(ROOT, "state", "session_owners.json")
-    if os.path.isfile(owners_path):
+    owners_path = _repo_path(os.path.join(ROOT, "state", "session_owners.json"))
+    if owners_path and os.path.isfile(owners_path):
         try:
             owners = json.loads(read(owners_path))
         except (json.JSONDecodeError, ValueError):
@@ -2677,14 +2726,17 @@ def git_inflight():
                     break
             info["active_sessions"] = sum(1 for v in owners.values() if isinstance(v, dict))
     # trunk-lease/: one json per session currently holding (or having held) the trunk lease
-    lease_dir = os.path.join(ROOT, "state", "trunk-lease")
-    if os.path.isdir(lease_dir):
+    lease_dir = _repo_path(os.path.join(ROOT, "state", "trunk-lease"))
+    if lease_dir and os.path.isdir(lease_dir):
         holders = []
         for fn in sorted(os.listdir(lease_dir)):
             if not fn.endswith(".json"):
                 continue
             try:
-                ld = json.loads(read(os.path.join(lease_dir, fn)))
+                lease_path = _repo_path(os.path.join(lease_dir, fn))
+                if not lease_path:
+                    continue
+                ld = json.loads(read(lease_path))
             except (json.JSONDecodeError, ValueError):
                 continue
             if isinstance(ld, dict) and ld.get("session_id"):
@@ -2832,19 +2884,29 @@ def main():
     args = ap.parse_args()
 
     if args.root:
-        ROOT = os.path.abspath(args.root)
+        selected_root = os.path.realpath(os.path.abspath(args.root))
+        if not os.path.isdir(selected_root):
+            ap.error("--root must select an existing directory")
+        ROOT = selected_root
 
     g, warnings, notes, wired = build()
 
     # Part B gate modes are terminal: do the gate, skip the graph dump / json / html.
     # (--check / --write-baseline are mutually exclusive at the argparse layer.)
     if args.write_baseline is not None:
-        bpath = args.write_baseline or default_baseline()
+        bpath = args.write_baseline or _repo_path(default_baseline())
+        if not bpath:
+            sys.stderr.write("refusing default baseline path outside selected --root\n")
+            sys.exit(2)
         write_baseline(bpath, warnings)
         sys.stdout.write(f"wrote baseline {rel(bpath)} ({len(warnings)} grandfathered)\n")
         return
     if args.check is not None:
-        sys.exit(run_gate(warnings, args.check or default_baseline()))
+        bpath = args.check or _repo_path(default_baseline())
+        if not bpath:
+            sys.stderr.write("refusing default baseline path outside selected --root\n")
+            sys.exit(2)
+        sys.exit(run_gate(warnings, bpath))
     if args.audit is not None:
         # The audit needs the live `fires` (compute_overlay) + git `added` (attach_git_dates)
         # tags to apply the dead-weight rule. Both only READ - no repo mutation.
@@ -2931,7 +2993,11 @@ def main():
                              f"({len(g.nodes)} nodes, {len(g.edges)} edges)\n")
 
     if args.html is not None:
-        hpath = os.path.abspath(args.html) if args.html else os.path.join(ROOT, "cartograph", "index.html")
+        hpath = (os.path.abspath(args.html) if args.html
+                 else _repo_path(os.path.join(ROOT, "cartograph", "index.html")))
+        if not hpath:
+            sys.stderr.write("refusing default html path outside selected --root\n")
+            sys.exit(2)
         os.makedirs(os.path.dirname(hpath) or ".", exist_ok=True)
         with open(hpath, "w", encoding="utf-8") as fh:
             fh.write(render_html(payload))
