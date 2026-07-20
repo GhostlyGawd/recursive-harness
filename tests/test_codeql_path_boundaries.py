@@ -242,7 +242,14 @@ def test_scratchpad_existence_check_uses_the_confined_canonical_target() -> None
 
         target = alias / "STATE.md"
         assert guard.classify("Write", {"file_path": str(target)}, str(root), exists=exists)
-        assert observed == [str(real / "STATE.md")]
+        # Hosted runner temp roots can themselves be aliases (for example macOS
+        # /var -> /private/var and Windows short/extended path forms).  Assert the
+        # boundary property against the platform canonical form instead of a
+        # textual spelling of the intermediate ``real`` path.
+        canonical_target = os.path.realpath(target)
+        canonical_root = os.path.realpath(root)
+        assert observed == [canonical_target]
+        assert os.path.commonpath((canonical_root, observed[0])) == canonical_root
 
 
 def test_transcript_detector_rejects_a_symlinked_host_capability() -> None:
