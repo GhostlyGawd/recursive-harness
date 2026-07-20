@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-20T20:01:44Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "ref": "refs/heads/main",
+  "main_sha": "f4b8fce373feaa87aa27723af2dac438b60ba4e8",
+  "pull_request": 258,
+  "ci": {
+    "run_id": 29774251320,
+    "conclusion": "success",
+    "jobs": {
+      "lint-and-test": 88459700347,
+      "windows-distribution": 88459700425,
+      "macos-distribution": 88459700421,
+      "minimum-git": 88459700379,
+      "optional-surfaces": 88459700349
+    }
+  },
+  "codeql": {
+    "run_id": 29774249756,
+    "conclusion": "success",
+    "actions_job_id": 88459699025,
+    "python_job_id": 88459698894,
+    "live_open_alert_count": 0
+  },
+  "package": {
+    "capability": "recursive-coordinate",
+    "source_tree_sha256": "f118af57eac6e7c09777d0809ac260dc854e17f9da2147e5add2aec8847aa5a7",
+    "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+    "provider_manifests": [
+      ".codex-plugin/plugin.json",
+      ".claude-plugin/plugin.json"
+    ]
+  },
+  "consumer_acceptance": {
+    "receipt": "docs/evidence/coordinate-consumer-acceptance.json",
+    "result": "accepted",
+    "agent_skills_copied_execution": true,
+    "claude_code_version": "2.1.200",
+    "codex_package": "@openai/codex",
+    "codex_version": "0.144.6",
+    "consumer_journeys": 3,
+    "worktree_processes_per_journey": 2,
+    "exclusive_claim_winners": 1,
+    "repository_writes": 0,
+    "network_requests": 0,
+    "mission_state_writes": 0
+  },
+  "phase_gate": {
+    "reproducible_package": true,
+    "tamper_closed": true,
+    "atomic_claim_properties": true,
+    "bounded_lease_recovery": true,
+    "idempotent_handoffs_and_releases": true,
+    "repository_isolation": true,
+    "read_only_mission_projection": true,
+    "remote_connectors": "not-shipped",
+    "claimed_consumers_installed": true,
+    "protected_main_green": true,
+    "maturity_label": "generated-beta",
+    "result": "verified"
+  }
+}

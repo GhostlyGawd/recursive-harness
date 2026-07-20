@@ -2,7 +2,7 @@
 
 Phase: 5
 
-Status: implementation complete; protected-main receipt pending
+Status: verified
 
 Package worktree awareness, claims, handoffs, Agent Mail/Fleet integration, and Mission
 Control without silently taking repository or external-service authority.
@@ -18,7 +18,7 @@ Control without silently taking repository or external-service authority.
 - [x] Package a read-only Mission projection over authoritative state, not a second ledger. The
   full Textual Mission Control TUI remains honestly unsupported in the portable beta.
 - [x] Verify independent install and real concurrent consumer journeys on supported systems.
-- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+- [x] Merge the exact package and consumer receipt through protected checks and record the live
   protected-main and CodeQL receipt.
 
 ## TDD
@@ -62,4 +62,6 @@ and the state/side-effect matrix and receipts are merged.
   two-worktree process race: `docs/evidence/coordinate-consumer-acceptance.json`.
 - Optional-service evidence is an explicit local-only status with no connector, credential
   request, or network call. No connected-service claim is made because no connector ships.
-- Live protected-main and CodeQL receipt: pending merge of this exact implementation.
+- `docs/evidence/coordinate/phase-05-live-receipt.json` binds PR #258 and main commit `f4b8fce`
+  to successful Linux, Windows, macOS, minimum-Git, optional-surface, Actions CodeQL, and Python
+  CodeQL jobs. The live main query returned zero open CodeQL alerts. Phase 5 is verified.

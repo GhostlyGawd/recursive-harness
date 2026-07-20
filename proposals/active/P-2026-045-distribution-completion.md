@@ -21,6 +21,7 @@ resolution: ""
 | 2026-07-20 | approved | in-progress | Phase 4 implementation completed locally: stateless Recursive Verify packages, read-only/path-boundary properties, exact diff-only proposal output, and real generic, Claude Code 2.1.200, and official Codex 0.144.6 consumer installs passed; protected-main receipt remains pending |
 | 2026-07-20 | approved | in-progress | Phase 4 verified on protected `main`: PR #256 merged at `2de791a`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-04-live-receipt.json` binds the stateless package and consumer evidence |
 | 2026-07-20 | approved | in-progress | Phase 5 implementation completed locally: atomic repository-scoped claims, bounded leases, idempotent handoffs/releases, read-only Mission projection, and real generic, Claude Code 2.1.200, and official Codex 0.144.6 concurrent worktree installs passed; protected-main receipt remains pending |
+| 2026-07-20 | approved | in-progress | Phase 5 verified on protected `main`: PR #258 merged at `f4b8fce`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-05-live-receipt.json` binds the fixed-root concurrent package and consumer evidence |
 <!-- proposal-history:end -->
 
 ## Problem
