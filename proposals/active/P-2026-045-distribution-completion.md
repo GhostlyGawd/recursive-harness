@@ -23,6 +23,7 @@ resolution: ""
 | 2026-07-20 | approved | in-progress | Phase 5 implementation completed locally: atomic repository-scoped claims, bounded leases, idempotent handoffs/releases, read-only Mission projection, and real generic, Claude Code 2.1.200, and official Codex 0.144.6 concurrent worktree installs passed; protected-main receipt remains pending |
 | 2026-07-20 | approved | in-progress | Phase 5 verified on protected `main`: PR #258 merged at `f4b8fce`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-05-live-receipt.json` binds the fixed-root concurrent package and consumer evidence |
 | 2026-07-20 | approved | in-progress | Phase 6 implementation completed locally: experimental Brainstorm/Roadmap previews, exact-target action records, zero mutation connector, and generic, Claude Code 2.1.200, and official Codex 0.144.6 isolated install/refresh/uninstall journeys passed; protected-main receipt remains pending |
+| 2026-07-20 | approved | in-progress | Phase 6 verified on protected `main`: PR #260 merged at `13fa650`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-06-live-receipt.json` binds the experimental package, honest first-version upgrade limitation, and consumer evidence |
 <!-- proposal-history:end -->
 
 ## Problem

@@ -21,7 +21,7 @@ Observed on 2026-07-19 at protected `main` commit
 | Codex specialization | Generated preview; no real receipt-bound Codex consumer execution |
 | Learn, Verify | Verified generated-beta consumer packages |
 | Coordinate | Verified generated-beta local consumer package |
-| Lab | Implementation and real-consumer evidence complete; protected-main receipt pending |
+| Lab | Verified generated-experimental consumer package |
 | Marketplace | Repository-local catalog exists; it is not a public OpenAI marketplace listing |
 
 Baseline changes are recorded as evidence; they do not silently rewrite the target.
