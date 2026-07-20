@@ -1,0 +1,57 @@
+{
+  "capability": "recursive-learn",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "provider_manifests": [
+    ".codex-plugin/plugin.json",
+    ".claude-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "4d25b577e584ceae0392ea1566fe6c43fab676e5212f265ce2f1feedd0d345ab",
+  "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+  "package_files": {
+    ".claude-plugin/plugin.json": "834fbf8afc9cfbd517021d7a7dba834dd8a11de6617f5cfff84b83200c75125d",
+    ".codex-plugin/plugin.json": "6e20e52c769c36951392de752e6a6d0db6b3b00d697b9ae1f9b6ef130e3ec937",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "skills/learn/SKILL.md": "3d75b57713a6e4f39b793059dd10e71181beeca67ad526b1556c84724cd74046",
+    "skills/learn/agents/openai.yaml": "da2e37c8a1523c002298411549acfa72c3d2a8afa007b4edaf3f0ba6cadb5dbf",
+    "skills/learn/references/privacy.md": "bedfd8e8219b216ed95f520875c0b4d6779d2da7f763d88dc05f5627a7082b64",
+    "skills/learn/references/promotion.md": "65e9e4b992bec901cbef6a0300b36b193bb6b8e14b8ca22ecfb133b73716cf2b",
+    "skills/learn/scripts/learn.py": "5bb72220f419312792c187c5fd601b741236f8e5e636807c8015c25fdde450d4",
+    "skills/learn/scripts/learn_private_state.py": "4d03a585af788a30db7c1442b437703391f2527f466bf3fccc7c2bf22fe2641d",
+    "skills/learn/scripts/learn_store.py": "553f65bd6e693346d3a006cd3aaf27bcd38d9c3f926abbcceba81dd239a01ecf"
+  },
+  "sources": {
+    "skills/learn/SKILL.md": {
+      "packaged_path": "skills/learn/SKILL.md",
+      "sha256": "3d75b57713a6e4f39b793059dd10e71181beeca67ad526b1556c84724cd74046"
+    },
+    "skills/learn/agents/openai.yaml": {
+      "packaged_path": "skills/learn/agents/openai.yaml",
+      "sha256": "da2e37c8a1523c002298411549acfa72c3d2a8afa007b4edaf3f0ba6cadb5dbf"
+    },
+    "skills/learn/scripts/learn.py": {
+      "packaged_path": "skills/learn/scripts/learn.py",
+      "sha256": "5bb72220f419312792c187c5fd601b741236f8e5e636807c8015c25fdde450d4"
+    },
+    "skills/learn/scripts/learn_store.py": {
+      "packaged_path": "skills/learn/scripts/learn_store.py",
+      "sha256": "553f65bd6e693346d3a006cd3aaf27bcd38d9c3f926abbcceba81dd239a01ecf"
+    },
+    "skills/learn/references/privacy.md": {
+      "packaged_path": "skills/learn/references/privacy.md",
+      "sha256": "bedfd8e8219b216ed95f520875c0b4d6779d2da7f763d88dc05f5627a7082b64"
+    },
+    "skills/learn/references/promotion.md": {
+      "packaged_path": "skills/learn/references/promotion.md",
+      "sha256": "65e9e4b992bec901cbef6a0300b36b193bb6b8e14b8ca22ecfb133b73716cf2b"
+    },
+    "private_state.py": {
+      "packaged_path": "skills/learn/scripts/learn_private_state.py",
+      "sha256": "4d03a585af788a30db7c1442b437703391f2527f466bf3fccc7c2bf22fe2641d"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

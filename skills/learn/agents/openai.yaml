@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Learn"
+  short_description: "Turn corrections into reviewable improvements."
+  default_prompt: "Use $learn to capture this correction privately and prepare a reviewable learning candidate without changing the repository."

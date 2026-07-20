@@ -2,8 +2,9 @@
 
 ## Identity
 
-The shelf for provider and multi-skill packages. `recursive-observe/` is a tracked,
-hook-free Claude/Codex/generic package over the canonical `skills/observe` capability.
+The shelf for provider and multi-skill packages. `recursive-observe/` and
+`recursive-learn/` are tracked, hook-free Claude/Codex/generic packages over their
+canonical capabilities.
 `recursive-specialization/` is a narrow generated Codex adapter for the canonical
 `skills/specialization/` capability. `prospector/` and `wraithworld/` remain vendored-live
 nested repositories with their own histories and are gitignored here.
@@ -51,6 +52,9 @@ must not be a budget-bypass.
   canonical capability and prove generated-source parity.
 - Rebuild Observe with `python3 scripts/build_observe_plugins.py`; verify drift with
   `python3 scripts/build_observe_plugins.py --check`.
+- Rebuild Learn with `python3 scripts/build_learn_plugins.py`; verify drift with
+  `python3 scripts/build_learn_plugins.py --check`. Edit `skills/learn`, never the generated
+  package copy.
 - Rebuild Specialization with `python3 scripts/build_codex_specialization_plugin.py`; verify
   drift with `python3 scripts/build_codex_specialization_plugin.py --check`. Edit canonical
   sources, never generated package copies.

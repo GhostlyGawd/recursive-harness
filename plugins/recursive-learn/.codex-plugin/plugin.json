@@ -1,0 +1,33 @@
+{
+  "name": "recursive-learn",
+  "version": "0.1.0",
+  "description": "Turn private corrections into reviewable improvements with zero default repository writes.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/learn-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "learning",
+    "privacy",
+    "retrospectives"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Learn",
+    "shortDescription": "Turn corrections into reviewable improvements.",
+    "longDescription": "Capture corrections and follow-ups in sanitized private state, select a compact retrospective, and emit an exact promotion diff without changing the repository.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Private correction ledger",
+      "Follow-up tracking",
+      "Three-signal retrospectives",
+      "Review-only promotion diffs"
+    ],
+    "defaultPrompt": "Use Recursive Learn to capture this correction privately and prepare a reviewable candidate without changing the repository."
+  }
+}

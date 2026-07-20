@@ -1,0 +1,60 @@
+{
+  "accepted_date": "2026-07-19",
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "limitations": {
+    "execution": "installed deterministic package runtime",
+    "hosted_web": "not tested",
+    "model_skill_selection": "not tested",
+    "public_marketplace": "not tested"
+  },
+  "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+  "providers": {
+    "agent-skills": {
+      "copied_package_execution": true,
+      "deterministic_runtime": true,
+      "file_count": 10,
+      "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+      "private_state": true,
+      "promotion": "diff-only",
+      "receipt_verified": true,
+      "redaction_at_rest": true
+    },
+    "claude-code": {
+      "consumer": "Claude Code",
+      "deterministic_runtime": true,
+      "file_count": 10,
+      "installed": true,
+      "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+      "private_state": true,
+      "promotion": "diff-only",
+      "receipt_verified": true,
+      "redaction_at_rest": true,
+      "scope": "isolated-user",
+      "version": "2.1.200"
+    },
+    "codex": {
+      "consumer_package": "@openai/codex",
+      "deterministic_runtime": true,
+      "file_count": 10,
+      "installed": true,
+      "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+      "private_state": true,
+      "promotion": "diff-only",
+      "receipt_verified": true,
+      "redaction_at_rest": true,
+      "scope": "isolated-user",
+      "version": "0.144.6"
+    }
+  },
+  "repository": {
+    "after_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "before_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "existing_configuration_files": 7,
+    "writes": 0
+  },
+  "result": "accepted",
+  "schema_version": 1
+}
