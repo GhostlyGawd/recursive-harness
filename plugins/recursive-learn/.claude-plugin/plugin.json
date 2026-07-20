@@ -1,0 +1,19 @@
+{
+  "name": "recursive-learn",
+  "version": "0.1.0",
+  "description": "Turn private corrections into reviewable improvements with zero default repository writes.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/learn-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "learning",
+    "privacy",
+    "retrospectives"
+  ],
+  "skills": "./skills/"
+}

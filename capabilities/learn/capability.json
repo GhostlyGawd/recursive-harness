@@ -4,21 +4,49 @@
   "id": "recursive-learn",
   "display_name": "Recursive Learn",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-beta",
   "safety_class": "advisory",
   "default_repository_writes": "never",
   "repository_writes": "explicit-reviewed-action-only",
   "state_behavior": "private sidecar candidates; durable promotion requires an explicit reviewed action",
+  "retention_behavior": "30-day raw-text scrub preview; apply is explicit; malformed timestamps are reported and retained",
   "explicit_repository_actions": ["run retrospection", "promote learning", "prepare reviewed change"],
   "required_events": [],
-  "optional_events": ["prompt-submit", "tool-result", "session-end"],
-  "canonical_components": [
-    "skills/routing-learnings",
-    "skills/retrospection",
-    "skills/specialization",
-    "skills/follow-up-handling",
-    "commands/retro.md",
-    "commands/followups.md"
+  "optional_events": [],
+  "optional_dependencies": [
+    "Python 3.12 or newer for the deterministic local CLI",
+    "Git only when selecting an explicit repository for a promotion diff"
   ],
-  "provider_packages": []
+  "unsupported_cases": [
+    "automatic prompt, transcript, tool-result, or repository ingestion",
+    "automatic edits, commits, pushes, pull requests, or instruction replacement",
+    "hosted state synchronization or multi-device merge",
+    "sandboxing untrusted commands or encrypting state independently of the operating system"
+  ],
+  "canonical_components": [
+    "skills/learn/SKILL.md",
+    "skills/learn/agents/openai.yaml",
+    "skills/learn/scripts/learn.py",
+    "skills/learn/scripts/learn_store.py",
+    "skills/learn/references/privacy.md",
+    "skills/learn/references/promotion.md",
+    "private_state.py"
+  ],
+  "provider_packages": [
+    {
+      "provider": "agent-skills",
+      "status": "generated-beta",
+      "path": "plugins/recursive-learn/skills/learn"
+    },
+    {
+      "provider": "claude-code",
+      "status": "generated-beta",
+      "path": "plugins/recursive-learn/.claude-plugin/plugin.json"
+    },
+    {
+      "provider": "codex",
+      "status": "generated-beta",
+      "path": "plugins/recursive-learn/.codex-plugin/plugin.json"
+    }
+  ]
 }

@@ -22,11 +22,13 @@ The extraction order is deliberate:
 4. `recursive-guard` — separate high-trust integration;
 5. `recursive-lab` — experimental and capability-specific.
 
-Observe currently ships as generated beta packages for generic Agent Skills, Claude Code,
-and local Codex. Guard ships as a separate generated-beta Codex package with its own trust
+Observe and Learn currently ship as generated beta packages for generic Agent Skills,
+Claude Code, and local Codex. Learn is hook-free, keeps sanitized signals in a fixed private
+sidecar, and can emit but never apply a promotion diff. Guard ships as a separate generated-beta Codex package with its own trust
 decision and is inert until a repository explicitly adopts a reviewed policy. The
-[Codex consumer receipt](../docs/codex-consumer-acceptance.md) binds both packages to a real
-immutable-ref install and installed-cache execution. The other catalog entries remain design
+[Codex consumer receipt](../docs/codex-consumer-acceptance.md) binds Observe and Guard to a real
+immutable-ref install and installed-cache execution. Learn has a separate multi-consumer
+receipt linked from its provider guide. The other catalog entries remain design
 contracts unless their manifest says otherwise.
 
 Existing consumer instructions, agents, skills, hooks, and provider settings remain
