@@ -4,18 +4,98 @@
   "id": "recursive-coordinate",
   "display_name": "Recursive Coordinate",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-beta",
   "safety_class": "operational",
   "default_repository_writes": "never",
-  "repository_writes": "runtime-only",
-  "state_behavior": "explicit local claims, leases, handoffs, and operator views",
+  "repository_writes": "never",
+  "state_behavior": "sanitized repository-scoped claims and handoffs in one user-private local ledger",
+  "state_root": "user-private:~/.recursive-harness/coordinate/repositories/<hashed-repository-scope>",
+  "credentials": "never-requested",
+  "remote_calls": [],
   "required_events": [],
-  "optional_events": ["session-start", "tool-result", "session-end"],
-  "canonical_components": [
-    "skills/worktree",
-    "commands/standup.md",
-    "fleet",
-    "mission_control"
+  "optional_events": [],
+  "concurrency_model": {
+    "claim_transaction": "interprocess-exclusive",
+    "storage": "portable file lock plus atomic JSONL replacement",
+    "scope": "one hashed Git common directory or canonical non-Git directory",
+    "conflict_rule": "different owners cannot hold overlapping live targets",
+    "ledger_cap": 5000
+  },
+  "lease_semantics": {
+    "minimum_seconds": 5,
+    "maximum_seconds": 86400,
+    "expiry": "wall-clock with last-ledger-timestamp floor",
+    "process_death": "claim becomes reacquirable at expiry",
+    "renewal": "owner-only replacement that supersedes the prior claim",
+    "release": "owner-only and idempotent"
+  },
+  "degraded_behavior": {
+    "missing_git": "canonical directory identity; no worktree unification claim",
+    "missing_external_service": "local claims, handoffs, and Mission projection remain available",
+    "clock_forward_jump": "lease may expire early; caller must reacquire and recheck work",
+    "clock_backward_jump": "last ledger timestamp prevents a second owner"
+  },
+  "optional_dependencies": [
+    "Git for common-directory identity across worktrees; ordinary directory identity remains available without it"
   ],
-  "provider_packages": []
+  "unsupported_cases": [
+    "remote Agent Mail or Fleet service connections",
+    "multi-machine consensus or distributed locking",
+    "the full Textual Mission Control interface",
+    "the optional Fleet MCP adapter",
+    "automatic hooks, repository edits, provider-configuration edits, or credential discovery",
+    "hosted web consumers until local Python execution and state persistence are proven"
+  ],
+  "command_contracts": {
+    "claim-acquire-renew-release": {
+      "state_writes": ["one sanitized event after an atomic owner/conflict check"],
+      "repository_writes": "never",
+      "remote_calls": [],
+      "maturity": "generated-beta"
+    },
+    "handoff-send-ack": {
+      "state_writes": ["one sanitized idempotent event"],
+      "repository_writes": "never",
+      "remote_calls": [],
+      "maturity": "generated-beta"
+    },
+    "claim-list-handoff-inbox-mission-view": {
+      "state_writes": [],
+      "repository_writes": "never",
+      "remote_calls": [],
+      "maturity": "generated-beta"
+    },
+    "integration-status": {
+      "state_writes": [],
+      "repository_writes": "never",
+      "remote_calls": [],
+      "maturity": "generated-beta"
+    }
+  },
+  "canonical_components": [
+    "skills/coordinate/SKILL.md",
+    "skills/coordinate/agents/openai.yaml",
+    "skills/coordinate/scripts/coordinate.py",
+    "skills/coordinate/references/commands.md",
+    "skills/coordinate/references/state-machine.md",
+    "skills/coordinate/references/security.md",
+    "private_state.py"
+  ],
+  "provider_packages": [
+    {
+      "provider": "agent-skills",
+      "status": "generated-beta",
+      "path": "plugins/recursive-coordinate/skills/coordinate"
+    },
+    {
+      "provider": "claude-code",
+      "status": "generated-beta",
+      "path": "plugins/recursive-coordinate/.claude-plugin/plugin.json"
+    },
+    {
+      "provider": "codex",
+      "status": "generated-beta",
+      "path": "plugins/recursive-coordinate/.codex-plugin/plugin.json"
+    }
+  ]
 }

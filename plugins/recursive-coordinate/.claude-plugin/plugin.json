@@ -1,0 +1,20 @@
+{
+  "name": "recursive-coordinate",
+  "version": "0.1.0",
+  "description": "Coordinate local agents with atomic claims and private handoffs without changing the project.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/coordinate-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "coordination",
+    "worktrees",
+    "claims",
+    "handoffs"
+  ],
+  "skills": "./skills/"
+}

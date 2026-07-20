@@ -201,16 +201,23 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
         require(after_first_release == package_files(state_root),
                 "idempotent release appended a duplicate event")
 
+        clock_key = "repo-" + hashlib.sha256(b"clock-property").hexdigest()
         early = runtime.acquire_claim(
-            state_root, repository_key, "clock-a", "docs/**", 10, "clock-a", now_s=100,
+            state_root, clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=100,
         )
         backward = runtime.acquire_claim(
-            state_root, repository_key, "clock-b", "docs/guide.md", 10, "clock-b", now_s=90,
+            state_root, clock_key, "clock-b", "docs/guide.md", 10, "clock-b", now_s=90,
+        )
+        expired_retry = runtime.acquire_claim(
+            state_root, clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=111,
         )
         recovered = runtime.acquire_claim(
-            state_root, repository_key, "clock-b", "docs/guide.md", 10, "clock-c", now_s=111,
+            state_root, clock_key, "clock-b", "docs/guide.md", 10, "clock-c", now_s=111,
         )
-        require(early["acquired"] and not backward["acquired"] and recovered["acquired"],
+        require(early["acquired"] and not backward["acquired"]
+                and not expired_retry["acquired"]
+                and expired_retry["reason"] == "operation-lease-expired"
+                and recovered["acquired"],
                 "backward clock or stale-lease recovery violated exclusivity")
 
         handoff_a = runtime.send_handoff(

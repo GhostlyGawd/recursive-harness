@@ -2,19 +2,24 @@
 
 Phase: 5
 
+Status: implementation complete; protected-main receipt pending
+
 Package worktree awareness, claims, handoffs, Agent Mail/Fleet integration, and Mission
 Control without silently taking repository or external-service authority.
 
 ## Tasks
 
-- [ ] Define the Coordinate manifest, concurrency model, lease semantics, state roots,
+- [x] Define the Coordinate manifest, concurrency model, lease semantics, state roots,
   optional services, remote calls, write policy, and degraded behavior.
-- [ ] Separate local advisory coordination from Fleet/Agent Mail integrations; require an
-  explicit connection and trust decision for every external service.
-- [ ] Make claims and handoffs collision-safe across processes and worktrees, with bounded
+- [x] Separate local advisory coordination from Fleet/Agent Mail integrations. No remote
+  connector or credential flow ships; a future connector requires a separate trust decision.
+- [x] Make claims and handoffs collision-safe across processes and worktrees, with bounded
   leases, idempotent release, and recoverable stale ownership.
-- [ ] Package Mission Control as a projection over authoritative state, not a second ledger.
-- [ ] Verify independent install and real concurrent consumer journeys on supported systems.
+- [x] Package a read-only Mission projection over authoritative state, not a second ledger. The
+  full Textual Mission Control TUI remains honestly unsupported in the portable beta.
+- [x] Verify independent install and real concurrent consumer journeys on supported systems.
+- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+  protected-main and CodeQL receipt.
 
 ## TDD
 
@@ -47,8 +52,14 @@ and the state/side-effect matrix and receipts are merged.
 
 ## Completion evidence
 
-- Manifest, dependency disclosure, and state-machine specification.
-- Repeated property-test seeds and concurrency stress results.
-- Worktree/process consumer transcripts and ledger reconciliation.
-- Optional-service unavailable/connected captures with sanitized network evidence.
-- Mission Control projection consistency receipt.
+- Manifest and state/side-effect disclosure: `capabilities/coordinate/capability.json` and
+  `skills/coordinate/references/commands.md`.
+- State-machine and clock/lease contract: `skills/coordinate/references/state-machine.md`.
+- Seeded 180-operation property suite, 12-process collision race, worktree/repository isolation,
+  stale ownership, double release, duplicate handoff, link confinement, and Mission consistency:
+  `tests/test_coordinate_package.py`.
+- Fresh generic, Claude Code 2.1.200, and official Codex 0.144.6 isolated installs, each running a
+  two-worktree process race: `docs/evidence/coordinate-consumer-acceptance.json`.
+- Optional-service evidence is an explicit local-only status with no connector, credential
+  request, or network call. No connected-service claim is made because no connector ships.
+- Live protected-main and CodeQL receipt: pending merge of this exact implementation.

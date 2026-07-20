@@ -1,0 +1,34 @@
+{
+  "name": "recursive-coordinate",
+  "version": "0.1.0",
+  "description": "Coordinate local agents with atomic claims and private handoffs without changing the project.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/coordinate-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "coordination",
+    "worktrees",
+    "claims",
+    "handoffs"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Coordinate",
+    "shortDescription": "Coordinate local agents without touching the project.",
+    "longDescription": "Use repository-scoped private state for atomic exclusive claims, bounded leases, idempotent handoffs, and a read-only Mission projection.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Collision-safe local claims",
+      "Bounded recoverable leases",
+      "Idempotent Agent Mail handoffs",
+      "Read-only Mission projection"
+    ],
+    "defaultPrompt": "Use Recursive Coordinate to claim the shared scope and coordinate this work without changing repository configuration or contacting a remote service."
+  }
+}

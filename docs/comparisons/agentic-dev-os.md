@@ -44,7 +44,7 @@ The consolidation rule is therefore:
 | Digest-bound action approvals | Approval markers plus human-reviewed PRs are the current binding gate | Defer | Design separately if threat evidence shows markers and protected review are insufficient |
 | Full outcome → opportunity → bet → PRD → spec → ticket chain | Proposals, Cartograph traces, spec-driven development, and product-local plans cover parts of the chain | Reject wholesale | Borrow links where they improve traceability; avoid mandatory bureaucracy for small learning-loop changes |
 | Governance event/telemetry contracts | Private ledgers, Fleet event log, calibration, and reviewed rollups | Adapt, do not duplicate | Define a provider-neutral event envelope only when a second adapter proves the need |
-| Portable multi-agent distribution | Observe and Guard now have receipt-bound local Codex consumer proof; the full harness remains Claude-specific and four packages remain planned | In progress | Preserve the provider contract and complete Learn, Verify, Coordinate, and Lab without duplicating their canonical logic |
+| Portable multi-agent distribution | Observe, Learn, Verify, Coordinate, and Guard have receipt-bound local consumer proof; the full harness remains Claude-specific and Lab remains planned | In progress | Preserve the provider contract, keep Coordinate local-only, and complete Lab without duplicating canonical logic |
 
 “Already native” means the capability exists in the current Recursive implementation and
 has local verification; it does not imply source-code lineage from Agentic Dev OS. “Adapt”

@@ -28,6 +28,13 @@
       "description": "Produce read-only repository proof without executing repository code.",
       "version": "0.1.0",
       "tags": ["agents", "verification", "evals", "privacy"]
+    },
+    {
+      "name": "recursive-coordinate",
+      "source": "./plugins/recursive-coordinate",
+      "description": "Coordinate local agents with atomic claims and private handoffs.",
+      "version": "0.1.0",
+      "tags": ["agents", "coordination", "worktrees", "privacy"]
     }
   ]
 }

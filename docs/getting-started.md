@@ -138,8 +138,13 @@ It neither replaces existing instructions nor applies its proposed patch.
 Recursive Verify is the stateless, hook-free evidence package. It provides metadata-only
 scorecards and fixed Atlas-style queries, inspects eval structure without executing repository
 code, and emits an exact proposal diff without applying it. Install it at personal or user scope
-with the same catalog, then follow the [Verify package guide](verify-plugin.md). Coordinate and
-Lab remain design contracts, not installable compatibility claims.
+with the same catalog, then follow the [Verify package guide](verify-plugin.md).
+
+Recursive Coordinate is the local-only coordination package. It gives Git worktrees one private,
+repository-scoped ledger with atomic claims, bounded leases, idempotent handoffs, and a read-only
+Mission projection. Install it at personal or user scope with the same catalog, then follow the
+[Coordinate package guide](coordinate-plugin.md). It ships no remote connector or credential flow.
+Lab remains a design contract, not an installable compatibility claim.
 
 ## 5. Verify the working loop
 
