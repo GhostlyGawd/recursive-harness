@@ -2,22 +2,24 @@
 
 Phase: 7
 
+Status: verified
+
 Produce and publish a reproducible v0.1.2 release whose assets, compatibility evidence,
 documentation, and live repository metadata agree.
 
 ## Tasks
 
-- [ ] Reconcile `VERSION`, changelog, README, compatibility matrix, manifests, package
+- [x] Reconcile `VERSION`, changelog, README, compatibility matrix, manifests, package
   versions, migration notes, and source-install/uninstall paths.
-- [ ] Build release archives twice in clean environments and require byte-identical output,
+- [x] Build release archives twice in clean environments and require byte-identical output,
   complete SHA-256 checksums, provenance, licenses, and package receipts.
-- [ ] Test fresh install, upgrade from the actual v0.1.0 tag, downgrade/rollback, and
+- [x] Test fresh install, upgrade from the actual v0.1.0 tag, downgrade/rollback, and
   uninstall while preserving user data by default and disclosing destructive cleanup.
-- [ ] Run the complete acceptance, security, privacy, provider, and optional Fleet/MCP
+- [x] Run the complete acceptance, security, privacy, provider, and optional Fleet/MCP
   matrices on supported systems; label macOS and unpinned providers accurately.
-- [ ] Create the immutable v0.1.2 tag and GitHub Release only from the verified commit, then
+- [x] Create the immutable v0.1.2 tag and GitHub Release only from the verified commit, then
   update the repository description and release/download calls to action.
-- [ ] Download every published asset as a consumer and verify filename, contents, checksum,
+- [x] Download every published asset as a consumer and verify filename, contents, checksum,
   install, version output, and rollback.
 
 ## TDD
@@ -55,3 +57,9 @@ download, and the GitHub description and all documentation accurately say v0.1.2
 - Tag-to-commit and GitHub Release API receipts.
 - Post-publication download and checksum/install verification.
 - Live repository description, README, changelog, and version reconciliation capture.
+
+Verified by [the phase 7 live receipt](../../evidence/release/phase-07-live-receipt.json):
+PR #262 and protected `main` passed every required platform, optional-surface, and CodeQL
+check; the tag resolves to the reviewed merge commit; two clean builds were byte-identical;
+and a fresh download passed checksum, manifest, parity, safe-member, version, install, and
+uninstall checks.

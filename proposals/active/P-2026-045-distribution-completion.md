@@ -25,6 +25,7 @@ resolution: ""
 | 2026-07-20 | approved | in-progress | Phase 6 implementation completed locally: experimental Brainstorm/Roadmap previews, exact-target action records, zero mutation connector, and generic, Claude Code 2.1.200, and official Codex 0.144.6 isolated install/refresh/uninstall journeys passed; protected-main receipt remains pending |
 | 2026-07-20 | approved | in-progress | Phase 6 verified on protected `main`: PR #260 merged at `13fa650`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-06-live-receipt.json` binds the experimental package, honest first-version upgrade limitation, and consumer evidence |
 | 2026-07-20 | approved | in-progress | Phase 7 release candidate freezes version/document/provider reconciliation, reproducible archive and safe-member properties, actual v0.1.0 upgrade/rollback/interruption journeys, operator-link validation, and an independent post-publication consumer verifier; protected-main and live-publication gates remain pending |
+| 2026-07-20 | approved | in-progress | Phase 7 verified: PR #262 merged at `5a524d1`; protected Linux/Windows/macOS/minimum-Git/optional/CodeQL checks passed; v0.1.2 was built twice byte-identically, published once at that commit, and passed fresh public download, checksum, manifest, version, install, and uninstall verification in `phase-07-live-receipt.json` |
 <!-- proposal-history:end -->
 
 ## Problem
@@ -58,7 +59,7 @@ or marketplace claim will be published before its preceding gates pass.
   and the live open-alert count is zero.
 - [x] Learn, Verify, Coordinate, and Lab have canonical manifests, reproducible packages,
   coexistence tests, honest maturity labels, and consumer evidence.
-- [ ] v0.1.2 is reproducibly built, upgrade/rollback tested, tagged, released with verified
+- [x] v0.1.2 is reproducibly built, upgrade/rollback tested, tagged, released with verified
   checksums, and aligned with repository metadata and documentation.
 - [ ] Public marketplace submission data includes exactly five positive and three negative
   tests, passes review, and is verified through a fresh public install.

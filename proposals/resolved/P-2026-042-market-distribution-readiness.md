@@ -2,13 +2,13 @@
 id: P-2026-042
 title: Market and distribution readiness
 status: approved
-implementation: in-progress
+implementation: landed
 created: 2026-07-17
 updated: 2026-07-20
 owner: GhostlyGawd
-resolution: ""
+resolution: "PR #262 merged green at 5a524d1; v0.1.2 published and independently verified in docs/evidence/release/phase-07-live-receipt.json"
 ---
-> **Current:** `approved` decision · `in-progress` implementation
+> **Current:** `approved` decision · `landed` implementation
 
 ## Status history
 
@@ -17,6 +17,7 @@ resolution: ""
 | 2026-07-17 | approved | in-progress | Owner requested the readiness plan, review, ordered implementation, and verification |
 | 2026-07-18 | approved | in-progress | PR #241 security and compatibility candidate; protected verification in progress |
 | 2026-07-20 | approved | in-progress | Protected `main` now has zero open CodeQL, secret-scanning, and Dependabot alerts; Linux/Windows/macOS/minimum-Git/optional-surface coverage is required; the v0.1.2 candidate adds reproducibility, actual v0.1.0 migration, operator-path, and live-publication acceptance gates |
+| 2026-07-20 | approved | landed | PR #262 merged green at 5a524d1; v0.1.2 published and independently verified in docs/evidence/release/phase-07-live-receipt.json |
 <!-- proposal-history:end -->
 
 ## Outcome
@@ -72,11 +73,11 @@ reversibility, and sole-maintainer safety. The resulting order is:
   paths have proportionate automated coverage.
 - [x] README presents the audience, problem, proof loop, supported features,
   optional/experimental boundaries, real outputs, limitations, and next action.
-- [ ] Repository metadata and visuals match the Append-Only Strata brand and the
+- [x] Repository metadata and visuals match the Append-Only Strata brand and the
   current beta version without unsupported claims.
-- [ ] All local checks and protected GitHub checks pass on the reviewed commit.
+- [x] All local checks and protected GitHub checks pass on the reviewed commit.
 - [x] The locked-layer PR received the required human merge in the earlier readiness pass.
-- [ ] `v0.1.2` is published with checksummed assets and release notes, then a
+- [x] `v0.1.2` is published with checksummed assets and release notes, then a
   clean consumer install from the release is verified.
 
 ## Verification record
@@ -98,5 +99,8 @@ remain visible; they are not converted into marketing claims.
   optional-surface, and Python/Actions CodeQL checks. The landing page, product evidence,
   provider packages, and security remediation are merged; live open CodeQL,
   secret-scanning, and Dependabot counts are zero.
-- Pending — v0.1.2 candidate merge, repository metadata update, immutable tag and release,
-  and independent verification of every downloaded public asset.
+- 2026-07-20 — PR #262 merged green at `5a524d1`; the protected-main CI and CodeQL
+  runs passed; the immutable v0.1.2 tag and GitHub Release carry byte-identical,
+  checksummed archives; aligned metadata is live; and the fresh-download consumer replay
+  passed. The machine-readable record is
+  [phase-07-live-receipt.json](../../docs/evidence/release/phase-07-live-receipt.json).
