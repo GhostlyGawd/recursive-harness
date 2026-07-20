@@ -9,14 +9,14 @@
   "default_repository_writes": "never",
   "repository_writes": "never",
   "state_behavior": "sanitized repository-scoped claims and handoffs in one user-private local ledger",
-  "state_root": "user-private:~/.recursive-harness/coordinate/repositories/<hashed-repository-scope>",
+  "state_root": "user-private:~/.recursive-harness/coordinate/coordinate.db keyed by hashed repository scope",
   "credentials": "never-requested",
   "remote_calls": [],
   "required_events": [],
   "optional_events": [],
   "concurrency_model": {
     "claim_transaction": "interprocess-exclusive",
-    "storage": "portable file lock plus atomic JSONL replacement",
+    "storage": "SQLite BEGIN IMMEDIATE transaction with repository-keyed rows",
     "scope": "one hashed Git common directory or canonical non-Git directory",
     "conflict_rule": "different owners cannot hold overlapping live targets",
     "ledger_cap": 5000
@@ -76,10 +76,10 @@
     "skills/coordinate/SKILL.md",
     "skills/coordinate/agents/openai.yaml",
     "skills/coordinate/scripts/coordinate.py",
+    "skills/coordinate/scripts/coordinate_store.py",
     "skills/coordinate/references/commands.md",
     "skills/coordinate/references/state-machine.md",
-    "skills/coordinate/references/security.md",
-    "private_state.py"
+    "skills/coordinate/references/security.md"
   ],
   "provider_packages": [
     {

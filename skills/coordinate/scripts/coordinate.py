@@ -17,13 +17,7 @@ import time
 import uuid
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-if not (SCRIPT_DIR / "private_state.py").exists():
-    candidate = SCRIPT_DIR.parents[2]
-    if (candidate / "private_state.py").exists():
-        sys.path.insert(0, str(candidate))
-
-import private_state  # noqa: E402
+import coordinate_store  # noqa: E402
 
 
 LEDGER = "coordinate-events-v1"
@@ -71,14 +65,6 @@ def _canonical(path: Path) -> Path:
     return Path(os.path.realpath(path.resolve(strict=True)))
 
 
-def _contains(parent: Path, child: Path) -> bool:
-    try:
-        child.relative_to(parent)
-        return True
-    except ValueError:
-        return False
-
-
 def _git_common_directory(repository: Path) -> Path | None:
     try:
         result = subprocess.run(
@@ -107,38 +93,6 @@ def repository_scope(repository: str | os.PathLike[str]) -> str:
     common = _git_common_directory(root)
     identity = "git:" + os.path.normcase(str(common or root))
     return "repo-" + hashlib.sha256(identity.encode("utf-8", "replace")).hexdigest()
-
-
-def default_state_root() -> Path:
-    return Path.home() / ".recursive-harness" / "coordinate"
-
-
-def validate_state_root(state_root: str | os.PathLike[str], repository: str | os.PathLike[str]) -> Path:
-    raw = Path(state_root)
-    if not raw.is_absolute():
-        raise ValueError("state root must be absolute")
-    root = Path(os.path.realpath(raw))
-    repo = _canonical(Path(repository))
-    if root == repo or _contains(repo, root):
-        raise ValueError("state root must stay outside the repository")
-    cursor = root
-    while True:
-        if os.path.lexists(cursor) and (
-            cursor.is_symlink() or getattr(os.path, "isjunction", lambda unused: False)(cursor)
-        ):
-            raise ValueError("state root must not traverse a symlink or junction")
-        parent = cursor.parent
-        if parent == cursor:
-            break
-        cursor = parent
-    return root
-
-
-def _events_path(state_root: str | os.PathLike[str], repository_key: str) -> Path:
-    if not repository_key.startswith("repo-") or len(repository_key) != 69:
-        raise ValueError("invalid repository scope")
-    root = Path(state_root).resolve()
-    return root / "repositories" / repository_key / "events.jsonl"
 
 
 def _norm_target(value: object) -> str:
@@ -220,9 +174,7 @@ def _existing_operation(records: list[dict], operation: str, kind: str) -> dict 
     )
 
 
-def _transaction(state_root: str | os.PathLike[str], repository_key: str, transform):
-    root = Path(state_root).resolve()
-    path = _events_path(root, repository_key)
+def _transaction(repository_key: str, transform):
     outcome: dict = {}
 
     def apply(records):
@@ -230,11 +182,11 @@ def _transaction(state_root: str | os.PathLike[str], repository_key: str, transf
         outcome.update(value)
         return after
 
-    private_state.transform_jsonl(str(path), apply, root=str(root))
+    coordinate_store.transform(repository_key, apply)
     return outcome
 
 
-def acquire_claim(state_root, repository_key: str, owner: str, target: str, lease_s: float,
+def acquire_claim(repository_key: str, owner: str, target: str, lease_s: float,
                   operation_id: str, *, now_s: float | None = None) -> dict:
     owner_value = _text(owner, "owner")
     target_value = _norm_target(target)
@@ -263,7 +215,7 @@ def acquire_claim(state_root, repository_key: str, owner: str, target: str, leas
         if conflict:
             evidence = {key: conflict[key] for key in ("id", "owner", "target", "expires_at")}
             return records, {"acquired": False, "conflict": evidence, "clock": now}
-        event = private_state.sanitize({
+        event = coordinate_store.sanitize({
             "ledger": LEDGER, "id": _event_id(), "operation_id": operation,
             "kind": "claim", "ts": now, "owner": owner_value, "target": target_value,
             "lease_s": lease, "expires_at": now + lease,
@@ -273,10 +225,10 @@ def acquire_claim(state_root, repository_key: str, owner: str, target: str, leas
             "acquired": True, "claim": event, "idempotent": False,
         }
 
-    return _transaction(state_root, repository_key, transform)
+    return _transaction(repository_key, transform)
 
 
-def renew_claim(state_root, repository_key: str, owner: str, claim_id: str, lease_s: float,
+def renew_claim(repository_key: str, owner: str, claim_id: str, lease_s: float,
                 operation_id: str, *, now_s: float | None = None) -> dict:
     owner_value, claim_value = _text(owner, "owner"), _text(claim_id, "claim id")
     lease, operation, requested = (
@@ -299,7 +251,7 @@ def renew_claim(state_root, repository_key: str, owner: str, claim_id: str, leas
             return records, {"renewed": False, "reason": "claim-not-live"}
         if current.get("owner") != owner_value:
             return records, {"renewed": False, "reason": "owner-mismatch"}
-        event = private_state.sanitize({
+        event = coordinate_store.sanitize({
             "ledger": LEDGER, "id": _event_id(), "operation_id": operation,
             "kind": "claim", "ts": now, "owner": owner_value, "target": current["target"],
             "lease_s": lease, "expires_at": now + lease,
@@ -310,10 +262,10 @@ def renew_claim(state_root, repository_key: str, owner: str, claim_id: str, leas
             "renewed": True, "claim": event, "idempotent": False,
         }
 
-    return _transaction(state_root, repository_key, transform)
+    return _transaction(repository_key, transform)
 
 
-def release_claim(state_root, repository_key: str, owner: str, claim_id: str,
+def release_claim(repository_key: str, owner: str, claim_id: str,
                   operation_id: str, *, now_s: float | None = None) -> dict:
     owner_value, claim_value = _text(owner, "owner"), _text(claim_id, "claim id")
     operation, requested = _operation_id(operation_id), _timestamp(now_s)
@@ -331,7 +283,7 @@ def release_claim(state_root, repository_key: str, owner: str, claim_id: str,
             return records, {"released": False, "reason": "claim-not-found"}
         if claim.get("owner") != owner_value:
             return records, {"released": False, "reason": "owner-mismatch"}
-        event = private_state.sanitize({
+        event = coordinate_store.sanitize({
             "ledger": LEDGER, "id": _event_id(), "operation_id": operation,
             "kind": "release", "ts": now, "owner": owner_value,
             "expires_at": now + AUDIT_RETENTION_SECONDS,
@@ -341,7 +293,7 @@ def release_claim(state_root, repository_key: str, owner: str, claim_id: str,
             "released": True, "release": event, "idempotent": False,
         }
 
-    return _transaction(state_root, repository_key, transform)
+    return _transaction(repository_key, transform)
 
 
 def _handle(value: str) -> str:
@@ -349,7 +301,7 @@ def _handle(value: str) -> str:
     return normalized if normalized.startswith("@") else "@" + normalized
 
 
-def send_handoff(state_root, repository_key: str, sender: str, recipient: str, topic: str,
+def send_handoff(repository_key: str, sender: str, recipient: str, topic: str,
                  message: str, ttl_s: float, operation_id: str,
                  *, now_s: float | None = None) -> dict:
     sender_value, recipient_value = _text(sender, "sender"), _handle(recipient)
@@ -361,7 +313,7 @@ def send_handoff(state_root, repository_key: str, sender: str, recipient: str, t
         existing = _existing_operation(records, operation, "handoff")
         if existing:
             return records, {"sent": True, "handoff": existing, "idempotent": True}
-        event = private_state.sanitize({
+        event = coordinate_store.sanitize({
             "ledger": LEDGER, "id": _event_id(), "operation_id": operation,
             "kind": "handoff", "ts": now, "owner": sender_value, "target": recipient_value,
             "payload": {"topic": topic_value, "message": message_value},
@@ -372,10 +324,10 @@ def send_handoff(state_root, repository_key: str, sender: str, recipient: str, t
             "sent": True, "handoff": event, "idempotent": False,
         }
 
-    return _transaction(state_root, repository_key, transform)
+    return _transaction(repository_key, transform)
 
 
-def ack_handoff(state_root, repository_key: str, owner: str, handoff_id: str,
+def ack_handoff(repository_key: str, owner: str, handoff_id: str,
                 operation_id: str, *, now_s: float | None = None) -> dict:
     owner_value, handoff_value = _handle(owner), _text(handoff_id, "handoff id")
     operation, requested = _operation_id(operation_id), _timestamp(now_s)
@@ -393,7 +345,7 @@ def ack_handoff(state_root, repository_key: str, owner: str, handoff_id: str,
             return records, {"acked": False, "reason": "handoff-not-live"}
         if handoff.get("target") != owner_value:
             return records, {"acked": False, "reason": "handle-mismatch"}
-        event = private_state.sanitize({
+        event = coordinate_store.sanitize({
             "ledger": LEDGER, "id": _event_id(), "operation_id": operation,
             "kind": "ack", "ts": now, "owner": owner_value,
             "expires_at": now + AUDIT_RETENTION_SECONDS,
@@ -403,13 +355,11 @@ def ack_handoff(state_root, repository_key: str, owner: str, handoff_id: str,
             "acked": True, "ack": event, "idempotent": False,
         }
 
-    return _transaction(state_root, repository_key, transform)
+    return _transaction(repository_key, transform)
 
 
-def mission_snapshot(state_root, repository_key: str, *, now_s: float | None = None) -> dict:
-    root = Path(state_root).resolve()
-    path = _events_path(root, repository_key)
-    records = private_state.read_jsonl(str(path), root=str(root))
+def mission_snapshot(repository_key: str, *, now_s: float | None = None) -> dict:
+    records = coordinate_store.read(repository_key)
     now = _effective_now(records, _timestamp(now_s))
     claims = [{key: item[key] for key in ("id", "owner", "target", "expires_at")}
               for item in _live(records, "claim", now)]
@@ -491,43 +441,42 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         repository = _canonical(args.repository)
-        state_root = validate_state_root(default_state_root(), repository)
         key = repository_scope(repository)
         if args.group == "claim" and args.action == "acquire":
-            result = acquire_claim(state_root, key, args.owner, args.target, args.lease_seconds,
+            result = acquire_claim(key, args.owner, args.target, args.lease_seconds,
                                    args.operation_id)
             _emit(result, args.json)
             return 0 if result["acquired"] else 3
         if args.group == "claim" and args.action == "renew":
-            result = renew_claim(state_root, key, args.owner, args.claim, args.lease_seconds,
+            result = renew_claim(key, args.owner, args.claim, args.lease_seconds,
                                  args.operation_id)
             _emit(result, args.json)
             return 0 if result["renewed"] else 3
         if args.group == "claim" and args.action == "release":
-            result = release_claim(state_root, key, args.owner, args.claim, args.operation_id)
+            result = release_claim(key, args.owner, args.claim, args.operation_id)
             _emit(result, args.json)
             return 0 if result["released"] else 3
         if args.group == "claim" and args.action == "list":
-            result = mission_snapshot(state_root, key)
+            result = mission_snapshot(key)
             _emit({"claims": result["claims"], "repository_scope": key}, args.json)
             return 0
         if args.group == "handoff" and args.action == "send":
-            result = send_handoff(state_root, key, args.sender, args.to, args.topic, args.message,
+            result = send_handoff(key, args.sender, args.to, args.topic, args.message,
                                   args.ttl_seconds, args.operation_id)
             _emit(result, args.json)
             return 0
         if args.group == "handoff" and args.action == "inbox":
-            result = mission_snapshot(state_root, key)
+            result = mission_snapshot(key)
             messages = [item for item in result["unread_handoffs"]
                         if item["to"] == _handle(args.owner)]
             _emit({"handoffs": messages, "repository_scope": key}, args.json)
             return 0
         if args.group == "handoff" and args.action == "ack":
-            result = ack_handoff(state_root, key, args.owner, args.handoff, args.operation_id)
+            result = ack_handoff(key, args.owner, args.handoff, args.operation_id)
             _emit(result, args.json)
             return 0 if result["acked"] else 3
         if args.group == "mission":
-            _emit(mission_snapshot(state_root, key), args.json)
+            _emit(mission_snapshot(key), args.json)
             return 0
         if args.group == "integration":
             _emit({

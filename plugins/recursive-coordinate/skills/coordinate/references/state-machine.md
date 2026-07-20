@@ -1,6 +1,7 @@
 # Coordinate state machine
 
-One repository scope owns one `coordinate-events-v1` JSONL ledger. A Git worktree scope hashes the
+One repository scope owns one `coordinate-events-v1` logical ledger inside the fixed private
+SQLite store. A Git worktree scope hashes the
 canonical Git common directory; a non-Git scope hashes its canonical directory. The path itself is
 never persisted.
 

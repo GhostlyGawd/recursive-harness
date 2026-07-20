@@ -18,9 +18,9 @@ The CLI has no repository installer, hook setup, configuration merger, network c
 connector, comment, commit, push, or pull-request operation.
 
 The fixed state root is `~/.recursive-harness/coordinate`; the CLI has no state-root override.
-It must remain outside the target repository and free of symlink or junction traversal. The
-bundled storage primitive creates owner-only directories/files and uses portable interprocess
-locks plus atomic replacement.
+It remains outside the target repository and rejects symlink or junction traversal. The bundled
+narrow store creates owner-only directories/files and uses SQLite `BEGIN IMMEDIATE` transactions
+for portable interprocess exclusion.
 
 <!-- provenance: 2026-07-20 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-045 portable Coordinate package. -->

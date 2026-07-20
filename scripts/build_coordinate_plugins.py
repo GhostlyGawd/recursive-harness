@@ -26,8 +26,8 @@ MAPPINGS = {
         PLUGIN / "skills" / "coordinate" / "references" / "security.md",
     ROOT / "skills" / "coordinate" / "scripts" / "coordinate.py":
         PLUGIN / "skills" / "coordinate" / "scripts" / "coordinate.py",
-    ROOT / "private_state.py":
-        PLUGIN / "skills" / "coordinate" / "scripts" / "private_state.py",
+    ROOT / "skills" / "coordinate" / "scripts" / "coordinate_store.py":
+        PLUGIN / "skills" / "coordinate" / "scripts" / "coordinate_store.py",
     ROOT / "LICENSE": PLUGIN / "LICENSE",
 }
 CODEX_MANIFEST = {

@@ -164,6 +164,7 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
         before = visible_files(repository)
         run([sys.executable, str(BUILDER), "--plugin-dir", str(installed)])
         cli = installed / "skills" / "coordinate" / "scripts" / "coordinate.py"
+        os.environ.update({"HOME": str(home), "USERPROFILE": str(home)})
         runtime = load_runtime(installed)
 
         require(runtime.repository_scope(worktree_a) == runtime.repository_scope(worktree_b),
@@ -199,12 +200,12 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
         repository_key = runtime.repository_scope(repository)
         claim = winners[0]["claim"]
         first_release = runtime.release_claim(
-            state_root, repository_key, claim["owner"], claim["id"],
+            repository_key, claim["owner"], claim["id"],
             "release-once", now_s=claim["ts"] + 1,
         )
         after_first_release = package_files(state_root)
         second_release = runtime.release_claim(
-            state_root, repository_key, claim["owner"], claim["id"],
+            repository_key, claim["owner"], claim["id"],
             "release-once", now_s=claim["ts"] + 2,
         )
         require(first_release["released"] and second_release["released"],
@@ -214,16 +215,16 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
 
         clock_key = "repo-" + hashlib.sha256(b"clock-property").hexdigest()
         early = runtime.acquire_claim(
-            state_root, clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=100,
+            clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=100,
         )
         backward = runtime.acquire_claim(
-            state_root, clock_key, "clock-b", "docs/guide.md", 10, "clock-b", now_s=90,
+            clock_key, "clock-b", "docs/guide.md", 10, "clock-b", now_s=90,
         )
         expired_retry = runtime.acquire_claim(
-            state_root, clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=111,
+            clock_key, "clock-a", "docs/**", 10, "clock-a", now_s=111,
         )
         recovered = runtime.acquire_claim(
-            state_root, clock_key, "clock-b", "docs/guide.md", 10, "clock-c", now_s=111,
+            clock_key, "clock-b", "docs/guide.md", 10, "clock-c", now_s=111,
         )
         require(early["acquired"] and not backward["acquired"]
                 and not expired_retry["acquired"]
@@ -231,25 +232,29 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
                 and recovered["acquired"],
                 "backward clock or stale-lease recovery violated exclusivity")
 
+        secret = "github_pat_" + "Z" * 28
         handoff_a = runtime.send_handoff(
-            state_root, repository_key, "clock-b", "reviewer", "review",
-            "ready", 600, "handoff-stable", now_s=120,
+            repository_key, "clock-b", "reviewer", "review",
+            "ready token=" + secret, 600, "handoff-stable", now_s=120,
         )
         handoff_b = runtime.send_handoff(
-            state_root, repository_key, "clock-b", "reviewer", "review",
-            "ready", 600, "handoff-stable", now_s=121,
+            repository_key, "clock-b", "reviewer", "review",
+            "ready token=" + secret, 600, "handoff-stable", now_s=121,
         )
         require(handoff_a["handoff"]["id"] == handoff_b["handoff"]["id"],
                 "duplicate handoff was applied twice")
-        snapshot = runtime.mission_snapshot(state_root, repository_key, now_s=122)
+        snapshot = runtime.mission_snapshot(repository_key, now_s=122)
         require(len(snapshot["unread_handoffs"]) == 1, "Mission projection duplicated a handoff")
+        state_bytes = b"".join(path.read_bytes() for path in state_root.rglob("*") if path.is_file())
+        require(secret.encode() not in state_bytes and b"[REDACTED" in state_bytes,
+                "private coordination state did not redact a secret-shaped handoff")
         ack_a = runtime.ack_handoff(
-            state_root, repository_key, "reviewer", handoff_a["handoff"]["id"],
+            repository_key, "reviewer", handoff_a["handoff"]["id"],
             "ack-stable", now_s=123,
         )
         state_after_ack = package_files(state_root)
         ack_b = runtime.ack_handoff(
-            state_root, repository_key, "reviewer", handoff_a["handoff"]["id"],
+            repository_key, "reviewer", handoff_a["handoff"]["id"],
             "ack-stable", now_s=124,
         )
         require(ack_a["acked"] and ack_b["acked"] and state_after_ack == package_files(state_root),
@@ -257,7 +262,7 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
 
         other_key = runtime.repository_scope(other_repository)
         other = runtime.acquire_claim(
-            state_root, other_key, "other-agent", "docs/**", 30, "other-claim", now_s=100,
+            other_key, "other-agent", "docs/**", 30, "other-claim", now_s=100,
         )
         require(other["acquired"], "one repository's claim blocked an independent repository")
 
@@ -268,19 +273,19 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
             if owners and rng.random() < 0.35:
                 claim_id, owner = rng.choice(list(owners.items()))
                 runtime.release_claim(
-                    state_root, repository_key, owner, claim_id,
+                    repository_key, owner, claim_id,
                     f"property-release-{index}", now_s=now,
                 )
                 owners.pop(claim_id, None)
             else:
                 result = runtime.acquire_claim(
-                    state_root, repository_key, f"property-{index % 5}",
+                    repository_key, f"property-{index % 5}",
                     rng.choice(["src/**", "src/app.py", "tests/**", "docs/**"]),
                     rng.choice([5, 15, 60]), f"property-acquire-{index}", now_s=now,
                 )
                 if result["acquired"]:
                     owners[result["claim"]["id"]] = result["claim"]["owner"]
-            current = runtime.mission_snapshot(state_root, repository_key, now_s=now)
+            current = runtime.mission_snapshot(repository_key, now_s=now)
             live = current["claims"]
             for left_index, left in enumerate(live):
                 for right in live[left_index + 1:]:

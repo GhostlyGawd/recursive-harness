@@ -71,9 +71,10 @@ Mission Control interface from the advanced Claude reference runtime.
 ## State, security, and degraded behavior
 
 The default owner-only state root is
-`~/.recursive-harness/coordinate/repositories/<hashed-repository-scope>`. Git worktrees share the
-hash of their common directory; unrelated repositories remain isolated. Repository paths are not
-persisted. The CLI has no state-root override; the fixed private boundary rejects link traversal.
+`~/.recursive-harness/coordinate/coordinate.db`, with rows keyed by a hashed repository scope. Git
+worktrees share the hash of their common directory; unrelated repositories remain isolated.
+Repository paths are not persisted. The CLI has no state-root override; the fixed private boundary
+rejects link traversal.
 
 Claims are cooperative local leases, not filesystem enforcement or distributed consensus. A
 forward clock jump can expire a lease early; a worker must reacquire and recheck its work. A
