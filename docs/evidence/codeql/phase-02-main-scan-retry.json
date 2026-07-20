@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "repository": "GhostlyGawd/recursive-harness",
+  "phase": 2,
+  "pull_request": 251,
+  "merge_sha": "66e2787f373d3e893d51b6f2a84de467214c7e4c",
+  "pr_verification": {
+    "ci_run_id": 29709912999,
+    "codeql_run_id": 29709911883,
+    "aggregate_codeql_check_run_id": 88252405961,
+    "result": "all-eight-checks-passed"
+  },
+  "first_main_scan": {
+    "codeql_run_id": 29710058605,
+    "actions_job_id": 88252667341,
+    "actions_result": "success",
+    "python_job_id": 88252667354,
+    "python_result": "failure",
+    "retry_api_result": "not-rerunnable",
+    "diagnostic_api_result": "intermittent-http-503",
+    "live_open_count_before_retry": 49,
+    "snapshot_note": "The failed Python upload left the previous main-branch alert snapshot current; it is not zero evidence."
+  },
+  "next_action": "Merge this evidence-only rescan trigger, require a successful Python upload on main, then record the live zero-alert receipt in a separate reviewed change."
+}

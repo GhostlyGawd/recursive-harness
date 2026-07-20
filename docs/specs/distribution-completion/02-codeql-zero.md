@@ -7,13 +7,13 @@ evidence-backed triage, with no bulk dismissal.
 
 ## Tasks
 
-- [ ] Export alert numbers, locations, dataflow, severity, and live state as the phase
+- [x] Export alert numbers, locations, dataflow, severity, and live state as the phase
   baseline; group the 27 Cartograph, 15 hook, four eval, and three test findings.
-- [ ] Identify every trusted root, user-controlled source, normalization step, filesystem
+- [x] Identify every trusted root, user-controlled source, normalization step, filesystem
   operation, and intended escape policy before changing runtime code.
-- [ ] Replace ad hoc path joining with shared fail-closed root/allowlist helpers where the
+- [x] Replace ad hoc path joining with shared fail-closed root/allowlist helpers where the
   security model is identical; preserve intentionally different authorities.
-- [ ] Fix each reachable flow and individually document any genuine false positive with a
+- [x] Fix each reachable flow and individually document any genuine false positive with a
   reproducer and precise dismissal reason.
 - [ ] Run extended CodeQL on the PR and query the live API after merge until the open count
   is zero.
@@ -51,5 +51,7 @@ zero open CodeQL alerts.
 
 - Frozen 49-alert baseline and per-alert resolution table.
 - Red/green test commits and shared-boundary design notes.
-- Extended CodeQL run URL and SARIF summary.
+- Extended CodeQL PR run `29709911883` passed; the first main run `29710058605`
+  had a successful Actions analysis but a failed Python upload and was not rerunnable.
+  The exact interim receipt is `phase-02-main-scan-retry.json`.
 - Live post-merge API receipt showing zero open alerts.
