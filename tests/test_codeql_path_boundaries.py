@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS = ROOT / "hooks"
 BASELINE = ROOT / "docs" / "evidence" / "codeql" / "phase-02-baseline.json"
 RESOLUTIONS = ROOT / "docs" / "evidence" / "codeql" / "phase-02-resolutions.json"
+LIVE_RECEIPT = ROOT / "docs" / "evidence" / "codeql" / "phase-02-live-receipt.json"
 
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(HOOKS))
@@ -301,6 +302,20 @@ def test_every_baseline_alert_has_one_reviewed_resolution() -> None:
         assert resolution["disposition"] in {"fixed", "false_positive", "used_in_tests"}
         assert resolution["evidence"]
         assert resolution["reason"]
+
+
+def test_live_receipt_proves_protected_main_has_zero_open_alerts() -> None:
+    receipt = json.loads(LIVE_RECEIPT.read_text(encoding="utf-8"))
+    assert receipt["repository"] == "GhostlyGawd/recursive-harness"
+    assert receipt["ref"] == "refs/heads/main"
+    assert len(receipt["main_sha"]) == 40
+    assert receipt["codeql"]["python_conclusion"] == "success"
+    assert receipt["codeql"]["actions_conclusion"] == "success"
+    assert receipt["live_query"]["open_alert_count"] == 0
+    assert receipt["triage"]["bulk_dismissal_used"] is False
+    assert receipt["triage"]["false_positive_count"] == 20
+    assert receipt["triage"]["used_in_tests_count"] == 7
+    assert len(receipt["triage"]["alerts"]) == 27
 
 
 def main() -> int:

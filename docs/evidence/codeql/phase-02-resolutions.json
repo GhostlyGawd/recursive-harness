@@ -2,7 +2,8 @@
   "schema_version": 1,
   "repository": "GhostlyGawd/recursive-harness",
   "baseline": "phase-02-baseline.json",
-  "status": "reviewed-pending-main-codeql",
+  "status": "verified-main-zero",
+  "live_receipt": "phase-02-live-receipt.json",
   "resolutions": [
     {"number": 62, "disposition": "fixed", "evidence": "tests/test_codeql_path_boundaries.py::test_cartograph_does_not_follow_repository_symlinks_outside_its_root", "reason": "All repository reads now pass through realpath containment under the operator-selected root."},
     {"number": 64, "disposition": "fixed", "evidence": "cartograph/extract.py::_repo_path,listfiles", "reason": "Directory enumeration is confined before the filesystem sink."},

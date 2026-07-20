@@ -2,6 +2,8 @@
 
 Phase: 2
 
+Status: verified
+
 Clear the 49 open CodeQL path-injection findings through safe boundary design and
 evidence-backed triage, with no bulk dismissal.
 
@@ -15,7 +17,7 @@ evidence-backed triage, with no bulk dismissal.
   security model is identical; preserve intentionally different authorities.
 - [x] Fix each reachable flow and individually document any genuine false positive with a
   reproducer and precise dismissal reason.
-- [ ] Run extended CodeQL on the PR and query the live API after merge until the open count
+- [x] Run extended CodeQL on the PR and query the live API after merge until the open count
   is zero.
 
 ## TDD
@@ -54,4 +56,8 @@ zero open CodeQL alerts.
 - Extended CodeQL PR run `29709911883` passed; the first main run `29710058605`
   had a successful Actions analysis but a failed Python upload and was not rerunnable.
   The exact interim receipt is `phase-02-main-scan-retry.json`.
-- Live post-merge API receipt showing zero open alerts.
+- `phase-02-live-receipt.json`: protected `main` run `29710409390` passed both
+  analyzers at `d09f2b1`, and the live API returned zero open alerts. Twenty-two
+  baseline findings auto-closed; the remaining 19 baseline and eight newly surfaced
+  sanitizer-blind findings were triaged individually (20 false positives, seven
+  test-only), with no bulk dismissal.
