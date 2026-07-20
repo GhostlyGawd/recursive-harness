@@ -34,6 +34,16 @@ silently expanding a declared capability.
    vulnerabilities simply because they can name an arbitrary path.
 6. Every false-positive or test-only resolution is individual. No alert is bulk-dismissed.
 
+## Source suppression policy
+
+CodeQL does not currently recognize this repository's `realpath` plus `commonpath` containment
+helpers as taint sanitizers. A narrow `# codeql[py/path-injection]` suppression is therefore allowed
+only immediately before an individually reviewed sink and only when the preceding line starts with
+`CODEQL-SUPPRESS:` and states the exact authority. Suppressions are also used for the four disposable
+eval-grader sinks and three test-fixture sinks already classified `used_in_tests`. The executable
+contract `test_every_source_suppression_has_an_adjacent_boundary_justification` rejects anonymous
+suppressions. The query remains enabled repository-wide; there is no path, suite, or query exclusion.
+
 ## Red-to-green evidence
 
 The red commits are `b4b8d30`, `feadd38`, `2bda051`, `a6f607f`, and `4539b12`. They demonstrate, respectively,

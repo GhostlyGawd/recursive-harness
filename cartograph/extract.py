@@ -86,6 +86,8 @@ def _explicit_read(path):
     if not isinstance(path, str) or not path or "\0" in path:
         return ""
     try:
+        # CODEQL-SUPPRESS: the CLI operator explicitly grants this one-file read capability.
+        # codeql[py/path-injection]
         with open(os.path.abspath(path), encoding="utf-8", errors="replace") as fh:
             return fh.read()
     except (OSError, UnicodeError):
@@ -115,11 +117,17 @@ def rel(path):
 
 def listfiles(subdir, ext):
     d = _repo_path(os.path.join(ROOT, subdir))
+    # CODEQL-SUPPRESS: _repo_path realpath-confines d to the selected repository.
+    # codeql[py/path-injection]
     if not d or not os.path.isdir(d):
         return []
     files = []
+    # CODEQL-SUPPRESS: d passed the selected-repository containment check above.
+    # codeql[py/path-injection]
     for name in os.listdir(d):
         candidate = _repo_path(os.path.join(d, name))
+        # CODEQL-SUPPRESS: _repo_path rejects candidate symlink and traversal escapes.
+        # codeql[py/path-injection]
         if name.endswith(ext) and candidate and os.path.isfile(candidate):
             files.append(candidate)
     return sorted(files)
@@ -494,8 +502,12 @@ def build(tracked_only=False):
     # --- discover artifact nodes + the "known name" sets we match against -----
     skill_files = {}
     skills_dir = _repo_path(os.path.join(ROOT, "skills"))
+    # CODEQL-SUPPRESS: skills_dir is a realpath-confined selected-repository child.
+    # codeql[py/path-injection]
     for d in (sorted(os.listdir(skills_dir)) if skills_dir and os.path.isdir(skills_dir) else []):
         sk = _repo_path(os.path.join(skills_dir, d, "SKILL.md"))
+        # CODEQL-SUPPRESS: _repo_path confines each discovered SKILL.md before probing it.
+        # codeql[py/path-injection]
         if sk and os.path.isfile(sk) and _tracked(sk):
             fm = frontmatter(read(sk))
             m = re.search(r"^name:\s*(\S+)", fm, re.M)
@@ -551,10 +563,14 @@ def build(tracked_only=False):
     # config + kernel + lint + evals
     for cfg in ("settings.json", "autonomy.json", "features.json"):
         p = _repo_path(os.path.join(ROOT, cfg))
+        # CODEQL-SUPPRESS: _repo_path confines each fixed config name under ROOT.
+        # codeql[py/path-injection]
         if p and os.path.isfile(p) and _tracked(p):
             g.node(f"config:{cfg}", "config", cfg, cfg)
     g.node("kernel:CLAUDE.md", "kernel", "CLAUDE.md (kernel)", "CLAUDE.md")
     lint_path = _repo_path(os.path.join(ROOT, "lint", "lint_harness.py"))
+    # CODEQL-SUPPRESS: lint_path is a fixed child accepted only after realpath containment.
+    # codeql[py/path-injection]
     if lint_path and os.path.isfile(lint_path):
         g.node("lint:lint_harness", "lint", "lint_harness.py", "lint/lint_harness.py")
     # Eval-corpus CASES, one node per evals/corpus/<slug>/ dir (mirrors ADR per-file
@@ -563,15 +579,21 @@ def build(tracked_only=False):
     # on - the single evals:corpus node had nothing for a clause-level pointer to attach to.
     eval_cases = set()
     corpus_dir = _repo_path(os.path.join(ROOT, "evals", "corpus"))
+    evals_dir = _repo_path(os.path.join(ROOT, "evals"))
+    # CODEQL-SUPPRESS: corpus_dir is a fixed selected-repository child after confinement.
+    # codeql[py/path-injection]
     if corpus_dir and os.path.isdir(corpus_dir):
         for d in sorted(os.listdir(corpus_dir)):
             case_dir = _repo_path(os.path.join(corpus_dir, d))
+            # CODEQL-SUPPRESS: each case directory is independently realpath-confined.
+            # codeql[py/path-injection]
             if case_dir and os.path.isdir(case_dir):
                 eval_cases.add(d)
                 g.node(f"evals:{d}", "evals", f"evals/corpus/{d}",
                        file=f"evals/corpus/{d}")
-    elif ((evals_dir := _repo_path(os.path.join(ROOT, "evals")))
-          and os.path.isdir(evals_dir)):
+    # CODEQL-SUPPRESS: evals_dir is a fixed child accepted by _repo_path confinement.
+    # codeql[py/path-injection]
+    elif evals_dir and os.path.isdir(evals_dir):
         # corpus dir absent but evals/ present - keep a single coarse node as a hygiene
         # fallback so the `evals` type does not silently vanish on a corpus-less checkout.
         g.node("evals:corpus", "evals", "evals/ (regression corpus)", "evals")
@@ -934,6 +956,8 @@ def default_baseline():
 def load_baseline(path):
     """Return the set of grandfathered fingerprints (empty if the file is absent or
     unreadable - an absent baseline grandfathers nothing, i.e. fully strict)."""
+    # CODEQL-SUPPRESS: path is an explicit local-operator baseline read capability.
+    # codeql[py/path-injection]
     if not path or not os.path.isfile(path):
         return set()
     try:
@@ -962,7 +986,11 @@ def write_baseline(path, warnings):
                         "rot is fixed; regenerate with `extract.py --write-baseline`."),
         "accepted": accepted,
     }
+    # CODEQL-SUPPRESS: --write-baseline explicitly authorizes this output path.
+    # codeql[py/path-injection]
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    # CODEQL-SUPPRESS: writing the operator-selected baseline is this command's contract.
+    # codeql[py/path-injection]
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(data, fh, indent=2)
         fh.write("\n")
@@ -987,6 +1015,8 @@ def run_gate(warnings, path):
     """--check: report new vs grandfathered structural warnings; return the process
     exit code (0 = nothing new, 1 = un-baselined rot blocks)."""
     new, grandfathered, stale = gate(warnings, load_baseline(path))
+    # CODEQL-SUPPRESS: metadata is queried only for the explicit baseline capability.
+    # codeql[py/path-injection]
     where = rel(path) if os.path.isfile(path) else f"{rel(path)} (none yet)"
     out = []
     if new:
@@ -1240,6 +1270,8 @@ def render_text(g, warnings, notes, wired):
 def read_jsonl(path):
     rows = []
     path = _repo_path(path)
+    # CODEQL-SUPPRESS: _repo_path realpath-confines this repository JSONL before probing it.
+    # codeql[py/path-injection]
     if not path or not os.path.isfile(path):
         return rows
     for line in read(path).splitlines():
@@ -2712,6 +2744,8 @@ def git_inflight():
         pass
     # session_owners.json: keys are absolute, lower-cased repo paths -> {session_id, pid, ...}
     owners_path = _repo_path(os.path.join(ROOT, "state", "session_owners.json"))
+    # CODEQL-SUPPRESS: owners_path is a fixed private-state child confined under ROOT.
+    # codeql[py/path-injection]
     if owners_path and os.path.isfile(owners_path):
         try:
             owners = json.loads(read(owners_path))
@@ -2727,6 +2761,8 @@ def git_inflight():
             info["active_sessions"] = sum(1 for v in owners.values() if isinstance(v, dict))
     # trunk-lease/: one json per session currently holding (or having held) the trunk lease
     lease_dir = _repo_path(os.path.join(ROOT, "state", "trunk-lease"))
+    # CODEQL-SUPPRESS: lease_dir is a fixed private-state child confined under ROOT.
+    # codeql[py/path-injection]
     if lease_dir and os.path.isdir(lease_dir):
         holders = []
         for fn in sorted(os.listdir(lease_dir)):
@@ -2885,6 +2921,8 @@ def main():
 
     if args.root:
         selected_root = os.path.realpath(os.path.abspath(args.root))
+        # CODEQL-SUPPRESS: --root is an explicit local-operator directory capability.
+        # codeql[py/path-injection]
         if not os.path.isdir(selected_root):
             ap.error("--root must select an existing directory")
         ROOT = selected_root
@@ -2917,7 +2955,11 @@ def main():
             sys.stdout.write(render_audit_text(report))
         if args.audit:                       # an explicit path was given -> also write json
             apath = os.path.abspath(args.audit)
+            # CODEQL-SUPPRESS: --audit JSON_OUT explicitly authorizes this output parent.
+            # codeql[py/path-injection]
             os.makedirs(os.path.dirname(apath) or ".", exist_ok=True)
+            # CODEQL-SUPPRESS: writing the operator-selected audit file is intended behavior.
+            # codeql[py/path-injection]
             with open(apath, "w", encoding="utf-8") as fh:
                 json.dump(report, fh, indent=2)
             sys.stderr.write(f"\nwrote {rel(apath)} "
@@ -2986,7 +3028,11 @@ def main():
             sys.stdout.write(text + "\n")
         else:
             jpath = os.path.abspath(args.json)
+            # CODEQL-SUPPRESS: --json PATH explicitly authorizes this output parent.
+            # codeql[py/path-injection]
             os.makedirs(os.path.dirname(jpath) or ".", exist_ok=True)
+            # CODEQL-SUPPRESS: writing the operator-selected JSON file is intended behavior.
+            # codeql[py/path-injection]
             with open(jpath, "w", encoding="utf-8") as fh:
                 fh.write(text + "\n")
             sys.stderr.write(f"\nwrote {rel(jpath)} "
@@ -2998,7 +3044,11 @@ def main():
         if not hpath:
             sys.stderr.write("refusing default html path outside selected --root\n")
             sys.exit(2)
+        # CODEQL-SUPPRESS: explicit --html grants output authority; the default is confined.
+        # codeql[py/path-injection]
         os.makedirs(os.path.dirname(hpath) or ".", exist_ok=True)
+        # CODEQL-SUPPRESS: hpath is either explicit operator output or _repo_path-confined.
+        # codeql[py/path-injection]
         with open(hpath, "w", encoding="utf-8") as fh:
             fh.write(render_html(payload))
         sys.stderr.write(f"\nwrote {rel(hpath)} "
