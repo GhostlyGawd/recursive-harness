@@ -2,7 +2,7 @@
 
 Phase: 3
 
-Status: implementation complete; protected-main receipt pending
+Status: verified
 
 Package corrections, follow-ups, retrospection, and specialization-candidate workflows as
 a non-invasive learning surface sourced from canonical Recursive components.
@@ -19,7 +19,7 @@ a non-invasive learning surface sourced from canonical Recursive components.
   is actually verified, and label unverified adapters honestly.
 - [x] Prove coexistence with existing project instructions and install from copied packages
   in clean consumer environments.
-- [ ] Merge the exact package and claims through every protected check, capture the live main
+- [x] Merge the exact package and claims through every protected check, capture the live main
   receipt, and only then mark this phase verified.
 
 ## TDD
@@ -66,5 +66,6 @@ merged catalog and README use the verified maturity label.
 - `scripts/record_learn_consumer_acceptance.py` is the replayable receipt generator. It invokes
   no model and explicitly leaves public marketplace, hosted web, and model skill selection
   unclaimed.
-- Final verification still requires this exact package and documentation to merge through all
-  protected checks and a post-merge main receipt before Phase 4 starts.
+- `docs/evidence/learn/phase-03-live-receipt.json` binds PR #254 and main commit `639bfbc`
+  to successful Linux, Windows, macOS, minimum-Git, optional-surface, Actions CodeQL, and
+  Python CodeQL jobs. The live main query returned zero open CodeQL alerts. Phase 3 is verified.
