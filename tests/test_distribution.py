@@ -570,12 +570,15 @@ def test_observe_provider_package() -> None:
         codex_plugins = {item["name"]: item for item in codex_marketplace["plugins"]}
         check("Codex marketplace preserves all opt-in packages",
               set(codex_plugins) == {
-                  "recursive-observe", "recursive-learn", "recursive-specialization",
-                  "recursive-guard"
+                  "recursive-observe", "recursive-learn", "recursive-verify",
+                  "recursive-specialization", "recursive-guard"
               }
               and codex_plugins["recursive-learn"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-learn"]["source"]["path"]
               == "./plugins/recursive-learn"
+              and codex_plugins["recursive-verify"]["policy"]["installation"] == "AVAILABLE"
+              and codex_plugins["recursive-verify"]["source"]["path"]
+              == "./plugins/recursive-verify"
               and codex_plugins["recursive-specialization"]["policy"]["installation"] == "AVAILABLE"
               and codex_plugins["recursive-specialization"]["source"]["path"]
               == "./plugins/recursive-specialization"
@@ -586,7 +589,9 @@ def test_observe_provider_package() -> None:
               claude_marketplace["plugins"][0]["name"] == "recursive-observe"
               and claude_marketplace["plugins"][0]["source"] == "./plugins/recursive-observe"
               and claude_marketplace["plugins"][1]["name"] == "recursive-learn"
-              and claude_marketplace["plugins"][1]["source"] == "./plugins/recursive-learn")
+              and claude_marketplace["plugins"][1]["source"] == "./plugins/recursive-learn"
+              and claude_marketplace["plugins"][2]["name"] == "recursive-verify"
+              and claude_marketplace["plugins"][2]["source"] == "./plugins/recursive-verify")
         (installed / ".codex-plugin" / "plugin.json").write_text(
             '{"name":"tampered"}\n', encoding="utf-8"
         )
@@ -633,7 +638,9 @@ def test_capability_catalog() -> None:
     check("capability catalog defines the complete approved suite", set(by_id) == expected)
     planned = [
         manifest for manifest in manifests
-        if manifest["id"] not in {"recursive-observe", "recursive-learn", "recursive-guard"}
+        if manifest["id"] not in {
+            "recursive-observe", "recursive-learn", "recursive-verify", "recursive-guard"
+        }
     ]
     check("unbuilt capability manifests remain truthful plans",
           all(manifest["packaging_status"] == "planned" and manifest["provider_packages"] == []
@@ -650,6 +657,12 @@ def test_capability_catalog() -> None:
           == {"agent-skills", "claude-code", "codex"}
           and all(item["status"] == "generated-beta"
                   for item in by_id["recursive-learn"]["provider_packages"]))
+    check("Verify names only its generated provider packages",
+          by_id["recursive-verify"]["packaging_status"] == "generated-beta"
+          and {item["provider"] for item in by_id["recursive-verify"]["provider_packages"]}
+          == {"agent-skills", "claude-code", "codex"}
+          and all(item["status"] == "generated-beta"
+                  for item in by_id["recursive-verify"]["provider_packages"]))
     check("Guard names only its generated Codex beta",
           by_id["recursive-guard"]["packaging_status"] == "generated-beta"
           and by_id["recursive-guard"]["provider_packages"] == [{

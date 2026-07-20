@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Verify"
+  short_description: "Inspect proof without executing repository code."
+  default_prompt: "Use $verify to produce a read-only structural scorecard for this repository and clearly label unsupported verification claims."

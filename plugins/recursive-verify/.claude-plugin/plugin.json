@@ -1,0 +1,19 @@
+{
+  "name": "recursive-verify",
+  "version": "0.1.0",
+  "description": "Produce read-only repository proof without executing repository code.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/verify-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "verification",
+    "evals",
+    "privacy"
+  ],
+  "skills": "./skills/"
+}

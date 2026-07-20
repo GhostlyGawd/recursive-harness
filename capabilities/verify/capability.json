@@ -4,25 +4,76 @@
   "id": "recursive-verify",
   "display_name": "Recursive Verify",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-beta",
   "safety_class": "advisory",
   "default_repository_writes": "never",
   "repository_writes": "explicit-reviewed-action-only",
-  "state_behavior": "read-only evidence by default; reviewed artifacts require an explicit action",
-  "explicit_repository_actions": ["capture evaluation", "create proposal", "prepare reviewed change"],
+  "state_behavior": "stateless read-only evidence; proposal preparation emits a diff and has no apply operation",
+  "explicit_repository_actions": ["prepare proposal diff for external review"],
   "required_events": [],
-  "optional_events": ["pull-request", "continuous-integration"],
-  "canonical_components": [
-    "skills/eval-capture",
-    "skills/structural-qa",
-    "skills/harness-authoring",
-    "skills/harness-pr-ops",
-    "commands/capture-eval.md",
-    "commands/run-evals.md",
-    "commands/atlas.md",
-    "agents/critic.md",
-    "agents/harness-auditor.md",
-    "cartograph"
+  "optional_events": [],
+  "optional_dependencies": [
+    "Python 3.12 or newer for the deterministic local CLI"
   ],
-  "provider_packages": []
+  "unsupported_cases": [
+    "executing repository graders, tests, hooks, commands, binaries, or model prompts",
+    "model-backed eval replay without a reviewed host sandbox",
+    "full Recursive Cartograph dependency, lineage, or blast-radius semantics",
+    "automatic edits, comments, commits, pushes, pull requests, or remote review actions",
+    "malware scanning, secret scanning, full static analysis, or correctness certification"
+  ],
+  "command_contracts": {
+    "scorecard": {
+      "data_reads": ["repository file paths, sizes, and types"],
+      "state_writes": [],
+      "repository_writes": "never",
+      "external_side_effects": [],
+      "maturity": "generated-beta"
+    },
+    "atlas-query": {
+      "data_reads": ["repository file paths, sizes, and types"],
+      "state_writes": [],
+      "repository_writes": "never",
+      "external_side_effects": [],
+      "maturity": "generated-beta"
+    },
+    "eval-inspect": {
+      "data_reads": ["eval case paths and bounded meta.json documents"],
+      "state_writes": [],
+      "repository_writes": "never",
+      "external_side_effects": [],
+      "maturity": "generated-beta"
+    },
+    "proposal-diff": {
+      "data_reads": ["one explicit confined target when it exists"],
+      "state_writes": [],
+      "repository_writes": "diff-only-no-apply",
+      "external_side_effects": [],
+      "maturity": "generated-beta"
+    }
+  },
+  "canonical_components": [
+    "skills/verify/SKILL.md",
+    "skills/verify/agents/openai.yaml",
+    "skills/verify/scripts/verify.py",
+    "skills/verify/references/commands.md",
+    "skills/verify/references/security.md"
+  ],
+  "provider_packages": [
+    {
+      "provider": "agent-skills",
+      "status": "generated-beta",
+      "path": "plugins/recursive-verify/skills/verify"
+    },
+    {
+      "provider": "claude-code",
+      "status": "generated-beta",
+      "path": "plugins/recursive-verify/.claude-plugin/plugin.json"
+    },
+    {
+      "provider": "codex",
+      "status": "generated-beta",
+      "path": "plugins/recursive-verify/.codex-plugin/plugin.json"
+    }
+  ]
 }

@@ -21,6 +21,13 @@
       "description": "Turn private corrections into reviewable improvements with zero default repository writes.",
       "version": "0.1.0",
       "tags": ["agents", "learning", "privacy", "retrospectives"]
+    },
+    {
+      "name": "recursive-verify",
+      "source": "./plugins/recursive-verify",
+      "description": "Produce read-only repository proof without executing repository code.",
+      "version": "0.1.0",
+      "tags": ["agents", "verification", "evals", "privacy"]
     }
   ]
 }

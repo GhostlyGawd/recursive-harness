@@ -134,7 +134,12 @@ Recursive Learn is the second hook-free package. It captures sanitized correctio
 follow-ups outside the repository and emits review-only promotion diffs. Install it at personal
 or user scope with the same repository catalog, then follow the [Learn package guide](learn-plugin.md).
 It neither replaces existing instructions nor applies its proposed patch.
-The remaining capability manifests are design contracts, not installable compatibility claims.
+
+Recursive Verify is the stateless, hook-free evidence package. It provides metadata-only
+scorecards and fixed Atlas-style queries, inspects eval structure without executing repository
+code, and emits an exact proposal diff without applying it. Install it at personal or user scope
+with the same catalog, then follow the [Verify package guide](verify-plugin.md). Coordinate and
+Lab remain design contracts, not installable compatibility claims.
 
 ## 5. Verify the working loop
 
