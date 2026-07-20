@@ -2,19 +2,24 @@
 
 Phase: 4
 
+Status: implementation complete; protected-main receipt pending
+
 Package evals, structural evidence, proposals, Cartograph, Atlas, and review workflows with
 read-only defaults and explicit, reviewable mutation boundaries.
 
 ## Tasks
 
-- [ ] Define the Verify manifest and map every shipped command to its canonical source,
+- [x] Define the Verify manifest and map every shipped command to its canonical source,
   data read, state write, repository write, external side effect, and maturity.
-- [ ] Make structural inspection, Atlas queries, scorecards, and eval replay read-only by
-  default; route generated evidence to user-private state unless a destination is explicit.
-- [ ] Require exact diff preview and confirmation for proposal creation, tracked evidence,
-  comments, or pull-request operations.
-- [ ] Package and install Verify independently from Guard and Coordinate.
-- [ ] Run real consumer journeys against repositories with and without Recursive metadata.
+- [x] Make structural inspection, Atlas queries, scorecards, and eval-corpus inspection
+  read-only by default. Executable or model-backed replay is explicitly unsupported without a
+  separately reviewed host sandbox.
+- [x] Require an exact diff preview for proposal preparation; the package has no apply,
+  comment, commit, push, or pull-request operation.
+- [x] Package and install Verify independently from Guard and Coordinate.
+- [x] Run real consumer journeys against repositories with and without Recursive metadata.
+- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+  protected-main and CodeQL receipt.
 
 ## TDD
 
@@ -31,7 +36,7 @@ equivalent graphs, and never convert untrusted repository text into an executabl
 ## BDD scenarios
 
 Given a repository that has never used Recursive
-When Verify runs an Atlas query and eval replay
+When Verify runs an Atlas query and eval-corpus inspection
 Then it produces evidence without creating or editing repository files
 
 Given a user requests a durable proposal
@@ -46,8 +51,12 @@ claimed consumer/provider journeys have reviewed receipts.
 
 ## Completion evidence
 
-- Command/side-effect matrix and manifest.
-- Golden read-only outputs and mutation-denial tests.
-- Property-test seeds/results for structural and path boundaries.
-- Installed consumer transcripts and byte-level before/after trees.
-- Green hosted CI and CodeQL receipts.
+- Command/side-effect matrix and manifest: `capabilities/verify/capability.json` and
+  `skills/verify/references/commands.md`.
+- Golden read-only outputs, mutation denial, and structural/path property tests:
+  `tests/test_verify_package.py`.
+- Reproducible provider build: `scripts/build_verify_plugins.py --check`.
+- Installed generic, Claude Code 2.1.200, and official Codex 0.144.6 consumer receipt with
+  byte-identical before/after repository trees:
+  `docs/evidence/verify-consumer-acceptance.json`.
+- Live protected-main and CodeQL receipt: pending merge of this exact implementation.

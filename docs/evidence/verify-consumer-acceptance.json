@@ -1,0 +1,63 @@
+{
+  "accepted_date": "2026-07-20",
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "limitations": {
+    "hosted_web": "not tested",
+    "model_or_executable_replay": "not supported",
+    "model_skill_selection": "not tested",
+    "public_marketplace": "not tested"
+  },
+  "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+  "providers": {
+    "agent-skills": {
+      "atlas_query": true,
+      "copied_package_execution": true,
+      "deterministic_runtime": true,
+      "eval_inventory_without_execution": true,
+      "file_count": 8,
+      "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+      "proposal": "diff-only",
+      "receipt_verified": true,
+      "scorecard": true
+    },
+    "claude-code": {
+      "atlas_query": true,
+      "consumer": "Claude Code",
+      "deterministic_runtime": true,
+      "eval_inventory_without_execution": true,
+      "file_count": 8,
+      "installed": true,
+      "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+      "proposal": "diff-only",
+      "receipt_verified": true,
+      "scope": "isolated-user",
+      "scorecard": true,
+      "version": "2.1.200"
+    },
+    "codex": {
+      "atlas_query": true,
+      "consumer_package": "@openai/codex",
+      "deterministic_runtime": true,
+      "eval_inventory_without_execution": true,
+      "file_count": 8,
+      "installed": true,
+      "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+      "proposal": "diff-only",
+      "receipt_verified": true,
+      "scope": "isolated-user",
+      "scorecard": true,
+      "version": "0.144.6"
+    }
+  },
+  "repository": {
+    "after_sha256": "b6483a62b2ec365cc5233dea36b0af5655acefa3eb2ecbc98bd07b175a23dc4f",
+    "before_sha256": "b6483a62b2ec365cc5233dea36b0af5655acefa3eb2ecbc98bd07b175a23dc4f",
+    "existing_files": 12,
+    "writes": 0
+  },
+  "result": "accepted",
+  "schema_version": 1
+}

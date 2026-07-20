@@ -1,0 +1,33 @@
+{
+  "name": "recursive-verify",
+  "version": "0.1.0",
+  "description": "Produce read-only repository proof without executing repository code.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/verify-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "verification",
+    "evals",
+    "privacy"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recursive Verify",
+    "shortDescription": "Inspect proof without executing repository code.",
+    "longDescription": "Generate deterministic structural scorecards, fixed Atlas queries, and safe eval inventory; prepare an exact proposal diff without changing the repository.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Structural scorecards",
+      "Fixed Atlas queries",
+      "Non-executing eval inspection",
+      "Review-only proposal diffs"
+    ],
+    "defaultPrompt": "Use Recursive Verify to inspect this repository without executing its code or changing its files."
+  }
+}

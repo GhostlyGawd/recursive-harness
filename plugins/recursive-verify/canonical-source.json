@@ -1,0 +1,47 @@
+{
+  "capability": "recursive-verify",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "provider_manifests": [
+    ".codex-plugin/plugin.json",
+    ".claude-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "31e9a32faf1c634e69fe52e833ffb70264730177b6c73f6dbc78c09807615927",
+  "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+  "package_files": {
+    ".claude-plugin/plugin.json": "54960f9d87d8ba4fba77d9335c991ed6b7a693b4592cb6f8f901168b91937086",
+    ".codex-plugin/plugin.json": "77f0170fa5c9247068ea912dc9842e7954273015cb10c51f1a9eb4ed66bfa6db",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "skills/verify/SKILL.md": "87d7360f25976c9ffc1b19d614e382eb9bb424ad416ba010b42a5beaad1ffb38",
+    "skills/verify/agents/openai.yaml": "fd482a42737b28668a7b2e4afe2c4e288a29790a5e3987c8982eecda85f7e7fc",
+    "skills/verify/references/commands.md": "629369bead97394b572002d7d1141ffac180f49e62ba7ccecc0186aa791ca0be",
+    "skills/verify/references/security.md": "197510210f0ad9a21b1ac5d49a80cde9c7cb4427996c23d3f11c8803aa6a2757",
+    "skills/verify/scripts/verify.py": "ff7fc5c6d0c9da26939f12e7edd9d2d25c603b1fc4e73d3b41dc06dec5823fb1"
+  },
+  "sources": {
+    "skills/verify/SKILL.md": {
+      "packaged_path": "skills/verify/SKILL.md",
+      "sha256": "87d7360f25976c9ffc1b19d614e382eb9bb424ad416ba010b42a5beaad1ffb38"
+    },
+    "skills/verify/agents/openai.yaml": {
+      "packaged_path": "skills/verify/agents/openai.yaml",
+      "sha256": "fd482a42737b28668a7b2e4afe2c4e288a29790a5e3987c8982eecda85f7e7fc"
+    },
+    "skills/verify/scripts/verify.py": {
+      "packaged_path": "skills/verify/scripts/verify.py",
+      "sha256": "ff7fc5c6d0c9da26939f12e7edd9d2d25c603b1fc4e73d3b41dc06dec5823fb1"
+    },
+    "skills/verify/references/commands.md": {
+      "packaged_path": "skills/verify/references/commands.md",
+      "sha256": "629369bead97394b572002d7d1141ffac180f49e62ba7ccecc0186aa791ca0be"
+    },
+    "skills/verify/references/security.md": {
+      "packaged_path": "skills/verify/references/security.md",
+      "sha256": "197510210f0ad9a21b1ac5d49a80cde9c7cb4427996c23d3f11c8803aa6a2757"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

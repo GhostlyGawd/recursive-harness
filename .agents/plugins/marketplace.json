@@ -29,6 +29,18 @@
       "category": "Developer Tools"
     },
     {
+      "name": "recursive-verify",
+      "source": {
+        "source": "local",
+        "path": "./plugins/recursive-verify"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
       "name": "recursive-specialization",
       "source": {
         "source": "local",
