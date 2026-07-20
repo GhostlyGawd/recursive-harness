@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import datetime as dt
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -158,6 +159,43 @@ def test_private_learning_properties_and_zero_write_coexistence() -> None:
             sys.executable, str(cli), "retro", "plan", "--json"
         ], cwd=repository, env=env).stdout)
         require(0 < len(plan["events"]) <= 3, "retro did not enforce the three-event cap")
+
+        ledger = home / ".recursive-harness" / "learn" / "corrections.jsonl"
+        existing_lines = ledger.read_text(encoding="utf-8").splitlines()
+        old_record = {
+            "id": "1" * 12,
+            "kind": "correction",
+            "ts": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=45)).isoformat(),
+            "session": "retention-property",
+            "text": "expired private detail",
+        }
+        malformed_record = {
+            "id": "2" * 12,
+            "kind": "correction",
+            "ts": "not-a-timestamp",
+            "session": "retention-property",
+            "text": "malformed timestamp stays visible",
+        }
+        ledger.write_text(
+            "\n".join([*existing_lines, json.dumps(old_record), json.dumps(malformed_record)]) + "\n",
+            encoding="utf-8",
+        )
+        before_retention = ledger.read_bytes()
+        retention_dry = json.loads(run([
+            sys.executable, str(cli), "privacy", "retain", "--days", "30", "--json"
+        ], cwd=repository, env=env).stdout)
+        require(retention_dry["would_scrub"] == 1 and retention_dry["invalid_timestamps"] == 1,
+                "retention preview did not classify old and malformed timestamps")
+        require(ledger.read_bytes() == before_retention, "retention preview changed private state")
+        retention_apply = json.loads(run([
+            sys.executable, str(cli), "privacy", "retain", "--days", "30", "--apply", "--json"
+        ], cwd=repository, env=env).stdout)
+        retained = ledger.read_text(encoding="utf-8")
+        require(retention_apply["scrubbed"] == 1, "retention apply did not scrub one old record")
+        require("expired private detail" not in retained and "[REDACTED:retention]" in retained,
+                "expired correction content survived retention")
+        require("malformed timestamp stays visible" in retained,
+                "malformed timestamp was silently destroyed")
         patch = run([
             sys.executable, str(cli), "promote", "diff", candidate["id"],
             "--repository", str(repository), "--target", "LEARNINGS.md"
