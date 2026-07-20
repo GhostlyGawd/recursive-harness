@@ -18,7 +18,7 @@ sandbox, and does not replace repository permissions, branch protection, or CI.
 ## Install
 
 ```bash
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
 codex plugin add recursive-guard@recursive-harness
 codex plugin list
 ```

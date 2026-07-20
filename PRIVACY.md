@@ -1,8 +1,35 @@
-# Privacy and local data
+# Privacy policy and local data
 
-Recursive Harness is designed to keep its hot operational state in the local checkout,
-but “gitignored” does not mean “non-sensitive.” This document describes the practical
-data boundary for operators and contributors; it is not a legal privacy policy.
+Effective: 2026-07-20
+
+This policy covers Recursive Harness and the skills-only Recursive plugin published by
+GhostlyGawd. Recursive is designed to keep operational evidence in the consumer's own
+environment, but “local” or “gitignored” does not mean “non-sensitive.” This document
+describes what the software stores, what it does not send, and the controls available to
+operators and contributors.
+
+## Public Recursive plugin
+
+The public skills-only bundle contains Observe, Learn, Verify, and Coordinate. The publisher
+does not operate a backend service for these skills and does not receive their prompts,
+repository contents, sidecar records, or command output. The bundle includes no authentication,
+analytics, advertising, remote connector, MCP server, or network command.
+
+- Observe stores sanitized predictions and outcomes under `~/.recursive-harness/observe`.
+- Learn stores sanitized corrections, follow-ups, and candidates under
+  `~/.recursive-harness/learn`.
+- Coordinate stores sanitized local claims and handoffs under
+  `~/.recursive-harness/coordinate`.
+- Verify is stateless and reads repository structure without executing repository code.
+
+OpenAI, Claude, GitHub, an operating-system vendor, or another host may process prompts,
+files, logs, and account data independently under that provider's policies. Those host-side
+flows are not collected by this repository or changed by installing the plugin.
+
+The publisher does not sell plugin data or share it for advertising. A user can audit,
+retain, or purge supported sidecar records with the bundled privacy commands described
+below. Uninstall removes package files but intentionally preserves sidecar evidence until the
+user separately requests deletion.
 
 ## What is stored locally
 
@@ -88,3 +115,9 @@ The enforcement hooks are not a network or process sandbox.
    machine paths, credentials, and private repository content.
 
 For a vulnerability, use the private reporting process in [SECURITY.md](SECURITY.md).
+
+## Policy changes and contact
+
+Material changes are published in this repository and dated above. General support belongs
+in the process documented by [SUPPORT.md](SUPPORT.md); suspected vulnerabilities, exposed
+credentials, or sensitive reports belong in the private process in [SECURITY.md](SECURITY.md).

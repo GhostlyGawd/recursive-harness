@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "source": {
+    "repository": "GhostlyGawd/recursive-harness",
+    "ref": "v0.1.2",
+    "commit": "5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4",
+    "release_url": "https://github.com/GhostlyGawd/recursive-harness/releases/tag/v0.1.2"
+  },
+  "plugin": {
+    "id": "recursive",
+    "version": "0.1.2",
+    "display_name": "Recursive",
+    "short_description": "Measure, learn, verify, and coordinate without rewriting your repo.",
+    "long_description": "Four portable agent workflows from Recursive Harness: score predictions, turn corrections into reviewable improvements, inspect repository structure without executing project code, and coordinate concurrent local agents. The skills preserve existing AGENTS.md, CLAUDE.md, hooks, settings, and workflows; no automatic setup or remote service is included.",
+    "developer_name": "GhostlyGawd",
+    "category": "Developer Tools",
+    "website_url": "https://github.com/GhostlyGawd/recursive-harness",
+    "support_url": "https://github.com/GhostlyGawd/recursive-harness/blob/main/SUPPORT.md",
+    "privacy_policy_url": "https://github.com/GhostlyGawd/recursive-harness/blob/main/PRIVACY.md",
+    "terms_url": "https://github.com/GhostlyGawd/recursive-harness/blob/main/LICENSE",
+    "logo_path": "assets/recursive-mark.svg",
+    "screenshot_path": "assets/recursive-overview.png",
+    "brand_color": "#20D9FF",
+    "skills": [
+      "observe",
+      "learn",
+      "verify",
+      "coordinate"
+    ],
+    "components": {
+      "skills": "./skills/"
+    },
+    "capabilities": [
+      "Prediction scoring and calibration",
+      "Private correction and follow-up learning",
+      "Read-only repository verification",
+      "Collision-safe local agent coordination"
+    ]
+  },
+  "starter_prompts": [
+    "Use Recursive Observe to record a falsifiable prediction for this task, then score it after verification.",
+    "Use Recursive Learn to capture this correction privately and prepare a reviewable improvement without changing the repository.",
+    "Use Recursive Verify to produce a structural scorecard for this repository without executing project code.",
+    "Use Recursive Coordinate to claim the shared scope and prepare a bounded local handoff."
+  ],
+  "maturity": {
+    "listing": "beta",
+    "observe": "beta",
+    "learn": "beta",
+    "verify": "beta",
+    "coordinate": "beta"
+  },
+  "runtime": {
+    "python": "CPython 3.12.x",
+    "authentication": "none",
+    "network": "none",
+    "repository_writes_by_default": false,
+    "private_state": "~/.recursive-harness"
+  },
+  "limitations": [
+    "This plugin is the portable skills suite, not the full Claude Code hook harness.",
+    "It does not install hooks, edit provider configuration, or merge with existing instruction files.",
+    "Verify inspects structure but does not execute project code or model-backed evals.",
+    "Coordinate is local-only and does not provide remote Agent Mail or distributed consensus.",
+    "Private sidecar data remains on the consumer environment until the user explicitly purges it.",
+    "The repository-wide MIT License is the software-use terms; the host platform's separate terms also apply."
+  ],
+  "availability": {
+    "status": "owner-selection-required",
+    "countries": []
+  }
+}
