@@ -357,6 +357,8 @@ instruction hierarchy.
 - The core CLI, hooks, Cartograph, eval runner, and Fleet engine use Python's standard
   library. Optional Mission Control and MCP dependencies are isolated and pinned in CI.
 
+The installed source reports its exact release with `python3 bin/harness --version`.
+
 Browse the [Harness Atlas](cartograph/ATLAS.md), [operations guide](docs/operations.md),
 [release checklist](docs/releasing.md), or the point-in-time
 [Agentic Dev OS comparison](docs/comparisons/agentic-dev-os.md).

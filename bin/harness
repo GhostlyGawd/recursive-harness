@@ -1120,6 +1120,14 @@ def main() -> int:
             pass
     p = argparse.ArgumentParser(prog="harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    try:
+        with open(os.path.join(ROOT, "VERSION"), encoding="utf-8") as version_file:
+            version = version_file.read().strip()
+    except OSError:
+        # Standalone copies are used by compatibility fixtures and downstream tooling.
+        # They remain executable, but cannot claim a repository release version.
+        version = "development"
+    p.add_argument("--version", action="version", version=f"%(prog)s {version}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("predict")

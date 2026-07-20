@@ -24,6 +24,7 @@ resolution: ""
 | 2026-07-20 | approved | in-progress | Phase 5 verified on protected `main`: PR #258 merged at `f4b8fce`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-05-live-receipt.json` binds the fixed-root concurrent package and consumer evidence |
 | 2026-07-20 | approved | in-progress | Phase 6 implementation completed locally: experimental Brainstorm/Roadmap previews, exact-target action records, zero mutation connector, and generic, Claude Code 2.1.200, and official Codex 0.144.6 isolated install/refresh/uninstall journeys passed; protected-main receipt remains pending |
 | 2026-07-20 | approved | in-progress | Phase 6 verified on protected `main`: PR #260 merged at `13fa650`; all platform, minimum-Git, optional, and CodeQL jobs passed; live CodeQL remains zero; `phase-06-live-receipt.json` binds the experimental package, honest first-version upgrade limitation, and consumer evidence |
+| 2026-07-20 | approved | in-progress | Phase 7 release candidate freezes version/document/provider reconciliation, reproducible archive and safe-member properties, actual v0.1.0 upgrade/rollback/interruption journeys, operator-link validation, and an independent post-publication consumer verifier; protected-main and live-publication gates remain pending |
 <!-- proposal-history:end -->
 
 ## Problem
@@ -55,7 +56,7 @@ or marketplace claim will be published before its preceding gates pass.
 - [x] A real receipt-bound Codex installation and consumer execution closes P-2026-044.
 - [x] All 49 baseline CodeQL findings are fixed or individually proven false positives,
   and the live open-alert count is zero.
-- [ ] Learn, Verify, Coordinate, and Lab have canonical manifests, reproducible packages,
+- [x] Learn, Verify, Coordinate, and Lab have canonical manifests, reproducible packages,
   coexistence tests, honest maturity labels, and consumer evidence.
 - [ ] v0.1.2 is reproducibly built, upgrade/rollback tested, tagged, released with verified
   checksums, and aligned with repository metadata and documentation.

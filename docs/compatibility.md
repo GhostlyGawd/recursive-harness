@@ -35,6 +35,28 @@ Both optional surfaces have their own CI job and weekly Dependabot update path.
 
 ## Upgrade procedure
 
+### From v0.1.0
+
+`v0.1.0` used an opt-out global `~/.claude` link. Stop Claude Code first and preserve the
+checkout's ignored `state/` data. Update that same checkout to `v0.1.2`; the existing link still
+points to exactly one checkout. Run the normal installer, then either keep the explicitly supported
+legacy link or migrate to an isolated account:
+
+```bash
+./install.sh
+./account-init.sh dev --store-account dev --sync-settings
+python3 bin/harness --version
+CLAUDE_CONFIG_DIR="$PWD/.claude-private/accounts/dev" python3 bin/harness doctor
+./uninstall.sh --global-legacy   # only after the isolated account works
+```
+
+The removal command refuses a global link that does not point to this checkout. It preserves the
+checkout, ignored state, account settings, backups, and transcripts. The tested rollback returns
+the same checkout to the immutable `v0.1.0` tag; do not run the v0.1.0 installer against a different
+directory without first inspecting its destructive global-link behavior.
+
+### From a current beta checkout
+
 1. Stop active harness sessions and preserve `.claude-private/` plus ignored `state/` data.
 2. Return the checkout to `main`, fetch, and fast-forward only:
 
@@ -54,6 +76,7 @@ Both optional surfaces have their own CI job and weekly Dependabot update path.
 5. Launch or export the intended `CLAUDE_CONFIG_DIR`, then run:
 
    ```bash
+   python3 bin/harness --version
    python3 bin/harness doctor
    python3 lint/lint_harness.py
    python3 evals/run_evals.py --dry-run
