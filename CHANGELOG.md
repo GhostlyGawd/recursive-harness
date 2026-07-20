@@ -4,31 +4,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 ## [Unreleased]
 
-### Changed
+No unreleased changes.
 
-- Replaced the `CLAUDE.md`-mutating project initializer with a read-only compatibility
-  inspector that preserves existing repository instructions, agents, skills, hooks,
-  provider settings, Git metadata, and unrelated files.
-- Reframed the account silo as the advanced Claude reference runtime and made non-invasive
-  personal-sidecar adoption the public default.
-- Added versioned source manifests for the planned Observe, Learn, Verify, Coordinate,
-  Guard, and Lab capability packages without claiming that provider plugins already ship.
-- Added the first generated-beta capability package: Recursive Observe for Claude Code and
-  generic Agent Skill hosts, with a generated-preview Codex adapter, private user-local
-  state, zero repository writes, SHA-256 source receipts, and explicit privacy deletion
-  controls.
-- Narrowed Recursive Observe storage to one fixed ledger below the user's home directory;
-  the package accepts no caller-selected path and no longer copies the harness-wide storage
-  module into its distributable surface.
-- Added a generated-preview Codex Specialization adapter with external private candidates,
-  lifecycle hooks, a complete receipt-bound package surface, and explicit trust/removal limits.
-- Added Recursive Guard as a separately installed and separately trusted Codex preview. It is
-  inert without a reviewed repository policy, never rewrites existing agent configuration,
-  carries a complete source receipt, and is not an advisory-plugin dependency.
-- Allowed multiple reviewed proposal updates on one date when each change appends a distinct
-  lifecycle-history row, preserving the enforcement requirement without inventing future dates.
-
-## [0.1.2] - 2026-07-18
+## [0.1.2] - 2026-07-20
 
 ### Added
 
@@ -45,6 +23,11 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   an embedded source manifest, SHA-256 checksums, and non-destructive uninstall.
 - Profile-aligned Signal Loop brand assets, real product-output evidence, and a
   complete product landing page.
+- Generated, receipt-bound Recursive Observe, Learn, Verify, and Coordinate packages for
+  generic Agent Skills, Claude Code, and Codex, with isolated consumer evidence.
+- A separate generated-experimental Recursive Lab package for preview-only Brainstorm and
+  Roadmap workflows, exact-target action records, and clean install/removal.
+- A generated Codex Specialization preview and separately trusted Recursive Guard beta.
 
 ### Changed
 
@@ -56,6 +39,12 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Pinned distributed companion repositories to reviewed immutable commits.
 - Strengthened protected `main` with the full release check set and required
   conversation resolution.
+- Replaced the `CLAUDE.md`-mutating project initializer with read-only compatibility
+  inspection and made non-invasive personal-sidecar adoption the public default.
+- Narrowed private provider state to fixed user-owned boundaries and kept existing project
+  instructions, agents, skills, hooks, and provider settings authoritative.
+- Allowed multiple reviewed proposal updates on one date only when each change appends a
+  distinct lifecycle-history row.
 
 ### Known limitations
 
@@ -65,6 +54,8 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 - Optional Mission Control and MCP surfaces have separate dependencies.
 - GitHub Releases are the supported packaged channel; package-manager channels
   are not published yet.
+- Hosted-web package execution, automatic model skill selection, public marketplace
+  discovery, and distributed Coordinate consensus are not claimed.
 
 ## [0.1.0] - 2026-06-13
 

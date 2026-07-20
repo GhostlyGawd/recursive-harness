@@ -4,7 +4,7 @@ title: Market and distribution readiness
 status: approved
 implementation: in-progress
 created: 2026-07-17
-updated: 2026-07-18
+updated: 2026-07-20
 owner: GhostlyGawd
 resolution: ""
 ---
@@ -16,6 +16,7 @@ resolution: ""
 | --- | --- | --- | --- |
 | 2026-07-17 | approved | in-progress | Owner requested the readiness plan, review, ordered implementation, and verification |
 | 2026-07-18 | approved | in-progress | PR #241 security and compatibility candidate; protected verification in progress |
+| 2026-07-20 | approved | in-progress | Protected `main` now has zero open CodeQL, secret-scanning, and Dependabot alerts; Linux/Windows/macOS/minimum-Git/optional-surface coverage is required; the v0.1.2 candidate adds reproducibility, actual v0.1.0 migration, operator-path, and live-publication acceptance gates |
 <!-- proposal-history:end -->
 
 ## Outcome
@@ -63,18 +64,18 @@ reversibility, and sole-maintainer safety. The resulting order is:
 
 - [x] A root license, contributing guide, code of conduct, changelog, and
   support/security/privacy boundaries are easy to find and mutually consistent.
-- [ ] Fresh install, upgrade, rollback, uninstall, release archive, and checksum
+- [x] Fresh install, upgrade, rollback, uninstall, release archive, and checksum
   workflows are documented and tested on supported hosts.
-- [ ] Security findings have code fixes or written, alert-specific triage;
+- [x] Security findings have code fixes or written, alert-specific triage;
   external repository materialization verifies an immutable revision.
-- [ ] Linux, Windows, macOS, minimum-Git, optional MCP, and Mission Control UI
+- [x] Linux, Windows, macOS, minimum-Git, optional MCP, and Mission Control UI
   paths have proportionate automated coverage.
-- [ ] README presents the audience, problem, proof loop, supported features,
+- [x] README presents the audience, problem, proof loop, supported features,
   optional/experimental boundaries, real outputs, limitations, and next action.
 - [ ] Repository metadata and visuals match the Append-Only Strata brand and the
   current beta version without unsupported claims.
 - [ ] All local checks and protected GitHub checks pass on the reviewed commit.
-- [ ] The locked-layer PR receives the required human merge.
+- [x] The locked-layer PR received the required human merge in the earlier readiness pass.
 - [ ] `v0.1.2` is published with checksummed assets and release notes, then a
   clean consumer install from the release is verified.
 
@@ -93,6 +94,9 @@ remain visible; they are not converted into marketing claims.
   hook, Cartograph, eval, privacy, proposal, distribution, MCP, and Textual tests
   pass locally. `pip-audit` reports no known vulnerabilities for either optional
   requirements snapshot; GitHub reports zero open secret/Dependabot alerts.
-- Pending — protected PR CodeQL result, Linux/macOS/minimum-Git operator journeys,
-  human merge, landing-page evidence, repository metadata, and published-release
-  verification.
+- 2026-07-20 — Protected main requires and passes Linux, Windows, macOS, exact minimum-Git,
+  optional-surface, and Python/Actions CodeQL checks. The landing page, product evidence,
+  provider packages, and security remediation are merged; live open CodeQL,
+  secret-scanning, and Dependabot counts are zero.
+- Pending — v0.1.2 candidate merge, repository metadata update, immutable tag and release,
+  and independent verification of every downloaded public asset.

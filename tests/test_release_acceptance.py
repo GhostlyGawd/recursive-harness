@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from urllib.parse import unquote
 import zipfile
 
 
@@ -65,6 +66,24 @@ def git_revision(repo: Path = ROOT) -> str:
     return run(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip()
 
 
+def markdown_link_targets(markdown: str) -> list[str]:
+    """Return inline Markdown destinations without treating prose as a URL grammar."""
+    targets: list[str] = []
+    offset = 0
+    while True:
+        marker = markdown.find("](", offset)
+        if marker < 0:
+            return targets
+        end = markdown.find(")", marker + 2)
+        if end < 0:
+            raise AssertionError("unterminated Markdown link")
+        destination = markdown[marker + 2:end].strip()
+        if destination.startswith("<") and destination.endswith(">"):
+            destination = destination[1:-1]
+        targets.append(destination)
+        offset = end + 1
+
+
 def test_version_docs_and_provider_versions_are_reconciled() -> None:
     require((ROOT / "VERSION").read_text(encoding="utf-8").strip() == VERSION,
             "root VERSION drifted")
@@ -101,6 +120,72 @@ def test_version_docs_and_provider_versions_are_reconciled() -> None:
             value = json.loads(provider_manifest.read_text(encoding="utf-8"))
             require(value["version"] == manifest["capability_version"],
                     f"provider/capability version drift: {provider_manifest}")
+
+
+def test_operator_path_links_and_commands_are_valid() -> None:
+    operator_docs = (
+        ROOT / "README.md",
+        ROOT / "docs" / "getting-started.md",
+        ROOT / "docs" / "compatibility.md",
+        ROOT / "docs" / "releasing.md",
+        ROOT / "docs" / "releases" / f"v{VERSION}.md",
+        ROOT / "DISTRIBUTION.md",
+        ROOT / "SECURITY.md",
+        ROOT / "PRIVACY.md",
+    )
+    for document in operator_docs:
+        markdown = document.read_text(encoding="utf-8")
+        for raw_target in markdown_link_targets(markdown):
+            target = unquote(raw_target.split("#", 1)[0].split("?", 1)[0])
+            if not target or target.startswith(("https://", "http://", "mailto:")):
+                continue
+            candidate = (document.parent / target).resolve()
+            require(candidate == ROOT or ROOT in candidate.parents,
+                    f"operator link escapes the repository: {document}: {raw_target}")
+            require(candidate.exists(),
+                    f"broken operator link: {document.relative_to(ROOT)}: {raw_target}")
+
+    command_contracts = {
+        ROOT / "README.md": (
+            "python3 bin/harness --version",
+            "python3 bin/harness doctor",
+        ),
+        ROOT / "docs" / "getting-started.md": (
+            "gh release download v0.1.2",
+            "./install.sh",
+            "./uninstall.sh",
+        ),
+        ROOT / "docs" / "compatibility.md": (
+            "./account-init.sh --all --sync-settings",
+            "python3 bin/harness --version",
+        ),
+        ROOT / "docs" / "releasing.md": (
+            "python3 scripts/build_release.py",
+        ),
+        ROOT / "docs" / "releases" / f"v{VERSION}.md": (
+            "recursive-harness-v0.1.2.tar.gz",
+            "recursive-harness-v0.1.2.zip",
+            "recursive-harness-v0.1.2.sha256",
+        ),
+    }
+    for document, commands in command_contracts.items():
+        contents = document.read_text(encoding="utf-8")
+        for command in commands:
+            require(command in contents,
+                    f"operator command missing from {document.relative_to(ROOT)}: {command}")
+
+
+def test_standalone_cli_without_version_file_is_truthfully_unversioned() -> None:
+    with tempfile.TemporaryDirectory(prefix="recursive-standalone-cli-") as raw:
+        fixture = Path(raw)
+        standalone = fixture / "bin" / "harness"
+        standalone.parent.mkdir()
+        shutil.copy2(ROOT / "bin" / "harness", standalone)
+        for module in ("private_state.py", "privacy_state.py"):
+            shutil.copy2(ROOT / module, fixture / module)
+        result = run([sys.executable, str(standalone), "--version"], cwd=standalone.parent)
+        require(result.stdout.strip() == "harness development",
+                "standalone CLI falsely claimed a repository release")
 
 
 def test_current_release_archives_are_reproducible_complete_and_safe() -> None:
