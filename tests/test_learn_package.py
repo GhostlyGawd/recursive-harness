@@ -207,7 +207,8 @@ def test_private_learning_properties_and_zero_write_coexistence() -> None:
             sys.executable, str(cli), "privacy", "audit", "--json"
         ], cwd=repository, env=env).stdout)
         require(audit["repository_writes"] == [], "privacy audit reports repository writes")
-        require(Path(audit["state_directory"]).is_relative_to(home), "state escaped private home")
+        require(Path(audit["state_directory"]).resolve().is_relative_to(home.resolve()),
+                "state escaped private home")
         require(before == visible_files(repository), "Learn changed the consumer repository")
         state_bytes = b"".join(path.read_bytes() for path in home.rglob("*") if path.is_file())
         require(secret.encode() not in state_bytes, "secret survived at rest")
