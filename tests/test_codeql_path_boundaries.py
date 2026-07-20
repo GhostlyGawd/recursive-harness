@@ -310,7 +310,7 @@ def test_every_source_suppression_has_an_adjacent_boundary_justification() -> No
         path = ROOT / relative
         lines = path.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
-            if line.strip() != "# codeql[py/path-injection]":
+            if line.strip() != "# lgtm[py/path-injection]":
                 continue
             site = f"{relative}:{index + 1}"
             sites.append(site)

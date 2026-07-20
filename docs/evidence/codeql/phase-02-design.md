@@ -37,7 +37,7 @@ silently expanding a declared capability.
 ## Source suppression policy
 
 CodeQL does not currently recognize this repository's `realpath` plus `commonpath` containment
-helpers as taint sanitizers. A narrow `# codeql[py/path-injection]` suppression is therefore allowed
+helpers as taint sanitizers. A narrow `# lgtm[py/path-injection]` suppression is therefore allowed
 only immediately before an individually reviewed sink and only when the preceding line starts with
 `CODEQL-SUPPRESS:` and states the exact authority. Suppressions are also used for the four disposable
 eval-grader sinks and three test-fixture sinks already classified `used_in_tests`. The executable

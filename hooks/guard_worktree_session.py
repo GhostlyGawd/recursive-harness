@@ -308,15 +308,15 @@ def _concurrent_live_session(data, now):
         if not tp.lower().endswith(".jsonl"):
             return None
         # CODEQL-SUPPRESS: tp is a host-granted transcript capability; links are rejected.
-        # codeql[py/path-injection]
+        # lgtm[py/path-injection]
         if os.path.islink(tp):
             return None
         # CODEQL-SUPPRESS: junction rejection prevents transcript capability redirection.
-        # codeql[py/path-injection]
+        # lgtm[py/path-injection]
         if is_junction(tp):
             return None
         # CODEQL-SUPPRESS: only a regular host-granted transcript file is accepted.
-        # codeql[py/path-injection]
+        # lgtm[py/path-injection]
         if not os.path.isfile(tp):
             return None
         bucket = os.path.dirname(tp)
@@ -334,15 +334,15 @@ def _concurrent_live_session(data, now):
             try:
                 peer_path = os.path.join(bucket, name)
                 # CODEQL-SUPPRESS: bucket is the accepted transcript's own directory.
-                # codeql[py/path-injection]
+                # lgtm[py/path-injection]
                 if os.path.islink(peer_path):
                     continue
                 # CODEQL-SUPPRESS: peer junctions are rejected before metadata access.
-                # codeql[py/path-injection]
+                # lgtm[py/path-injection]
                 if is_junction(peer_path):
                     continue
                 # CODEQL-SUPPRESS: peer_path is a same-bucket JSONL entry, not an open/read.
-                # codeql[py/path-injection]
+                # lgtm[py/path-injection]
                 mtime = os.path.getmtime(peer_path)
             except OSError:
                 continue

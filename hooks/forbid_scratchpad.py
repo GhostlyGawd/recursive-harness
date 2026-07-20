@@ -73,7 +73,7 @@ def classify(tool_name: str, tool_input: dict, root: str, exists=os.path.exists)
         if target:
             kind, canonical = target
             # CODEQL-SUPPRESS: realpath_in_root confined canonical before this probe.
-            # codeql[py/path-injection]
+            # lgtm[py/path-injection]
             if not exists(canonical):
                 return (kind, canonical)
     elif tool_name == "Bash":
