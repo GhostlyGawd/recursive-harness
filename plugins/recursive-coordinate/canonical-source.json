@@ -1,0 +1,57 @@
+{
+  "capability": "recursive-coordinate",
+  "canonical_repository": "GhostlyGawd/recursive-harness",
+  "contract_version": 1,
+  "provider_manifests": [
+    ".codex-plugin/plugin.json",
+    ".claude-plugin/plugin.json"
+  ],
+  "source_tree_sha256": "f118af57eac6e7c09777d0809ac260dc854e17f9da2147e5add2aec8847aa5a7",
+  "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+  "package_files": {
+    ".claude-plugin/plugin.json": "63b8efaf60b2ae9e090f3c69e0637aa56edf615bb70e36b1b9e796ffcaa7b56e",
+    ".codex-plugin/plugin.json": "933a74c135715671ec29b54ed6c1d2cd5692c50351f8684725b45ee1379b6363",
+    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
+    "skills/coordinate/SKILL.md": "213735aa5a31591ac7f70f54d0b57556b17f08363bde2e83bdf6bc1d1cbd21a8",
+    "skills/coordinate/agents/openai.yaml": "7f4a35a3b2210c95cfbea3654e76dd2dd0b56db8003a02a9343009f3e5543dd9",
+    "skills/coordinate/references/commands.md": "9dca89db9968b9f5c9bfd84ecc561576a3e49463bdf4fc165f57ec907a7c3642",
+    "skills/coordinate/references/security.md": "5b1a67500abd7e88d93ce3955624f3851eefd6a59151c80821026ef458a57a1b",
+    "skills/coordinate/references/state-machine.md": "7159337ed139a7e34a6f804c0a2dc09d83986c27e22f3561539d386d7e0a94f9",
+    "skills/coordinate/scripts/coordinate.py": "5e8821575de41459159850865f4f0291e35bf1f9b52639c86fe018edebb030ae",
+    "skills/coordinate/scripts/coordinate_store.py": "d37841cd68a0506c88d552dbabb3b0d131760ce7b35cdfcc8f810af360194207"
+  },
+  "sources": {
+    "skills/coordinate/SKILL.md": {
+      "packaged_path": "skills/coordinate/SKILL.md",
+      "sha256": "213735aa5a31591ac7f70f54d0b57556b17f08363bde2e83bdf6bc1d1cbd21a8"
+    },
+    "skills/coordinate/agents/openai.yaml": {
+      "packaged_path": "skills/coordinate/agents/openai.yaml",
+      "sha256": "7f4a35a3b2210c95cfbea3654e76dd2dd0b56db8003a02a9343009f3e5543dd9"
+    },
+    "skills/coordinate/references/commands.md": {
+      "packaged_path": "skills/coordinate/references/commands.md",
+      "sha256": "9dca89db9968b9f5c9bfd84ecc561576a3e49463bdf4fc165f57ec907a7c3642"
+    },
+    "skills/coordinate/references/state-machine.md": {
+      "packaged_path": "skills/coordinate/references/state-machine.md",
+      "sha256": "7159337ed139a7e34a6f804c0a2dc09d83986c27e22f3561539d386d7e0a94f9"
+    },
+    "skills/coordinate/references/security.md": {
+      "packaged_path": "skills/coordinate/references/security.md",
+      "sha256": "5b1a67500abd7e88d93ce3955624f3851eefd6a59151c80821026ef458a57a1b"
+    },
+    "skills/coordinate/scripts/coordinate.py": {
+      "packaged_path": "skills/coordinate/scripts/coordinate.py",
+      "sha256": "5e8821575de41459159850865f4f0291e35bf1f9b52639c86fe018edebb030ae"
+    },
+    "skills/coordinate/scripts/coordinate_store.py": {
+      "packaged_path": "skills/coordinate/scripts/coordinate_store.py",
+      "sha256": "d37841cd68a0506c88d552dbabb3b0d131760ce7b35cdfcc8f810af360194207"
+    },
+    "LICENSE": {
+      "packaged_path": "LICENSE",
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+    }
+  }
+}

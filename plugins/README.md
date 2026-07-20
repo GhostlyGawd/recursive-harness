@@ -3,7 +3,8 @@
 ## Identity
 
 The shelf for provider and multi-skill packages. `recursive-observe/`, `recursive-learn/`,
-and `recursive-verify/` are tracked, hook-free Claude/Codex/generic packages over their
+`recursive-verify/`, and `recursive-coordinate/` are tracked, hook-free
+Claude/Codex/generic packages over their
 canonical capabilities.
 `recursive-specialization/` is a narrow generated Codex adapter for the canonical
 `skills/specialization/` capability. `prospector/` and `wraithworld/` remain vendored-live
@@ -58,6 +59,9 @@ must not be a budget-bypass.
 - Rebuild Verify with `python3 scripts/build_verify_plugins.py`; verify drift with
   `python3 scripts/build_verify_plugins.py --check`. Edit `skills/verify`, never its generated
   package copy.
+- Rebuild Coordinate with `python3 scripts/build_coordinate_plugins.py`; verify drift with
+  `python3 scripts/build_coordinate_plugins.py --check`. Edit `skills/coordinate`, never its
+  generated package copy.
 - Rebuild Specialization with `python3 scripts/build_codex_specialization_plugin.py`; verify
   drift with `python3 scripts/build_codex_specialization_plugin.py --check`. Edit canonical
   sources, never generated package copies.

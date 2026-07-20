@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recursive Coordinate"
+  short_description: "Coordinate local agents without touching the project"
+  default_prompt: "Use Recursive Coordinate to claim the shared scope and prepare a bounded local handoff without changing repository configuration."

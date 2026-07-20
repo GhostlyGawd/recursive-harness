@@ -81,13 +81,13 @@ but it must not become an independently edited second harness. Each adapter must
 - which safety guarantees remain provider-specific.
 
 The machine-readable [capability catalog](../capabilities/catalog.json) maps six packages:
-Observe, Learn, Verify, Coordinate, Guard, and Lab. Observe is `generated-beta`: one
-canonical skill plus the shared private-state helper produces a self-contained generic
-Agent Skill, Claude and Codex manifests, and a source-hash receipt. Guard is a separate
-`generated-beta` local Codex package that is inert without a reviewed repository policy and
-can never arrive as a hidden dependency. Learn, Verify, Coordinate, and Lab remain
-`planned`, not published plugins. Advisory capabilities prohibit default repository writes
-and operational capabilities disclose their state.
+Observe, Learn, Verify, Coordinate, Guard, and Lab. Observe, Learn, Verify, and Coordinate are
+`generated-beta` generic Agent Skill, Claude, and Codex packages with canonical-source receipts
+and isolated consumer evidence. Guard is a separate `generated-beta` local Codex package that is
+inert without a reviewed repository policy and can never arrive as a hidden dependency.
+Coordinate is local-only and makes no distributed or remote-service claim. Lab remains `planned`,
+not a published plugin. Advisory capabilities prohibit default repository writes and operational
+capabilities disclose their state.
 
 The detailed Agentic Dev OS adoption and rejection decisions live in the
 [consolidation map](comparisons/agentic-dev-os.md). It is the drain checklist for that

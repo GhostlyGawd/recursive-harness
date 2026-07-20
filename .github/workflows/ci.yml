@@ -74,6 +74,7 @@ jobs:
           python3 tests/test_codex_consumer_acceptance.py
           python3 tests/test_learn_package.py
           python3 tests/test_verify_package.py
+          python3 tests/test_coordinate_package.py
           python3 tests/test_codeql_path_boundaries.py
           python3 tests/test_operator_journeys.py
           python3 tests/test_ci_coverage.py
@@ -134,6 +135,7 @@ jobs:
           python tests/test_distribution.py
           python tests/test_learn_package.py
           python tests/test_verify_package.py
+          python tests/test_coordinate_package.py
           python tests/test_codeql_path_boundaries.py
       - name: Session-store cutover under Windows PowerShell 5.1
         shell: powershell
@@ -164,6 +166,7 @@ jobs:
           python3 tests/test_distribution.py
           python3 tests/test_learn_package.py
           python3 tests/test_verify_package.py
+          python3 tests/test_coordinate_package.py
           python3 tests/test_codeql_path_boundaries.py
           python3 tests/test_operator_journeys.py
           python3 tests/test_materialize_worktree_repos.py

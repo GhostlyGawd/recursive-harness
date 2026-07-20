@@ -1,0 +1,79 @@
+{
+  "accepted_date": "2026-07-20",
+  "coordination": {
+    "consumer_journeys": 3,
+    "credentials_requested": false,
+    "exclusive_claim_winners": 1,
+    "mission_state_writes": 0,
+    "network_requests": 0,
+    "worktree_processes_per_journey": 2
+  },
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "limitations": {
+    "distributed_consensus": "not supported",
+    "full_mission_control_tui": "not packaged",
+    "hosted_web": "not tested",
+    "model_skill_selection": "not tested",
+    "public_marketplace": "not tested",
+    "remote_connectors": "not shipped"
+  },
+  "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+  "providers": {
+    "agent-skills": {
+      "copied_package_execution": true,
+      "credentials_requested": false,
+      "deterministic_runtime": true,
+      "exclusive_claim_winners": 1,
+      "file_count": 10,
+      "idempotent_handoff": true,
+      "mission_state_writes": 0,
+      "network_requests": 0,
+      "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+      "receipt_verified": true,
+      "worktrees_share_scope": true
+    },
+    "claude-code": {
+      "consumer": "Claude Code",
+      "credentials_requested": false,
+      "deterministic_runtime": true,
+      "exclusive_claim_winners": 1,
+      "file_count": 10,
+      "idempotent_handoff": true,
+      "installed": true,
+      "mission_state_writes": 0,
+      "network_requests": 0,
+      "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+      "receipt_verified": true,
+      "scope": "isolated-user",
+      "version": "2.1.200",
+      "worktrees_share_scope": true
+    },
+    "codex": {
+      "consumer_package": "@openai/codex",
+      "credentials_requested": false,
+      "deterministic_runtime": true,
+      "exclusive_claim_winners": 1,
+      "file_count": 10,
+      "idempotent_handoff": true,
+      "installed": true,
+      "mission_state_writes": 0,
+      "network_requests": 0,
+      "package_tree_sha256": "1d7cd8ec671b68dcf460eadf7b7468ce7f730a6ad7e257c52a09ef86eccd119b",
+      "receipt_verified": true,
+      "scope": "isolated-user",
+      "version": "0.144.6",
+      "worktrees_share_scope": true
+    }
+  },
+  "repository": {
+    "after_sha256": "3b3c8f0bc8a5f26f8d112b1c68ae72ab8864c5612852da51f18d0698f6a947b9",
+    "before_sha256": "3b3c8f0bc8a5f26f8d112b1c68ae72ab8864c5612852da51f18d0698f6a947b9",
+    "existing_files": 8,
+    "writes": 0
+  },
+  "result": "accepted",
+  "schema_version": 1
+}
