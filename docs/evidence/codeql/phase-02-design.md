@@ -36,8 +36,10 @@ silently expanding a declared capability.
 
 ## Red-to-green evidence
 
-The red commits are `b4b8d30`, `feadd38`, `2bda051`, and `a6f607f`. They demonstrate, respectively,
+The red commits are `b4b8d30`, `feadd38`, `2bda051`, `a6f607f`, and `4539b12`. They demonstrate, respectively,
 the hook/materialization paths, a Cartograph repository symlink read, a Cartograph default-output
-symlink escape, and cross-platform relative-path properties. `tests/test_codeql_path_boundaries.py`
-exercises the actual sinks plus deterministic path properties. The final hosted CodeQL run and
-live-zero API receipt are added only after the reviewed change reaches `main`.
+symlink escape, cross-platform relative-path properties, and the Windows extended-path alias race
+found by the repository-wide run. `tests/test_codeql_path_boundaries.py` and
+`tests/test_private_state.py` exercise the actual sinks plus deterministic path properties. The
+final hosted CodeQL run and live-zero API receipt are added only after the reviewed change reaches
+`main`.

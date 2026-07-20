@@ -62,8 +62,21 @@ def safe_filename_id(value, prefix="id"):
     return f"{safe_prefix}-{digest}"
 
 
+def _strip_extended(path):
+    r"""Collapse Windows ``\\?\\`` aliases to their ordinary spelling."""
+    if path.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + path[len("\\\\?\\UNC\\"):]
+    if path.startswith("\\\\?\\"):
+        return path[len("\\\\?\\"):]
+    return path
+
+
+def _comparison_path(path):
+    return os.path.normcase(os.path.normpath(_strip_extended(os.fspath(path))))
+
+
 def _thread_lock(path):
-    key = os.path.normcase(os.path.abspath(path))
+    key = _comparison_path(os.path.abspath(path))
     with _THREAD_LOCKS_GUARD:
         return _THREAD_LOCKS.setdefault(key, threading.RLock())
 
@@ -95,12 +108,14 @@ def _is_link(path):
 
 
 def _assert_contained(path, boundary):
+    compared_path = _comparison_path(path)
+    compared_boundary = _comparison_path(boundary)
     try:
-        common = os.path.commonpath((boundary, path))
+        common = os.path.commonpath((compared_boundary, compared_path))
     except ValueError as exc:
         raise ValueError("private-state path and root must share one filesystem") from exc
-    if (os.path.normcase(common) != os.path.normcase(boundary)
-            or os.path.normcase(path) == os.path.normcase(boundary)):
+    if (os.path.normcase(common) != os.path.normcase(compared_boundary)
+            or os.path.normcase(compared_path) == os.path.normcase(compared_boundary)):
         raise ValueError("private-state path must be a file below its state root")
 
 
@@ -113,7 +128,7 @@ def _assert_no_link_escape(path, boundary):
     cursor = boundary
     if os.path.lexists(cursor) and _is_link(cursor):
         raise ValueError("private-state root must not be a symlink or junction")
-    relative = os.path.relpath(path, boundary)
+    relative = os.path.relpath(_comparison_path(path), _comparison_path(boundary))
     for part in relative.split(os.sep):
         if not part or part == ".":
             continue
@@ -124,8 +139,11 @@ def _assert_no_link_escape(path, boundary):
     # platform-specific reparse behavior even when the runtime does not expose
     # ``isjunction`` while avoiding a Windows sharing violation from resolving
     # the state file itself while another process owns its byte-range lock.
-    real_boundary = os.path.realpath(boundary)
-    real_parent = os.path.realpath(os.path.dirname(path))
+    # Windows may return the same path with an extended-length prefix during a
+    # concurrent filesystem transition. Compare aliases canonically so one
+    # process does not spuriously reject a capability another process accepted.
+    real_boundary = _comparison_path(os.path.realpath(boundary))
+    real_parent = _comparison_path(os.path.realpath(os.path.dirname(path)))
     real_path = os.path.join(real_parent, os.path.basename(path))
     try:
         real_common = os.path.commonpath((real_boundary, real_path))
@@ -144,7 +162,7 @@ def _resolve_private_path(path, root=None):
         raise ValueError("private-state path must be absolute")
     if _has_parent_reference(raw_path):
         raise ValueError("private-state path must not contain parent traversal")
-    absolute = os.path.abspath(raw_path)
+    absolute = os.path.abspath(_strip_extended(raw_path))
 
     if root is None:
         boundary = _nearest_state_root(absolute)
@@ -158,7 +176,7 @@ def _resolve_private_path(path, root=None):
             raise ValueError("private-state root must be absolute")
         if _has_parent_reference(raw_root):
             raise ValueError("private-state root must not contain parent traversal")
-        boundary = os.path.abspath(raw_root)
+        boundary = os.path.abspath(_strip_extended(raw_root))
 
     _assert_contained(absolute, boundary)
     _assert_no_link_escape(absolute, boundary)
