@@ -18,9 +18,10 @@ their normal explicit decisions and reviews.
   capability donor and Master Harness is a retired consolidation spike; the companion
   `repo-audit` governance change aligns the portfolio records with that decision.
 - The approved non-invasive capability boundary is now defined in P-2026-044 and ADR 0013.
-  Read-only inspection, canonical manifests, generated Observe/Specialization packages, and
-  the separately trusted Guard package are delivered. Observe and Guard now have immutable-ref
-  Codex install/cache execution evidence; broader package extraction remains.
+  Read-only inspection, canonical manifests, generated Observe, Learn, Verify, Coordinate,
+  Specialization, experimental Lab packages, and the separately trusted Guard package are
+  delivered. The portable suite has receipt-bound local consumer evidence; hosted execution,
+  public marketplace acceptance, and the versioned release remain.
 
 ## P0 — consolidate ownership without duplicating the runtime
 

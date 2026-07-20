@@ -1,24 +1,142 @@
 {
-  "_provenance": "2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-044 and ADR 0013; owner portability correction",
+  "_provenance": "2026-07-20 session 019f6e76-5f8b-7633-8b19-d7cd457847fa; P-2026-045 Phase 6 experimental portable Lab boundary",
   "schema_version": 1,
   "id": "recursive-lab",
-  "display_name": "Recursive Lab",
+  "display_name": "Recursive Lab (Experimental)",
   "capability_version": "0.1.0",
-  "packaging_status": "planned",
+  "packaging_status": "generated-experimental",
   "safety_class": "experimental",
   "default_repository_writes": "never",
-  "repository_writes": "capability-specific-disclosed",
-  "state_behavior": "workflow-specific; preview and approval requirements must be disclosed",
+  "repository_writes": "never; separately confirmed host actions are outside the package",
+  "state_behavior": "stateless",
+  "credentials": "never-requested",
+  "remote_calls": [],
+  "external_mutation_executor": "not-shipped",
   "required_events": [],
   "optional_events": [],
-  "canonical_components": [
-    "skills/brainstorm",
-    "skills/roadmap",
-    "skills/venture-build",
-    "skills/build-loop",
-    "skills/language-selection",
-    "commands/roadmap.md",
-    "commands/venture.md"
+  "dependencies": [],
+  "workflow_inventory": {
+    "included": [
+      {
+        "id": "brainstorm-preview",
+        "owner": "GhostlyGawd/recursive-harness",
+        "safety_class": "experimental",
+        "inputs": ["one bounded brief", "2-8 distinct candidate titles and summaries"],
+        "outputs": ["deterministic conversation-preview envelope", "user selection gate"],
+        "side_effect_policy": "preview-only",
+        "retirement_path": "remove only skills/lab and recursive-lab provider package; use ordinary host brainstorming",
+        "provider_support": {
+          "agent-skills": "instruction package plus deterministic envelope",
+          "claude-code": "isolated user install and envelope execution verified",
+          "codex": "isolated user install and envelope execution verified",
+          "hosted-web": "unverified"
+        },
+        "evidence_level": "runtime and package verified; model ideation quality and selection unverified"
+      },
+      {
+        "id": "roadmap-preview",
+        "owner": "GhostlyGawd/recursive-harness",
+        "safety_class": "experimental",
+        "inputs": ["one bounded brief", "measurable win condition", "1-20 dated milestones"],
+        "outputs": ["deterministic conversation-preview envelope", "null tracked-file target"],
+        "side_effect_policy": "preview-only",
+        "retirement_path": "remove only skills/lab and recursive-lab provider package; keep existing ROADMAP.md unchanged",
+        "provider_support": {
+          "agent-skills": "instruction package plus deterministic envelope",
+          "claude-code": "isolated user install and envelope execution verified",
+          "codex": "isolated user install and envelope execution verified",
+          "hosted-web": "unverified"
+        },
+        "evidence_level": "runtime and package verified; model roadmap quality and skill selection unverified"
+      }
+    ],
+    "excluded": [
+      {
+        "id": "venture-build",
+        "owner": "GhostlyGawd/recursive-harness",
+        "safety_class": "high-mutation",
+        "inputs": ["venture charter", "repository and publication authority"],
+        "outputs": ["new product code", "strategy artifacts", "Git history"],
+        "side_effect_policy": "excluded-broad-mutation",
+        "retirement_path": "remains an advanced full-harness workflow until separately threat-modeled and consumer-proven",
+        "provider_support": "advanced Claude reference runtime only",
+        "evidence_level": "insufficient for portable Lab"
+      },
+      {
+        "id": "build-loop",
+        "owner": "GhostlyGawd/recursive-harness",
+        "safety_class": "production-conductor",
+        "inputs": ["approved feature criteria", "repository mutation authority"],
+        "outputs": ["tests", "implementation", "pull request"],
+        "side_effect_policy": "excluded-production-execution",
+        "retirement_path": "continues as a full-harness delivery procedure, not a Lab experiment",
+        "provider_support": "advanced Claude reference runtime only",
+        "evidence_level": "out of scope for portable Lab"
+      },
+      {
+        "id": "language-selection",
+        "owner": "GhostlyGawd/recursive-harness",
+        "safety_class": "advisory",
+        "inputs": ["technical constraints", "ecosystem requirements"],
+        "outputs": ["language recommendation"],
+        "side_effect_policy": "excluded-not-incubation",
+        "retirement_path": "remains an independent canonical skill",
+        "provider_support": "full-harness skill",
+        "evidence_level": "useful but unrelated to Lab's incubation boundary"
+      }
+    ]
+  },
+  "command_contracts": {
+    "brainstorm-preview": {
+      "repository_writes": [],
+      "state_writes": [],
+      "external_actions": [],
+      "maturity": "experimental"
+    },
+    "roadmap-preview": {
+      "repository_writes": [],
+      "state_writes": [],
+      "external_actions": [],
+      "maturity": "experimental"
+    },
+    "action-preview-decide-receipt": {
+      "repository_writes": [],
+      "state_writes": [],
+      "external_actions": [],
+      "maturity": "experimental",
+      "receipt_truth": "caller-attested; Lab never claims it performed the action"
+    }
+  },
+  "unsupported_cases": [
+    "autonomous repository, issue, pull-request, or message mutation",
+    "wildcard or multi-target action expansion",
+    "provider-owned configuration or instruction-file edits",
+    "venture creation, build execution, code generation, or publication",
+    "model ideation quality, automatic skill selection, or interactive picker parity",
+    "hosted web consumers until package execution is proven there"
   ],
-  "provider_packages": []
+  "canonical_components": [
+    "skills/lab/SKILL.md",
+    "skills/lab/agents/openai.yaml",
+    "skills/lab/scripts/lab.py",
+    "skills/lab/references/workflows.md",
+    "skills/lab/references/security.md"
+  ],
+  "provider_packages": [
+    {
+      "provider": "agent-skills",
+      "status": "generated-experimental",
+      "path": "plugins/recursive-lab/skills/lab"
+    },
+    {
+      "provider": "claude-code",
+      "status": "generated-experimental",
+      "path": "plugins/recursive-lab/.claude-plugin/plugin.json"
+    },
+    {
+      "provider": "codex",
+      "status": "generated-experimental",
+      "path": "plugins/recursive-lab/.codex-plugin/plugin.json"
+    }
+  ]
 }

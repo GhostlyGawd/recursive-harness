@@ -23,7 +23,8 @@ The extraction order is deliberate:
 5. `recursive-lab` — experimental and capability-specific.
 
 Observe, Learn, Verify, and Coordinate currently ship as generated beta packages for generic Agent Skills,
-Claude Code, and local Codex. Learn is hook-free, keeps sanitized signals in a fixed private
+Claude Code, and local Codex. Lab ships as a separate generated-experimental package for
+preview-only brainstorm and roadmap workflows. Learn is hook-free, keeps sanitized signals in a fixed private
 sidecar, and can emit but never apply a promotion diff. Guard ships as a separate generated-beta Codex package with its own trust
 decision and is inert until a repository explicitly adopts a reviewed policy. The
 [Codex consumer receipt](../docs/codex-consumer-acceptance.md) binds Observe and Guard to a real
@@ -31,8 +32,9 @@ immutable-ref install and installed-cache execution. Learn has a separate multi-
 receipt linked from its provider guide. Verify is stateless, executes no repository code,
 and has its own multi-consumer receipt. Coordinate adds a repository-scoped private ledger with
 atomic local claims, idempotent handoffs, and a read-only Mission projection; it ships no remote
-connector and has its own multi-consumer receipt. The other catalog entries remain design
-contracts unless their manifest says otherwise.
+connector and has its own multi-consumer receipt. Lab is stateless, has no mutation connector, and
+has its own install/uninstall receipt. Other catalog entries remain design contracts unless their
+manifest says otherwise.
 
 Existing consumer instructions, agents, skills, hooks, and provider settings remain
 authoritative. `default_repository_writes: never` means ordinary activation is read-only;

@@ -35,13 +35,14 @@ The public adoption default is now non-invasive: inspect first, keep every exist
 into only the capabilities you want. The canonical capability model is provider-neutral,
 but the full production integration today is the advanced Claude Code reference runtime.
 Observe, Learn, Verify, and Coordinate now ship as generated-beta Claude, generic Agent Skill, and local
-Codex packages.
+Codex packages. Recursive Lab ships separately as a generated-experimental, preview-only package.
 Recursive also includes an experimental, narrow OpenAI/Codex
 [Specialization adapter](docs/codex-specialization.md); it packages that canonical capability
 rather than making the entire harness installable. The separately trusted, no-op-by-default
-[Recursive Guard](docs/guard-plugin.md) is also available as a separate Codex beta. Lab remains
-planned. See the [Observe guide](docs/observe-plugin.md), [Learn guide](docs/learn-plugin.md),
+[Recursive Guard](docs/guard-plugin.md) is also available as a separate Codex beta. See the
+[Observe guide](docs/observe-plugin.md), [Learn guide](docs/learn-plugin.md),
 [Verify guide](docs/verify-plugin.md), [Coordinate guide](docs/coordinate-plugin.md),
+[Lab guide](docs/lab-plugin.md),
 [capability catalog](capabilities/README.md), [architecture](docs/architecture.md), and
 [Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
 migration status.
@@ -157,7 +158,7 @@ repositories use reviewed immutable commits unless explicitly marked as developm
 | --- | --- | --- |
 | Compatibility inspection | No | You want a deterministic inventory of existing agent configuration before deciding anything |
 | Personal sidecar | No | You want explicit prediction, outcome, privacy, structure, or coordination commands while keeping the project's setup untouched |
-| Namespaced capability plugin | Observe, Learn, Verify, and Coordinate: Claude, generic, and local Codex beta; Guard: separate local Codex beta; Specialization: narrow Codex preview; others planned | You want one capability without adopting the full runtime or replacing provider configuration |
+| Namespaced capability plugin | No at personal/user scope | You want one capability without adopting the full runtime: Observe, Learn, Verify, or Coordinate beta; experimental Lab; separately trusted Guard; or narrow Specialization preview |
 | Reviewed repository integration | Exact proposed diff only | A team deliberately wants shared workflow or CI configuration in the repository |
 | Full Claude reference runtime | No target-source writes, but it selects a separate Claude configuration | You want the complete hooks, agents, skills, settings, and safety model and accept isolation from your normal Claude config |
 
@@ -319,7 +320,7 @@ backups, ignored state, and the checkout are retained for deliberate inspection.
 | Optional | Fleet MCP adapter and Mission Control TUI | Tested separately with pinned dependency snapshots; not required for the core loop |
 | Generated beta | Recursive Observe, Recursive Learn, Recursive Verify, and Recursive Coordinate for Claude, generic Agent Skills, and local Codex | Generated artifacts, source receipts, standalone runtimes, coexistence fixtures, and real isolated consumer installs pass; Coordinate remains local-only and hosted use remains unverified |
 | Generated beta | Recursive Guard for local Codex | Separately installed and trusted; inert without a reviewed repository policy; receipt-bound, coexistence-tested, and consumer-installed, but not a sandbox |
-| Planned | Lab provider package | Its capability manifest exists; a provider package and compatibility claims require generated artifacts and consumer evidence |
+| Generated experimental | Recursive Lab for Claude, generic Agent Skills, and local Codex | Brainstorm and roadmap remain preview-only; real isolated install/uninstall and zero-project-write evidence passes, while model behavior and hosted use remain unverified |
 | Experimental | Product/venture workflows, extraction proposals, and product-build tooling | Available for evaluation without a compatibility promise |
 | Internal/legacy | Raw state schemas, graph internals, calibration storage, and `--global-legacy` install | Not a public integration surface; legacy install is a guarded migration path only |
 

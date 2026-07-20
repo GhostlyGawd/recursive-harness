@@ -290,15 +290,25 @@ def test_real_consumer_receipt_matches_experimental_claims() -> None:
             "consumer receipt reports an external action")
     require(receipt["uninstall"]["project_files_changed"] == 0,
             "consumer uninstall reports project changes")
+    require(receipt["upgrade"]["prior_version"] == "not-applicable-first-Lab-package"
+            and receipt["upgrade"]["generic_same_version_refresh"] is True
+            and receipt["upgrade"]["claude_same_version_refresh"] is True
+            and receipt["upgrade"]["codex_same_catalog_reinstall"] is True
+            and receipt["upgrade"]["version_upgrade"]
+            == "not-testable-without-a-prior-Lab-package"
+            and receipt["upgrade"]["project_files_changed"] == 0,
+            "first-release refresh path is not proven honestly")
     providers = receipt["providers"]
     require(providers["agent-skills"]["copied_package_execution"] is True,
             "generic Agent Skill execution is not proven")
     require(providers["claude-code"]["consumer"] == "Claude Code"
             and providers["claude-code"]["installed"] is True
+            and providers["claude-code"]["refreshed"] is True
             and providers["claude-code"]["uninstalled"] is True,
             "Claude experimental install/uninstall is not proven")
     require(providers["codex"]["consumer_package"] == "@openai/codex"
             and providers["codex"]["installed"] is True
+            and providers["codex"]["refreshed"] is True
             and providers["codex"]["uninstalled"] is True,
             "official Codex experimental install/uninstall is not proven")
     canonical = json.loads((PLUGIN / "canonical-source.json").read_text(encoding="utf-8"))

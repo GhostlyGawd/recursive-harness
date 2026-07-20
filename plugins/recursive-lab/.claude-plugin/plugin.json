@@ -1,0 +1,20 @@
+{
+  "name": "recursive-lab",
+  "version": "0.1.0",
+  "description": "Experimentally preview ideas and roadmaps without changing the project.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://github.com/GhostlyGawd/recursive-harness/blob/main/docs/lab-plugin.md",
+  "repository": "https://github.com/GhostlyGawd/recursive-harness",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "experimental",
+    "brainstorm",
+    "roadmap",
+    "privacy"
+  ],
+  "skills": "./skills/"
+}

@@ -144,7 +144,12 @@ Recursive Coordinate is the local-only coordination package. It gives Git worktr
 repository-scoped ledger with atomic claims, bounded leases, idempotent handoffs, and a read-only
 Mission projection. Install it at personal or user scope with the same catalog, then follow the
 [Coordinate package guide](coordinate-plugin.md). It ships no remote connector or credential flow.
-Lab remains a design contract, not an installable compatibility claim.
+
+Recursive Lab is a separate experimental package. It produces Brainstorm and Roadmap previews,
+binds a possible host action to one exact target, and ships no mutation connector. Its generic,
+Claude, and Codex install/uninstall journeys preserve an existing project's byte hash. Follow the
+[Lab package guide](lab-plugin.md); its runtime boundary is proven, but model output quality,
+automatic skill selection, and hosted-web use remain unverified.
 
 ## 5. Verify the working loop
 

@@ -2,20 +2,25 @@
 
 Phase: 6
 
+Status: implementation complete; protected-main receipt pending
+
 Package experimental brainstorm, roadmap, venture, and other incubation workflows without
 allowing experiments to inherit production claims or hidden mutation authority.
 
 ## Tasks
 
-- [ ] Inventory candidate Lab workflows and exclude any surface lacking an owner, safety
+- [x] Inventory candidate Lab workflows and exclude any surface lacking an owner, safety
   class, explicit inputs/outputs, side-effect policy, and retirement path.
-- [ ] Mark the entire package experimental and label each workflow's provider support and
+- [x] Mark the entire package experimental and label each workflow's provider support and
   evidence level independently.
-- [ ] Make analysis preview-first; require explicit targets and confirmation for tracked
+- [x] Make analysis preview-first; require explicit targets and confirmation for tracked
   files, issues, pull requests, messages, or other external mutations.
-- [ ] Isolate Lab state and dependencies from core packages so uninstalling Lab cannot
+- [x] Isolate Lab state and dependencies from core packages so uninstalling Lab cannot
   damage Observe, Learn, Verify, Coordinate, or Guard.
-- [ ] Validate install, upgrade, and uninstall in consumers with existing tools and docs.
+- [x] Validate install, same-version refresh/reinstall, and uninstall in consumers with existing
+  tools and docs. This is the first Lab version, so no prior-version upgrade can yet be claimed.
+- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+  protected-main and CodeQL receipt.
 
 ## TDD
 
@@ -47,8 +52,15 @@ pass, and all public surfaces say experimental.
 
 ## Completion evidence
 
-- Included/excluded workflow inventory and rationale.
-- Package/manifest receipts and dependency graph.
-- Preview, confirmation, denial, interruption, upgrade, and uninstall captures.
-- Before/after consumer hashes and external-side-effect audit.
-- Honest provider and maturity matrix merged into documentation.
+- Included/excluded workflow inventory, owners, safety classes, provider support, evidence, and
+  retirement paths: `capabilities/lab/capability.json`.
+- Reproducible package and dependency-free manifest receipt:
+  `plugins/recursive-lab/canonical-source.json` and `scripts/build_lab_plugins.py --check`.
+- Red-first example, property, and BDD coverage for preview, exact-target confirmation, denial,
+  interruption, caller-attested receipt closure, and clean removal: `tests/test_lab_package.py`.
+- Fresh generic, Claude Code 2.1.200, and official Codex 0.144.6 isolated install, refresh/reinstall,
+  preview, unavailable-connector, and uninstall journeys:
+  `docs/evidence/lab-consumer-acceptance.json`.
+- Byte-identical existing-project hashes, zero repository writes, zero external actions, and honest
+  unsupported model/hosted/version-upgrade claims: `docs/lab-plugin.md`.
+- Live protected-main and CodeQL receipt: pending merge of this exact implementation.
