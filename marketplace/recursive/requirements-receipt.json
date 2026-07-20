@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-07-20",
+  "official_source": "https://learn.chatgpt.com/docs/submit-plugins",
+  "portal": "https://platform.openai.com/plugins",
+  "submission_type": "skills-only",
+  "requirements": {
+    "apps_management_write": "portal-verification-pending",
+    "verified_developer_or_business_identity": "portal-verification-pending",
+    "public_listing_metadata": "prepared",
+    "final_skill_bundle": "prepared-by-reproducible-builder",
+    "starter_prompts": 4,
+    "positive_test_cases": 5,
+    "negative_test_cases": 3,
+    "country_availability": "owner-selection-required",
+    "policy_attestations": "submitter-confirmation-required"
+  },
+  "notes": [
+    "The official portal requires a signed-in organization and saves a draft when Create plugin is selected.",
+    "Submission starts review and does not publish automatically; the owner publishes only after OpenAI approval.",
+    "No account identifiers, credentials, cookies, or private organization details belong in this receipt."
+  ]
+}

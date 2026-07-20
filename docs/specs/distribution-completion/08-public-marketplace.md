@@ -9,11 +9,11 @@ process, then prove a fresh consumer can discover and install the published list
 
 - [ ] Reconfirm current official submission requirements and account eligibility immediately
   before submission; record source, date, identity, and permissions without exposing secrets.
-- [ ] Build the final skills-only bundle from the released commit with name, description,
+- [x] Build the final skills-only bundle from the released commit with name, description,
   brand assets, support, privacy, terms, version, canonical-source, and receipt metadata.
-- [ ] Validate least privilege, zero embedded credentials/private data, prompt-injection
+- [x] Validate least privilege, zero embedded credentials/private data, prompt-injection
   resistance, declared side effects, uninstall, and all public claims.
-- [ ] Prepare exactly five positive and three negative evaluator test cases for each submitted
+- [x] Prepare exactly five positive and three negative evaluator test cases for each submitted
   item, covering intended triggers, non-triggers, safety boundaries, and existing-project coexistence.
 - [ ] Submit through the official portal, retain the submission/review receipt, answer review
   findings through reviewed changes, and publish only after acceptance.
@@ -55,3 +55,19 @@ passes without a local catalog, checkout, or broken link.
 - Exactly five positive and three negative evaluator cases and their results.
 - Submission, review, response, acceptance, and publication identifiers.
 - Fresh external discovery/install/execution/upgrade/uninstall transcript.
+
+## Pre-submission evidence
+
+The tracked [`marketplace/recursive`](../../../marketplace/recursive/README.md) input records
+the official requirements observed on 2026-07-20, exact listing copy, public legal/support
+URLs, four starter prompts, exactly five positive and three negative evaluator cases, release
+notes, and an explicit preflight—not-public state. `scripts/build_public_plugin.py` reconstructs
+the four-skill package from tag `v0.1.2` at commit `5a524d1`, verifies each provider receipt,
+rejects unsafe metadata and archive members, and builds byte-identical ZIPs.
+
+[`public-plugin-preflight.json`](../../evidence/public-plugin-preflight.json) records a real
+official Codex CLI 0.144.6 local-catalog install of that exact ZIP, all four deterministic
+runtime journeys, zero writes to a foreign repository with existing agent configuration,
+package removal, and preservation of private sidecar state. It deliberately records public
+discovery, hosted execution, and model skill selection as untested. Portal eligibility,
+submission, review, publication, and the no-local-catalog consumer gate remain open.

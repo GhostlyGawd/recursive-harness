@@ -4,7 +4,17 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+
+- A deterministic, release-pinned public skills-plugin builder for Observe, Learn, Verify,
+  and Coordinate, plus official submission metadata, five positive evaluator cases, three
+  negative evaluator cases, fail-closed validation properties, and a real isolated Codex
+  install/execute/uninstall preflight receipt.
+
+### Changed
+
+- Updated Git-backed Codex install examples to the immutable v0.1.2 release commit while the
+  public OpenAI Plugins Directory submission remains under review preparation.
 
 ## [0.1.2] - 2026-07-20
 

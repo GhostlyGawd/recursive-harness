@@ -10,10 +10,10 @@ their normal explicit decisions and reviews.
 - The core architecture is coherent: Cartograph reports no structural rot or dead-weight
   candidates, and the full local CI suite is green.
 - Dependency and secret scans found no live credential or known vulnerable dependency.
-- The repository is functionally rich but still beta. The `v0.1.2` candidate adds a
-  checksummed GitHub Release channel, cross-platform black-box journeys, explicit stability
-  labels, and a product landing page; native package-manager channels and repeated external
-  release validation remain future work.
+- The repository is functionally rich but still beta. The immutable `v0.1.2` GitHub Release
+  has checksummed reproducible archives, cross-platform black-box journeys, explicit stability
+  labels, a product landing page, and a successful fresh public-download verification; native
+  package-manager channels and repeated later-release evidence remain future work.
 - Recursive Harness is the selected canonical harness target. Agentic Dev OS is a
   capability donor and Master Harness is a retired consolidation spike; the companion
   `repo-audit` governance change aligns the portfolio records with that decision.
@@ -21,7 +21,8 @@ their normal explicit decisions and reviews.
   Read-only inspection, canonical manifests, generated Observe, Learn, Verify, Coordinate,
   Specialization, experimental Lab packages, and the separately trusted Guard package are
   delivered. The portable suite has receipt-bound local consumer evidence; hosted execution,
-  public marketplace acceptance, and the versioned release remain.
+  and the v0.1.2 release are delivered. Public marketplace acceptance and live hosted
+  execution remain.
 
 ## P0 — consolidate ownership without duplicating the runtime
 
@@ -40,8 +41,10 @@ unless concrete threat or consumer evidence justifies their cost.
 
 **Delivered as narrow proofs:** the Specialization provider contract and the separate Guard
 policy contract have shared fixtures, generated-source drift receipts, repository-catalog
-entries, and Codex packages. Observe and Guard additionally have local Codex installation
-dogfood; Specialization, hosted web, and public marketplace distribution remain unverified.
+entries, and Codex packages. Observe, Learn, Verify, Coordinate, Guard, and experimental Lab
+have isolated consumer evidence. The combined public skills-only bundle also passes a real
+Codex install/execute/uninstall preflight; hosted web and public-directory discovery remain
+unverified until portal review and publication finish.
 
 Extract the smallest contract needed to expose canonical capabilities without copying them:
 capability/version metadata, lifecycle mapping, shared fixtures, unsupported-event
@@ -217,11 +220,11 @@ These scenarios should assert observable outcomes, not prompt text.
 
 ## Suggested delivery sequence
 
-1. Publish and observe `v0.1.2` through the governed release checklist
-2. Collect clean-environment install, upgrade, rollback, and model-backed replay reports
-3. Work down evidence-backed Cartograph connectedness gaps
-4. Decide whether demand justifies Homebrew, Scoop, or another package-manager channel
-5. Promote or retire optional/experimental surfaces only with consumer evidence
+1. Submit the verified skills-only bundle, answer review findings, and publish only after approval
+2. Prove fresh Plugins Directory discovery, install, execution, upgrade, and uninstall
+3. Collect repeated later-release and model-backed replay evidence
+4. Work down evidence-backed Cartograph connectedness gaps
+5. Decide whether demand justifies Homebrew, Scoop, or another package-manager channel
 
 The security-specific evidence and status are in
 [security-assessment-2026-07-17.md](security-assessment-2026-07-17.md). Architecture and

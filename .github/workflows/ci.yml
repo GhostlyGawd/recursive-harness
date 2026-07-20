@@ -77,6 +77,7 @@ jobs:
           python3 tests/test_coordinate_package.py
           python3 tests/test_lab_package.py
           python3 tests/test_release_acceptance.py
+          python3 tests/test_public_plugin_submission.py
           python3 tests/test_codeql_path_boundaries.py
           python3 tests/test_operator_journeys.py
           python3 tests/test_ci_coverage.py
@@ -130,6 +131,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with: {python-version: "3.12"}
       - name: Installer and launcher smoke tests
@@ -140,6 +142,7 @@ jobs:
           python tests/test_coordinate_package.py
           python tests/test_lab_package.py
           python tests/test_release_acceptance.py
+          python tests/test_public_plugin_submission.py
           python tests/test_codeql_path_boundaries.py
       - name: Session-store cutover under Windows PowerShell 5.1
         shell: powershell
@@ -173,6 +176,7 @@ jobs:
           python3 tests/test_coordinate_package.py
           python3 tests/test_lab_package.py
           python3 tests/test_release_acceptance.py
+          python3 tests/test_public_plugin_submission.py
           python3 tests/test_codeql_path_boundaries.py
           python3 tests/test_operator_journeys.py
           python3 tests/test_materialize_worktree_repos.py

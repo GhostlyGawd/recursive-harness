@@ -47,6 +47,11 @@ rather than making the entire harness installable. The separately trusted, no-op
 [Agentic Dev OS consolidation map](docs/comparisons/agentic-dev-os.md) for the boundary and
 migration status.
 
+The public OpenAI Plugins Directory submission is prepared but not yet published. Its single
+skills-only listing bundles Observe, Learn, Verify, and Coordinate without hooks or automatic
+setup. Until the portal review and fresh public-install gate pass, use the immutable Git-backed
+catalog instructions below; this README will not point at a listing that does not exist.
+
 ## What you get
 
 | Capability | What ships |
@@ -179,8 +184,8 @@ reviewed integration.
 Observe is hook-free and keeps its private state outside the active repository.
 
 ```bash
-# Codex: repository catalog at the tested immutable revision (not the public marketplace).
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+# Codex: repository catalog at the v0.1.2 release commit (not the public marketplace).
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
 codex plugin add recursive-observe@recursive-harness
 
 # Claude Code: personal/user scope; does not edit the project.
@@ -255,7 +260,7 @@ repository owner reviews and commits `.recursive-guard.json`. Start with `audit`
 
 ```bash
 # Add the same repository catalog, then install Guard as a separate trust decision.
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
 codex plugin add recursive-guard@recursive-harness
 ```
 

@@ -16,6 +16,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts" / "build_public_plugin.py"
 METADATA = ROOT / "marketplace" / "recursive"
+PREFLIGHT = ROOT / "docs" / "evidence" / "public-plugin-preflight.json"
 RELEASE_COMMIT = "5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4"
 SKILLS = {"observe", "learn", "verify", "coordinate"}
 
@@ -91,6 +92,8 @@ def main() -> int:
     builder = load_builder()
     listing = json.loads((METADATA / "listing.json").read_text(encoding="utf-8"))
     cases = json.loads((METADATA / "evaluator-cases.json").read_text(encoding="utf-8"))
+    requirements = json.loads((METADATA / "requirements-receipt.json").read_text(encoding="utf-8"))
+    state = json.loads((METADATA / "submission-state.json").read_text(encoding="utf-8"))
     builder.validate_submission_data(listing, cases)
     property_checks(builder, listing, cases)
 
@@ -99,6 +102,25 @@ def main() -> int:
     require(set(listing["plugin"]["skills"]) == SKILLS, "public skill set is incomplete or expanded")
     require(len(cases["positive"]) == 5, "submission needs exactly five positive cases")
     require(len(cases["negative"]) == 3, "submission needs exactly three negative cases")
+    require(requirements["official_source"] == "https://learn.chatgpt.com/docs/submit-plugins",
+            "requirements receipt is not bound to the official current instructions")
+    require(requirements["requirements"]["positive_test_cases"] == 5
+            and requirements["requirements"]["negative_test_cases"] == 3,
+            "requirements receipt has the wrong evaluator counts")
+    require(state["state"] == "preflight" and state["review_status"] == "not-submitted",
+            "local packaging is being misrepresented as a submitted listing")
+    require(state["public_listing_url"] is None and state["published_at"] is None,
+            "local packaging is being misrepresented as public availability")
+    preflight = json.loads(PREFLIGHT.read_text(encoding="utf-8"))
+    require(preflight["result"] == "accepted", "real Codex preflight was not accepted")
+    require(preflight["bundle"]["source_commit"] == RELEASE_COMMIT,
+            "real Codex preflight used the wrong release source")
+    require(preflight["consumer_repository"]["repository_writes"] == 0,
+            "real Codex preflight changed its consumer repository")
+    require(preflight["uninstall"] == {"package_removed": True, "private_data_preserved": True},
+            "real Codex preflight did not prove non-destructive uninstall")
+    require(preflight["marketplace"]["public_listing"] is False,
+            "local Codex preflight is being represented as public discovery")
 
     with tempfile.TemporaryDirectory(prefix="recursive-public-plugin-") as raw_tmp:
         output = Path(raw_tmp)
@@ -109,6 +131,8 @@ def main() -> int:
         require(first_bytes == second_bytes, "public plugin archive is not reproducible")
         require(hashlib.sha256(first_bytes).hexdigest() == first.receipt["archive_sha256"],
                 "archive hash does not match its external receipt")
+        require(preflight["bundle"]["archive_sha256"] == first.receipt["archive_sha256"],
+                "real Codex preflight receipt is stale for the final archive")
 
         with zipfile.ZipFile(first.archive) as bundle:
             names = bundle.namelist()

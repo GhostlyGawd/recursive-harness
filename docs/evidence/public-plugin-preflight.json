@@ -1,0 +1,59 @@
+{
+  "accepted_date": "2026-07-20",
+  "bundle": {
+    "archive_sha256": "da1d2166e797116cc20e5bd956e592e5c3dcaabc29210d792fe2928ce62960f3",
+    "files_verified": 29,
+    "payload_tree_sha256": "2755936d51027364567150f921045f558d4b48bdaa5f25a8b178c5614606d1eb",
+    "source_commit": "5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4"
+  },
+  "consumer": {
+    "package": "@openai/codex",
+    "version": "0.144.6"
+  },
+  "consumer_repository": {
+    "after_sha256": "890e95f10cf27adfccb5dc0d26a6459fd376518e30d7b608c5da0699deb0debd",
+    "before_sha256": "890e95f10cf27adfccb5dc0d26a6459fd376518e30d7b608c5da0699deb0debd",
+    "existing_configuration_files": 9,
+    "repository_writes": 0
+  },
+  "host": {
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "journeys": {
+    "coordinate": {
+      "claim_acquired": true,
+      "handoff_sent": true,
+      "mission_generated": true
+    },
+    "learn": {
+      "correction_recorded": true,
+      "retro_generated": true
+    },
+    "observe": {
+      "hits": 1,
+      "scored": 1
+    },
+    "verify": {
+      "atlas_generated": true,
+      "eval_inventory_generated": true,
+      "scorecard_generated": true
+    }
+  },
+  "limitations": {
+    "execution": "installed deterministic skill runtimes",
+    "hosted_work_mode": "not tested",
+    "model_skill_selection": "not tested",
+    "public_discovery": "not tested"
+  },
+  "marketplace": {
+    "kind": "isolated local preflight",
+    "public_listing": false
+  },
+  "result": "accepted",
+  "schema_version": 1,
+  "uninstall": {
+    "package_removed": true,
+    "private_data_preserved": true
+  }
+}

@@ -29,7 +29,7 @@ Add this Git repository as a catalog at the tested immutable revision, then inst
 Recursive Observe with the stable plugin CLI:
 
 ```bash
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 202647e50edea2418773e8005e93630a5b7ca479
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
 codex plugin add recursive-observe@recursive-harness
 codex plugin list
 ```

@@ -64,6 +64,12 @@ must not be a budget-bypass.
   generated package copy.
 - Rebuild experimental Lab with `python3 scripts/build_lab_plugins.py`; verify drift with
   `python3 scripts/build_lab_plugins.py --check`. Edit `skills/lab`, never its generated copy.
+- Build the public skills-only submission with
+  `python3 scripts/build_public_plugin.py --output-dir dist/public-plugin`; it verifies and
+  copies Observe, Learn, Verify, and Coordinate from the immutable v0.1.2 release. Validate
+  its metadata, evaluator cases, safe members, and reproducibility with
+  `python3 tests/test_public_plugin_submission.py`. This archive is not a public listing until
+  the official review record and fresh public-install receipt exist.
 - Rebuild Specialization with `python3 scripts/build_codex_specialization_plugin.py`; verify
   drift with `python3 scripts/build_codex_specialization_plugin.py --check`. Edit canonical
   sources, never generated package copies.
