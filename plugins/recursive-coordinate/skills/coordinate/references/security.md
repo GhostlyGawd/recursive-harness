@@ -13,8 +13,8 @@ endpoint/credential choice, threat review, and consumer receipt.
 
 The claim ledger is cooperative advisory coordination. It cannot stop a process that ignores it,
 cannot provide distributed consensus, and cannot make a shared filesystem or untrusted process
-safe. State-root confinement rejects repository-local roots and symlink/junction escapes. Treat
-any deliberately shared private-state directory as sensitive operational metadata.
+safe. The fixed state-root boundary rejects symlink/junction escapes and cannot be redirected by a
+repository or CLI argument. Treat private coordination state as sensitive operational metadata.
 
 <!-- provenance: 2026-07-20 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-045 portable Coordinate package. -->

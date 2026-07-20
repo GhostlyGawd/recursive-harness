@@ -437,7 +437,6 @@ def _emit(value: dict, as_json: bool) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="recursive-coordinate")
     parser.add_argument("--repository", type=Path, default=Path.cwd())
-    parser.add_argument("--state-root", type=Path, default=None)
     groups = parser.add_subparsers(dest="group", required=True)
 
     claim = groups.add_parser("claim").add_subparsers(dest="action", required=True)
@@ -492,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         repository = _canonical(args.repository)
-        state_root = validate_state_root(args.state_root or default_state_root(), repository)
+        state_root = validate_state_root(default_state_root(), repository)
         key = repository_scope(repository)
         if args.group == "claim" and args.action == "acquire":
             result = acquire_claim(state_root, key, args.owner, args.target, args.lease_seconds,

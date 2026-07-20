@@ -65,10 +65,15 @@ def load_runtime(installed: Path):
 
 def command(cli: Path, repository: Path, state_root: Path, *args: str,
             check: bool = True) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env.update({
+        "HOME": str(state_root.parents[1]),
+        "USERPROFILE": str(state_root.parents[1]),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    })
     return run([
-        sys.executable, str(cli), "--repository", str(repository),
-        "--state-root", str(state_root), *args,
-    ], cwd=repository, check=check)
+        sys.executable, str(cli), "--repository", str(repository), *args,
+    ], cwd=repository, env=env, check=check)
 
 
 def init_repository(path: Path) -> None:
@@ -140,7 +145,8 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
         temp = Path(raw)
         repository, other_repository = temp / "repository", temp / "other-repository"
         worktree_a, worktree_b = temp / "worktree-a", temp / "worktree-b"
-        state_root, installed = temp / "private-state", temp / "installed"
+        home, installed = temp / "home", temp / "installed"
+        state_root = home / ".recursive-harness" / "coordinate"
         init_repository(repository)
         init_repository(other_repository)
         for relative, text in {
@@ -166,14 +172,19 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
                 "independent repositories share private coordination state")
 
         contenders = []
+        consumer_env = dict(os.environ)
+        consumer_env.update({
+            "HOME": str(home), "USERPROFILE": str(home), "PYTHONDONTWRITEBYTECODE": "1",
+        })
         for index in range(12):
             repo = worktree_a if index % 2 else worktree_b
             contenders.append(subprocess.Popen([
                 sys.executable, str(cli), "--repository", str(repo),
-                "--state-root", str(state_root), "claim", "acquire",
+                "claim", "acquire",
                 "--owner", f"agent-{index}", "--target", "src/**",
                 "--lease-seconds", "600", "--operation-id", f"acquire-{index}", "--json",
-            ], cwd=repo, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+            ], cwd=repo, env=consumer_env, text=True,
+               stdout=subprocess.PIPE, stderr=subprocess.PIPE))
         results = []
         for process in contenders:
             stdout, stderr = process.communicate(timeout=30)
@@ -294,10 +305,11 @@ def test_collision_lease_handoff_isolation_and_mission_properties() -> None:
             "remote_connectors": [],
             "status": "local-only",
         }, "unavailable optional services did not degrade to local-only")
-        rejected = command(
-            cli, repository, repository / ".coordinate", "mission", "view", "--json", check=False
-        )
-        require(rejected.returncode != 0, "repository-local state root was accepted")
+        rejected = run([
+            sys.executable, str(cli), "--repository", str(repository),
+            "--state-root", str(repository / ".coordinate"), "mission", "view", "--json",
+        ], cwd=repository, env=consumer_env, check=False)
+        require(rejected.returncode != 0, "removed repository-local state override was accepted")
         require(before == visible_files(repository), "Coordinate changed existing project files")
         source = cli.read_text(encoding="utf-8")
         require(not any(token in source for token in (

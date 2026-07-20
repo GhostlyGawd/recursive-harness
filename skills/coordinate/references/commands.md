@@ -17,10 +17,10 @@ TTL where applicable. Claim conflicts return status 3 with actionable owner and 
 The CLI has no repository installer, hook setup, configuration merger, network client, remote
 connector, comment, commit, push, or pull-request operation.
 
-The default state root is `~/.recursive-harness/coordinate`. `--state-root` is an explicit local
-test/operations override and must be absolute, outside the target repository, and free of symlink
-or junction traversal. The bundled storage primitive creates owner-only directories/files and
-uses portable interprocess locks plus atomic replacement.
+The fixed state root is `~/.recursive-harness/coordinate`; the CLI has no state-root override.
+It must remain outside the target repository and free of symlink or junction traversal. The
+bundled storage primitive creates owner-only directories/files and uses portable interprocess
+locks plus atomic replacement.
 
 <!-- provenance: 2026-07-20 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-045 portable Coordinate package. -->

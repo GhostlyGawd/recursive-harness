@@ -136,10 +136,15 @@ def create_repository(root: Path, worktree_a: Path, worktree_b: Path) -> None:
 
 def runtime_command(cli: Path, repository: Path, state_root: Path, *args: str,
                     accepted: set[int] | None = None) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env.update({
+        "HOME": str(state_root.parents[1]),
+        "USERPROFILE": str(state_root.parents[1]),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    })
     return run([
-        sys.executable, str(cli), "--repository", str(repository),
-        "--state-root", str(state_root), *args,
-    ], cwd=repository, accepted=accepted)
+        sys.executable, str(cli), "--repository", str(repository), *args,
+    ], cwd=repository, env=env, accepted=accepted)
 
 
 def runtime_journey(plugin_root: Path, repository: Path, worktree_a: Path, worktree_b: Path,
@@ -147,14 +152,18 @@ def runtime_journey(plugin_root: Path, repository: Path, worktree_a: Path, workt
     profile.mkdir(parents=True)
     state_root = profile / ".recursive-harness" / "coordinate"
     cli = plugin_root / "skills" / "coordinate" / "scripts" / "coordinate.py"
+    runtime_env = dict(os.environ)
+    runtime_env.update({
+        "HOME": str(profile), "USERPROFILE": str(profile), "PYTHONDONTWRITEBYTECODE": "1",
+    })
     commands = []
     for index, worktree in enumerate((worktree_a, worktree_b)):
         commands.append(subprocess.Popen([
             sys.executable, str(cli), "--repository", str(worktree),
-            "--state-root", str(state_root), "claim", "acquire",
+            "claim", "acquire",
             "--owner", f"{label}-{index}", "--target", "src/**",
             "--lease-seconds", "600", "--operation-id", f"{label}-claim-{index}", "--json",
-        ], cwd=worktree, text=True, encoding="utf-8", errors="replace",
+        ], cwd=worktree, env=runtime_env, text=True, encoding="utf-8", errors="replace",
            stdout=subprocess.PIPE, stderr=subprocess.PIPE))
     results = []
     for process in commands:
