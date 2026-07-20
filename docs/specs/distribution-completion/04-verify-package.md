@@ -2,7 +2,7 @@
 
 Phase: 4
 
-Status: implementation complete; protected-main receipt pending
+Status: verified
 
 Package evals, structural evidence, proposals, Cartograph, Atlas, and review workflows with
 read-only defaults and explicit, reviewable mutation boundaries.
@@ -18,7 +18,7 @@ read-only defaults and explicit, reviewable mutation boundaries.
   comment, commit, push, or pull-request operation.
 - [x] Package and install Verify independently from Guard and Coordinate.
 - [x] Run real consumer journeys against repositories with and without Recursive metadata.
-- [ ] Merge the exact package and consumer receipt through protected checks and record the live
+- [x] Merge the exact package and consumer receipt through protected checks and record the live
   protected-main and CodeQL receipt.
 
 ## TDD
@@ -59,4 +59,6 @@ claimed consumer/provider journeys have reviewed receipts.
 - Installed generic, Claude Code 2.1.200, and official Codex 0.144.6 consumer receipt with
   byte-identical before/after repository trees:
   `docs/evidence/verify-consumer-acceptance.json`.
-- Live protected-main and CodeQL receipt: pending merge of this exact implementation.
+- `docs/evidence/verify/phase-04-live-receipt.json` binds PR #256 and main commit `2de791a`
+  to successful Linux, Windows, macOS, minimum-Git, optional-surface, Actions CodeQL, and
+  Python CodeQL jobs. The live main query returned zero open CodeQL alerts. Phase 4 is verified.

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-20T19:20:55Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "ref": "refs/heads/main",
+  "main_sha": "2de791a24f02d160b4c2b6eed34a19f27b090538",
+  "pull_request": 256,
+  "ci": {
+    "run_id": 29771446051,
+    "conclusion": "success",
+    "jobs": {
+      "lint-and-test": 88450356045,
+      "windows-distribution": 88450356215,
+      "macos-distribution": 88450356067,
+      "minimum-git": 88450356051,
+      "optional-surfaces": 88450355964
+    }
+  },
+  "codeql": {
+    "run_id": 29771445447,
+    "conclusion": "success",
+    "actions_job_id": 88450360824,
+    "python_job_id": 88450360831,
+    "live_open_alert_count": 0
+  },
+  "package": {
+    "capability": "recursive-verify",
+    "source_tree_sha256": "31e9a32faf1c634e69fe52e833ffb70264730177b6c73f6dbc78c09807615927",
+    "package_tree_sha256": "d9a8c85c5bec4f803010814666b720ba6a794624afcf5f6be6dbf02b1bcf8877",
+    "provider_manifests": [
+      ".codex-plugin/plugin.json",
+      ".claude-plugin/plugin.json"
+    ]
+  },
+  "consumer_acceptance": {
+    "receipt": "docs/evidence/verify-consumer-acceptance.json",
+    "result": "accepted",
+    "agent_skills_copied_execution": true,
+    "claude_code_version": "2.1.200",
+    "codex_package": "@openai/codex",
+    "codex_version": "0.144.6",
+    "repository_writes": 0
+  },
+  "phase_gate": {
+    "reproducible_package": true,
+    "tamper_closed": true,
+    "structural_and_path_properties": true,
+    "repository_code_execution": false,
+    "proposal_behavior": "diff-only-no-apply",
+    "claimed_consumers_installed": true,
+    "protected_main_green": true,
+    "maturity_label": "generated-beta",
+    "result": "verified"
+  }
+}
