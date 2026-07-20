@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-20T02:02:26Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "ref": "refs/heads/main",
+  "main_sha": "639bfbcf25e0805dc973916d1ced68a354e5cdef",
+  "pull_request": 254,
+  "ci": {
+    "run_id": 29711767527,
+    "conclusion": "success",
+    "jobs": {
+      "lint-and-test": 88256646244,
+      "windows-distribution": 88256646243,
+      "macos-distribution": 88256646237,
+      "minimum-git": 88256646239,
+      "optional-surfaces": 88256646242
+    }
+  },
+  "codeql": {
+    "run_id": 29711767429,
+    "conclusion": "success",
+    "actions_job_id": 88256647509,
+    "python_job_id": 88256647525,
+    "live_open_alert_count": 0
+  },
+  "package": {
+    "capability": "recursive-learn",
+    "source_tree_sha256": "4d25b577e584ceae0392ea1566fe6c43fab676e5212f265ce2f1feedd0d345ab",
+    "package_tree_sha256": "f0e8f3052320ccc78796f9b6e4dcb941021f2ea576a1f8ccf0ed1446cd14405a",
+    "provider_manifests": [
+      ".codex-plugin/plugin.json",
+      ".claude-plugin/plugin.json"
+    ]
+  },
+  "consumer_acceptance": {
+    "receipt": "docs/evidence/learn-consumer-acceptance.json",
+    "result": "accepted",
+    "agent_skills_copied_execution": true,
+    "claude_code_version": "2.1.200",
+    "codex_package": "@openai/codex",
+    "codex_version": "0.144.6",
+    "repository_writes": 0
+  },
+  "phase_gate": {
+    "reproducible_package": true,
+    "tamper_closed": true,
+    "privacy_and_retention_properties": true,
+    "existing_configuration_coexistence": true,
+    "claimed_consumers_installed": true,
+    "protected_main_green": true,
+    "maturity_label": "generated-beta",
+    "result": "verified"
+  }
+}
