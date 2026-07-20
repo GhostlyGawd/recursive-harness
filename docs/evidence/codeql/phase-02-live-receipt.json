@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-07-20T01:20:15Z",
+  "repository": "GhostlyGawd/recursive-harness",
+  "ref": "refs/heads/main",
+  "main_sha": "d09f2b19e1de0dd86efe451c4a985cf9516182e5",
+  "pull_requests": [251, 252],
+  "ci": {
+    "run_id": 29710409587,
+    "lint_and_test_job_id": 88253413016,
+    "conclusion": "success"
+  },
+  "codeql": {
+    "run_id": 29710409390,
+    "python_job_id": 88253413574,
+    "python_conclusion": "success",
+    "actions_job_id": 88253413567,
+    "actions_conclusion": "success"
+  },
+  "live_query": {
+    "endpoint": "GET /repos/GhostlyGawd/recursive-harness/code-scanning/alerts?state=open&ref=refs/heads/main",
+    "open_alert_count": 0
+  },
+  "baseline_outcome": {
+    "baseline_alert_count": 49,
+    "auto_fixed_count": 22,
+    "baseline_alerts_individually_triaged": 19,
+    "new_sanitizer_blind_alerts_individually_triaged": 8
+  },
+  "triage": {
+    "bulk_dismissal_used": false,
+    "false_positive_count": 20,
+    "used_in_tests_count": 7,
+    "alerts": [
+      {"number": 305, "disposition": "false_positive", "evidence": "cartograph/extract.py:_repo_path corpus enumeration"},
+      {"number": 306, "disposition": "false_positive", "evidence": "cartograph/test_gate.py explicit baseline capability"},
+      {"number": 307, "disposition": "false_positive", "evidence": "cartograph/test_gate.py explicit baseline output"},
+      {"number": 308, "disposition": "false_positive", "evidence": "cartograph/extract.py:_repo_path lease enumeration"},
+      {"number": 309, "disposition": "false_positive", "evidence": "cartograph/test_audit.py explicit audit output"},
+      {"number": 310, "disposition": "false_positive", "evidence": "cartograph/test_artifacts.py explicit JSON output"},
+      {"number": 311, "disposition": "false_positive", "evidence": "test_cartograph_default_output_cannot_escape_selected_root"},
+      {"number": 312, "disposition": "false_positive", "evidence": "tests/test_private_state.py contained link rejection"},
+      {"number": 178, "disposition": "false_positive", "evidence": "test_untrusted_gitdir_pointer_cannot_certify_a_stale_worktree"},
+      {"number": 52, "disposition": "false_positive", "evidence": "test_untrusted_gitdir_pointer_cannot_certify_a_stale_worktree"},
+      {"number": 53, "disposition": "false_positive", "evidence": "test_untrusted_gitdir_pointer_cannot_certify_a_stale_worktree"},
+      {"number": 56, "disposition": "false_positive", "evidence": "test_transcript_detector_rejects_a_symlinked_host_capability"},
+      {"number": 57, "disposition": "false_positive", "evidence": "test_transcript_detector_rejects_a_symlinked_host_capability"},
+      {"number": 58, "disposition": "false_positive", "evidence": "test_transcript_detector_rejects_a_symlinked_host_capability"},
+      {"number": 62, "disposition": "false_positive", "evidence": "test_cartograph_does_not_follow_repository_symlinks_outside_its_root"},
+      {"number": 78, "disposition": "false_positive", "evidence": "cartograph/test_gate.py explicit baseline output"},
+      {"number": 79, "disposition": "false_positive", "evidence": "cartograph/test_gate.py explicit baseline capability"},
+      {"number": 88, "disposition": "false_positive", "evidence": "cartograph/test_audit.py explicit audit output"},
+      {"number": 90, "disposition": "false_positive", "evidence": "cartograph/test_artifacts.py explicit JSON output"},
+      {"number": 92, "disposition": "false_positive", "evidence": "test_cartograph_default_output_cannot_escape_selected_root"},
+      {"number": 25, "disposition": "used_in_tests", "evidence": "evals/corpus/jsonl-rotate/check.py"},
+      {"number": 26, "disposition": "used_in_tests", "evidence": "evals/corpus/jsonl-rotate/check.py"},
+      {"number": 27, "disposition": "used_in_tests", "evidence": "evals/corpus/jsonl-rotate/check.py"},
+      {"number": 28, "disposition": "used_in_tests", "evidence": "evals/corpus/jsonl-rotate/check.py"},
+      {"number": 103, "disposition": "used_in_tests", "evidence": "tests/test_ci_coverage.py"},
+      {"number": 104, "disposition": "used_in_tests", "evidence": "tests/test_guard_worktree_session.py"},
+      {"number": 151, "disposition": "used_in_tests", "evidence": "tests/test_guard_worktree_session.py"}
+    ]
+  }
+}
