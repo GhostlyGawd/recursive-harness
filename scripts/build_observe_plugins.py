@@ -15,7 +15,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import sys
 
 
@@ -36,8 +35,10 @@ MAPPINGS = {
 }
 CODEX_MANIFEST = {
     "name": "recursive-observe",
+    "description": (
+        "Score predictions with private sidecar state without changing consumer worktree files."
+    ),
     "version": "0.1.0",
-    "description": "Score predictions with private sidecar state and zero repository writes.",
     "author": {
         "name": "GhostlyGawd",
         "url": "https://github.com/GhostlyGawd",
@@ -49,10 +50,11 @@ CODEX_MANIFEST = {
     "skills": "./skills/",
     "interface": {
         "displayName": "Recursive Observe",
-        "shortDescription": "Score outcomes without touching repositories.",
+        "shortDescription": "Score outcomes without changing worktree files.",
         "longDescription": (
             "Record falsifiable expectations, score real outcomes, inspect calibration, "
-            "and audit or delete sanitized private evidence without changing the active repository."
+            "and audit or delete sanitized private evidence without changing persistent "
+            "active-repository worktree files."
         ),
         "developerName": "GhostlyGawd",
         "category": "Developer Tools",
@@ -94,20 +96,35 @@ def select_plugin_directory(path: Path) -> None:
     RECEIPT = selected / "canonical-source.json"
 
 
-def normalized(data: bytes) -> bytes:
-    return data.replace(b"\r\n", b"\n")
-
-
 def digest(data: bytes) -> str:
-    return hashlib.sha256(normalized(data)).hexdigest()
+    """Return the version 2 receipt digest for the exact supplied bytes."""
+    return hashlib.sha256(data).hexdigest()
 
 
 def json_bytes(value: object) -> bytes:
     return (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
+def canonical_source_bytes(source: Path) -> bytes:
+    """Return source bytes under the repository's LF text policy."""
+    return source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def expected_package_files() -> dict[Path, bytes]:
-    files = {target: source.read_bytes() for source, target in MAPPINGS.items()}
+    files = {
+        target: canonical_source_bytes(source)
+        for source, target in MAPPINGS.items()
+    }
+    # Keep the root license byte-identical for every other distribution while giving this
+    # first attributed Observe package a distinct, terms-equivalent blob that Git must
+    # rematerialize as LF.
+    license_target = PLUGIN / "LICENSE"
+    license_marker = b"MIT License\n\n"
+    if files[license_target].count(license_marker) != 1:
+        raise ValueError("unexpected MIT license format")
+    files[license_target] = files[license_target].replace(
+        license_marker, b"MIT License\n\n\n", 1
+    )
     files.update({target: json_bytes(value) for target, value in GENERATED_JSON.items()})
     return files
 
@@ -117,7 +134,7 @@ def receipt_value() -> dict[str, object]:
     for source, target in MAPPINGS.items():
         sources[source.relative_to(ROOT).as_posix()] = {
             "packaged_path": target.relative_to(PLUGIN).as_posix(),
-            "sha256": digest(source.read_bytes()),
+            "sha256": digest(canonical_source_bytes(source)),
         }
     combined = json.dumps(sources, sort_keys=True, separators=(",", ":")).encode("utf-8")
     package_files = {
@@ -132,7 +149,9 @@ def receipt_value() -> dict[str, object]:
     return {
         "capability": "recursive-observe",
         "canonical_repository": "GhostlyGawd/recursive-harness",
-        "contract_version": 1,
+        "contract_version": 2,
+        "hash_semantics": "sha256-raw-bytes",
+        "source_hash_semantics": "sha256-lf-normalized",
         "provider_manifests": [
             ".codex-plugin/plugin.json",
             ".claude-plugin/plugin.json",
@@ -172,12 +191,12 @@ def check() -> int:
     for target, expected in expected_files.items():
         if not target.exists():
             errors.append(f"missing packaged file: {package_label(target)}")
-        elif normalized(expected) != normalized(target.read_bytes()):
+        elif expected != target.read_bytes():
             errors.append(f"drift: {package_label(target)}")
     unexpected = actual_package_files() - set(expected_files)
     for path in sorted(unexpected, key=lambda item: item.as_posix()):
         errors.append(f"unexpected packaged file: {path.relative_to(PLUGIN).as_posix()}")
-    if not RECEIPT.exists() or normalized(RECEIPT.read_bytes()) != render_receipt():
+    if not RECEIPT.exists() or RECEIPT.read_bytes() != render_receipt():
         errors.append("drift: plugins/recursive-observe/canonical-source.json")
     for error in errors:
         print(error, file=sys.stderr)
@@ -188,15 +207,12 @@ def check() -> int:
 
 
 def build() -> int:
-    expected = set(expected_package_files())
-    for obsolete in actual_package_files() - expected:
+    expected = expected_package_files()
+    for obsolete in actual_package_files() - set(expected):
         obsolete.unlink()
-    for source, target in MAPPINGS.items():
+    for target, data in expected.items():
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-    for target, value in GENERATED_JSON.items():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(json_bytes(value))
+        target.write_bytes(data)
     RECEIPT.write_bytes(render_receipt())
     print("Generated Recursive Observe provider package from canonical sources")
     return 0

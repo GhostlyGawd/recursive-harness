@@ -3,6 +3,7 @@
 The store deliberately exposes no caller-selected filesystem path. All operations target
 one fixed ledger below the current user's home directory, which keeps the package portable
 without turning an environment variable or model-supplied argument into filesystem authority.
+The provider package binds this helper as LF-encoded raw bytes under receipt contract 2.
 """
 
 from __future__ import annotations

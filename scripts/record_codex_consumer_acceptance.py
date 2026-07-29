@@ -52,8 +52,10 @@ def normalized(data: bytes) -> bytes:
     return data.replace(b"\r\n", b"\n")
 
 
-def digest(data: bytes) -> str:
-    return hashlib.sha256(normalized(data)).hexdigest()
+def digest(data: bytes, contract_version: int) -> str:
+    """Hash raw v2 bytes while preserving historical v1 receipt semantics."""
+    payload = data if contract_version == 2 else normalized(data)
+    return hashlib.sha256(payload).hexdigest()
 
 
 def visible_files(root: Path) -> dict[str, str]:
@@ -76,6 +78,15 @@ def package_evidence(plugin_root: Path) -> dict[str, object]:
     receipt_path = plugin_root / "canonical-source.json"
     require(receipt_path.is_file(), f"{plugin_root.name}: canonical receipt is missing")
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    contract_version = receipt.get("contract_version")
+    require(type(contract_version) is int and contract_version in {1, 2},
+            f"{plugin_root.name}: unsupported receipt contract version")
+    if contract_version == 2:
+        require(receipt.get("hash_semantics") == "sha256-raw-bytes",
+                f"{plugin_root.name}: version 2 receipt does not declare raw-byte hashes")
+    else:
+        require("hash_semantics" not in receipt,
+                f"{plugin_root.name}: historical version 1 receipt has unexpected hash semantics")
     expected = receipt.get("package_files")
     require(isinstance(expected, dict) and expected, f"{plugin_root.name}: invalid file receipt")
 
@@ -92,7 +103,8 @@ def package_evidence(plugin_root: Path) -> dict[str, object]:
     require(actual_paths == set(expected), f"{plugin_root.name}: installed file closure differs")
 
     actual_hashes = {
-        name: digest((plugin_root / Path(name)).read_bytes()) for name in sorted(actual_paths)
+        name: digest((plugin_root / Path(name)).read_bytes(), contract_version)
+        for name in sorted(actual_paths)
     }
     require(actual_hashes == expected, f"{plugin_root.name}: installed package hash differs")
     tree_payload = json.dumps(expected, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -102,6 +114,10 @@ def package_evidence(plugin_root: Path) -> dict[str, object]:
     return {
         "installed": True,
         "receipt_verified": True,
+        "contract_version": contract_version,
+        "hash_semantics": (
+            "sha256-raw-bytes" if contract_version == 2 else "sha256-lf-normalized"
+        ),
         "package_tree_sha256": tree_digest,
         "package_files": expected,
     }

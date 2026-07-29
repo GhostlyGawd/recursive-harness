@@ -10,8 +10,8 @@ servers, or repository settings.
 | Surface | Status | Evidence |
 | --- | --- | --- |
 | Generic Agent Skill | Generated beta | The generated, self-contained `plugins/recursive-observe/skills/observe` package validates and passes copied-package execution |
-| Codex plugin | Generated beta | [Codex CLI 0.144.6 consumer acceptance](codex-consumer-acceptance.md), source receipt, installed-cache execution, and zero-write coexistence pass |
-| Claude Code plugin | Generated beta | [Claude Code 2.1.200 consumer acceptance](observe-claude-acceptance.md), source receipt, and coexistence fixture pass |
+| Codex plugin | Generated beta | The [superseding Codex CLI 0.145.0 Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.md) passes installed-cache execution, contained-path checks, protected-state equality, measured worktree coexistence, and rollback |
+| Claude Code plugin | Generated beta | [Claude Code 2.1.200 version 1 acceptance](observe-claude-acceptance.md) remains historical runtime/coexistence evidence; receipt version 2 changes packaging bytes and comments, but a fresh Claude version 2 install was not rerun |
 | ChatGPT Work web / hosted Codex | Experimental | Plugin discovery is supported by the product, but state persistence and bundled Python execution still need live consumer evidence |
 | Claude Code web | Unverified | Do not assume local plugin state persists in a hosted session until a real acceptance run proves it |
 
@@ -20,8 +20,11 @@ The same plugin directory carries `.codex-plugin/plugin.json` and
 also the portable generic Agent Skill because it includes the state helper needed outside a
 harness checkout. The authoring source remains wholly under `skills/observe`; its narrow
 storage helper exposes only the fixed Observe ledger, not a caller-selected path.
-`canonical-source.json` binds every packaged file, including both
-provider manifests, to its reviewed SHA-256 hash.
+`canonical-source.json` binds every packaged file, including both provider manifests, to
+its reviewed raw-byte SHA-256 hash under receipt contract version 2. A CRLF-only change is
+package drift. Canonical source hashes use the receipt's separate LF-normalized source
+semantics so an unchanged CRLF working-tree source cannot change a build. The shared verifier
+retains explicit normalized-line-ending support only for historical version 1 receipts.
 
 ## Install for Codex
 
@@ -29,10 +32,13 @@ Add this Git repository as a catalog at the tested immutable revision, then inst
 Recursive Observe with the stable plugin CLI:
 
 ```bash
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref c31db956eea519c77c4c516b095c8c70b9537a45
 codex plugin add recursive-observe@recursive-harness
 codex plugin list
 ```
+
+The earlier `ca5f79c69777ae72f2d70ea79332e3702734d457` report is preserved as historical
+evidence. The command above uses the implementation commit that passed the superseding run.
 
 In ChatGPT desktop, open **Plugins** in Work mode or Codex after the marketplace is
 available. ChatGPT Work web can use workspace-shared plugins, but this package's deterministic
@@ -75,7 +81,8 @@ python3 <observe-skill>/scripts/observe.py privacy purge --apply
 See the packaged [privacy contract](../plugins/recursive-observe/skills/observe/references/privacy.md) for exact fields,
 paths, permissions, retention, and removal behavior. The coexistence test runs the package
 from a copied install while the working directory contains pre-existing `AGENTS.md`,
-`CLAUDE.md`, and `.codex/config.toml`; every project byte must remain unchanged.
+`CLAUDE.md`, and `.codex/config.toml`; every persistent non-`.git` worktree file must remain
+unchanged, and the final Git status must stay clean.
 
 ## Upgrade and rollback
 
@@ -85,9 +92,15 @@ prove that the package and receipt match canonical sources. Rollback selects a r
 tag or commit in the marketplace; it never rewrites the consumer repository or deletes
 private state.
 
-The exact Codex commands and installed-cache behavior above are replayed by
-`scripts/record_codex_consumer_acceptance.py`. Public marketplace discovery remains a
-separate Phase 8 claim; this Git-backed catalog is deliberately not presented as that listing.
+The exact Observe-only Codex commands and installed-cache behavior above are replayed by
+`scripts/record_observe_codex_windows_acceptance.py`. The recorder canonicalizes the immutable
+commit before command use, contains installed paths under its isolated `CODEX_HOME`, rejects
+receipt-bound links and junctions, and uses the operating system's standard temporary
+directory. It compares persistent non-`.git` worktree files and final Git status. It does not
+inspect Git metadata or trace transient writes. The
+[historical Codex 0.144.6 record](codex-consumer-acceptance.md) remains the version 1 and
+Guard evidence. Public marketplace discovery remains a separate Phase 8 claim; this
+Git-backed catalog is deliberately not presented as that listing.
 
 <!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-044 Observe-first distribution. -->

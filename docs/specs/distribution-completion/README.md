@@ -45,7 +45,7 @@ where the phase calls for a real consumer, hosted check, release, or public list
 
 | Requirement | Phase | Required evidence |
 | --- | --- | --- |
-| Real Codex portability | [1](01-codex-consumer-acceptance.md) | Isolated install receipt, cache hashes, foreign-repo run, zero-write proof |
+| Real Codex portability | [1](01-codex-consumer-acceptance.md) | Isolated install receipt, cache hashes, foreign-repo run, worktree digest, and final Git status |
 | Security-cleared runtime | [2](02-codeql-zero.md) | Regression properties, extended scan, live open-alert count of zero |
 | Learn package | [3](03-learn-package.md) | Reproducible package, provider/coexistence matrix, consumer receipts |
 | Verify package | [4](04-verify-package.md) | Read-only defaults, explicit-diff tests, consumer receipts |
@@ -54,6 +54,7 @@ where the phase calls for a real consumer, hosted check, release, or public list
 | v0.1.2 distribution | [7](07-release-and-metadata.md) | Reproducible archives/checksums, upgrade/rollback, tag, release, live metadata |
 | Public discoverability | [8](08-public-marketplace.md) | Review submission with five positive and three negative tests, approval, fresh public install |
 | Whole-product completion | [9](09-completion-audit.md) | Reconciled checklist, green protected main, resolved proposals, clean live inventory |
+| Observe Windows raw-byte integrity | [10](10-observe-windows-raw-byte-integrity.md) | LF checkout policy, raw-byte receipt properties, and a fresh Codex 0.145.0 Windows install |
 
 ## Global definition of done
 

@@ -1,7 +1,7 @@
 {
   "name": "recursive-observe",
+  "description": "Score predictions with private sidecar state without changing consumer worktree files.",
   "version": "0.1.0",
-  "description": "Score predictions with private sidecar state and zero repository writes.",
   "author": {
     "name": "GhostlyGawd",
     "url": "https://github.com/GhostlyGawd"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Recursive Observe",
-    "shortDescription": "Score outcomes without touching repositories.",
-    "longDescription": "Record falsifiable expectations, score real outcomes, inspect calibration, and audit or delete sanitized private evidence without changing the active repository.",
+    "shortDescription": "Score outcomes without changing worktree files.",
+    "longDescription": "Record falsifiable expectations, score real outcomes, inspect calibration, and audit or delete sanitized private evidence without changing persistent active-repository worktree files.",
     "developerName": "GhostlyGawd",
     "category": "Developer Tools",
     "capabilities": [

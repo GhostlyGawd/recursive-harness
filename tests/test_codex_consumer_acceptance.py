@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import random
@@ -112,13 +113,18 @@ def main() -> int:
     packages = data.get("packages", {})
     for plugin in PLUGINS:
         actual = packages.get(plugin, {})
-        canonical = canonical_receipt(plugin)
         require(actual.get("installed") is True, f"{plugin} was not installed")
         require(actual.get("receipt_verified") is True, f"{plugin} receipt was not verified")
-        require(actual.get("package_tree_sha256") == canonical["package_tree_sha256"],
-                f"{plugin} package tree differs from canonical receipt")
-        require(actual.get("package_files") == canonical["package_files"],
-                f"{plugin} file closure differs from canonical receipt")
+        package_files = actual.get("package_files")
+        require(isinstance(package_files, dict) and package_files,
+                f"{plugin} historical file closure is missing")
+        tree_payload = json.dumps(
+            package_files, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        require(
+            actual.get("package_tree_sha256") == hashlib.sha256(tree_payload).hexdigest(),
+            f"{plugin} historical package tree is internally inconsistent",
+        )
 
     repository = data.get("foreign_repository", {})
     require(repository.get("existing_configuration_files") == 7,

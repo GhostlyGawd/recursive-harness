@@ -65,5 +65,8 @@ python3 <skill-dir>/scripts/observe.py privacy purge --apply
 Installing or invoking this skill must not edit `AGENTS.md`, `CLAUDE.md`, `.claude/`,
 `.codex/`, hooks, workflows, or any other file in the active repository.
 
+Provider packages bind these instructions and their runtime dependencies with raw-byte
+SHA-256 receipts. A line-ending-only change is package drift and must fail verification.
+
 <!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-044 Observe-first portable package. -->
