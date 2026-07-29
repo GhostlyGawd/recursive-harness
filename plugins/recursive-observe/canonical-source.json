@@ -1,7 +1,8 @@
 {
   "capability": "recursive-observe",
   "canonical_repository": "GhostlyGawd/recursive-harness",
-  "contract_version": 1,
+  "contract_version": 2,
+  "hash_semantics": "sha256-raw-bytes",
   "provider_manifests": [
     ".codex-plugin/plugin.json",
     ".claude-plugin/plugin.json"

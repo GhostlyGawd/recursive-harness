@@ -94,12 +94,9 @@ def select_plugin_directory(path: Path) -> None:
     RECEIPT = selected / "canonical-source.json"
 
 
-def normalized(data: bytes) -> bytes:
-    return data.replace(b"\r\n", b"\n")
-
-
 def digest(data: bytes) -> str:
-    return hashlib.sha256(normalized(data)).hexdigest()
+    """Return the version 2 receipt digest for the exact supplied bytes."""
+    return hashlib.sha256(data).hexdigest()
 
 
 def json_bytes(value: object) -> bytes:
@@ -132,7 +129,8 @@ def receipt_value() -> dict[str, object]:
     return {
         "capability": "recursive-observe",
         "canonical_repository": "GhostlyGawd/recursive-harness",
-        "contract_version": 1,
+        "contract_version": 2,
+        "hash_semantics": "sha256-raw-bytes",
         "provider_manifests": [
             ".codex-plugin/plugin.json",
             ".claude-plugin/plugin.json",
@@ -172,12 +170,12 @@ def check() -> int:
     for target, expected in expected_files.items():
         if not target.exists():
             errors.append(f"missing packaged file: {package_label(target)}")
-        elif normalized(expected) != normalized(target.read_bytes()):
+        elif expected != target.read_bytes():
             errors.append(f"drift: {package_label(target)}")
     unexpected = actual_package_files() - set(expected_files)
     for path in sorted(unexpected, key=lambda item: item.as_posix()):
         errors.append(f"unexpected packaged file: {path.relative_to(PLUGIN).as_posix()}")
-    if not RECEIPT.exists() or normalized(RECEIPT.read_bytes()) != render_receipt():
+    if not RECEIPT.exists() or RECEIPT.read_bytes() != render_receipt():
         errors.append("drift: plugins/recursive-observe/canonical-source.json")
     for error in errors:
         print(error, file=sys.stderr)

@@ -1,0 +1,15 @@
+/LICENSE text eol=lf
+/skills/observe/SKILL.md text eol=lf
+/skills/observe/agents/openai.yaml text eol=lf
+/skills/observe/references/privacy.md text eol=lf
+/skills/observe/scripts/observe.py text eol=lf
+/skills/observe/scripts/observe_store.py text eol=lf
+/plugins/recursive-observe/.claude-plugin/plugin.json text eol=lf
+/plugins/recursive-observe/.codex-plugin/plugin.json text eol=lf
+/plugins/recursive-observe/LICENSE text eol=lf
+/plugins/recursive-observe/canonical-source.json text eol=lf
+/plugins/recursive-observe/skills/observe/SKILL.md text eol=lf
+/plugins/recursive-observe/skills/observe/agents/openai.yaml text eol=lf
+/plugins/recursive-observe/skills/observe/references/privacy.md text eol=lf
+/plugins/recursive-observe/skills/observe/scripts/observe.py text eol=lf
+/plugins/recursive-observe/skills/observe/scripts/observe_store.py text eol=lf

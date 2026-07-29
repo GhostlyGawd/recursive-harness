@@ -15,6 +15,10 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 - Updated Git-backed Codex install examples to the immutable v0.1.2 release commit while the
   public OpenAI Plugins Directory submission remains under review preparation.
+- Changed Recursive Observe receipt version 2 to raw-byte SHA-256 and added exact LF checkout
+  rules so Windows Git marketplaces cannot silently change receipt-bound package bytes.
+- Kept the consumer verifier compatible with historical version 1 receipts, whose recorded
+  contract normalized CRLF to LF before hashing.
 
 ## [0.1.2] - 2026-07-20
 
