@@ -22,6 +22,7 @@
 - [x] Preserve receipt version 1 verification for historical evidence.
 - [x] Add deterministic Linux and Windows regression tests.
 - [x] Add the superseding specification and initial changelog entry.
+- [x] Correct the default-main-to-feature-ref materialization edge case found by live testing.
 - [ ] Update current install and compatibility documentation after live acceptance.
 - [ ] Run focused and full local quality gates.
 - [ ] Commit and push the implementation after the identity guard passes.
@@ -58,7 +59,10 @@ The implementation and deterministic tests are complete. Observe's generated rec
 contract version 2 and declares raw-byte SHA-256. Exact `.gitattributes` entries cover all
 current canonical and packaged receipt paths. The shared verifier selects version 1 normalized
 semantics or version 2 raw-byte semantics and rejects malformed contracts. The Windows live
-recorder is ready but has not run against an immutable pushed commit.
+recorder found that Codex checks out default `main` before it switches to the requested commit.
+Git did not rewrite unchanged blobs when the attributes first appeared. A controlled one-time
+change now updates every receipt-bound blob, and the deterministic test binds that transition to
+the pre-attribute base commit.
 
 ## Validation evidence
 
@@ -87,13 +91,22 @@ recorder is ready but has not run against an immutable pushed commit.
   synthetic identities are rejected by the installed global identity guard. No bypass or
   fallback identity was added. GitHub Actions remains the full-suite gate.
 - Installed identity guard pre-commit check — PASS for role `GhostlyGawd`.
+- First live invocation — infrastructure selection failure: the Windows desktop App Execution
+  Alias cannot be launched by Python. No plugin was installed.
+- Second live invocation — invalid expanded commit SHA supplied by the operator; Git rejected
+  the ref before installation.
+- Live invocation at implementation commit `147d138302a050fb7d2488bf2f9337273242ca64`
+  — required failure: all eight marketplace and cache files were CRLF and failed raw hashes.
+  Git reported the correct LF attributes, but unchanged blobs were not rewritten when Codex
+  switched from default `main` to the feature commit. Observe runtime execution remained blocked.
+- Disposable diagnostic plugin and marketplace rollback — PASS.
 
 ## Alignment table
 
 | Contract item | Normative level | Implementation | Test | Docs/example | Status |
 | --- | --- | --- | --- | --- | --- |
 | Observe v2 uses raw-byte SHA-256 | Required | `scripts/build_observe_plugins.py` | Receipt properties pass | Superseding spec added; Observe guide pending live evidence | Worker proven |
-| Windows Git checkout preserves receipt bytes | Required | `.gitattributes` | Windows-style checkout regression passes | Superseding spec added; README pending live evidence | Worker proven |
+| Windows Git checkout preserves receipt bytes | Required | `.gitattributes` plus one-time receipt-blob transition | Windows-style checkout and pre-attribute blob regressions pass | Superseding spec added; README pending live evidence | Worker proven; live retry pending |
 | Historical v1 evidence remains reproducible | Required | Version-aware verifier | Historical acceptance test passes | Historical records preserved; superseding spec added | Worker proven |
 | Codex 0.145.0 installs only Observe from an immutable ref | Required | Isolated acceptance recorder | Live acceptance | Dated evidence and current install guidance | Pending |
 | Observe does not add hooks or write to a consumer repository | Required | Existing package boundary | Closure passes; live journeys pending | Product surface and Observe guide pending live evidence | Partially proven |

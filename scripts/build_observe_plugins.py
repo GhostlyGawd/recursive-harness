@@ -36,8 +36,8 @@ MAPPINGS = {
 }
 CODEX_MANIFEST = {
     "name": "recursive-observe",
-    "version": "0.1.0",
     "description": "Score predictions with private sidecar state and zero repository writes.",
+    "version": "0.1.0",
     "author": {
         "name": "GhostlyGawd",
         "url": "https://github.com/GhostlyGawd",

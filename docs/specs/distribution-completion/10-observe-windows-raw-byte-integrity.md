@@ -12,6 +12,9 @@ by the package receipt.
 
 - Every canonical and packaged Observe text file named by the receipt has a repository-owned
   `text eol=lf` attribute.
+- Every receipt-bound blob differs from the pre-attribute base commit. This one-time transition
+  makes Git rewrite files when Codex first clones default `main` and then checks out the
+  immutable fix commit.
 - Observe receipt contract version 2 uses SHA-256 over raw bytes. Verification must not
   normalize line endings or other content before hashing.
 - The version 2 receipt declares `hash_semantics` as `sha256-raw-bytes`.
@@ -30,6 +33,7 @@ by the package receipt.
 | Sequence | Failure injection | Expected semantic outcome | Durable evidence | Test |
 | --- | --- | --- | --- | --- |
 | Git materialization | Checkout with `core.autocrlf=true` | Every Observe receipt path remains LF | CI output | `tests/test_observe_raw_byte_distribution.py` |
+| First attributed checkout | Switch from pre-attribute `main` to the fix commit | Every receipt-bound blob is rewritten under the LF rule | Test output | Pre-attribute blob transition property |
 | Receipt hashing | Change one LF to CRLF | Version 2 rejects the installed file | Test output | Raw-byte receipt property |
 | Receipt closure | Add, remove, or mutate one file | Verification fails closed | Test output | Closure properties |
 | Receipt parsing | Use a boolean, unknown version, or missing v2 semantics | Verification fails closed | Test output | Malformed receipt properties |

@@ -1,3 +1,4 @@
+# Receipt contract version 2 binds this file as LF-encoded raw bytes.
 interface:
   display_name: "Recursive Observe"
   short_description: "Score outcomes without touching repositories."

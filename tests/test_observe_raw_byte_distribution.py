@@ -15,6 +15,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "recursive-observe"
 RECEIPT = PLUGIN / "canonical-source.json"
+PRE_ATTRIBUTE_COMMIT = "5bed2286b5ecaaae25de98710f5a5dbc6e6dd7dc"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import record_codex_consumer_acceptance as recorder  # noqa: E402
@@ -102,6 +103,19 @@ def main() -> int:
     require(len(attributes) == len(paths) * 2, "Git did not report both attributes for every path")
     require(all(line.endswith(": text: set") or line.endswith(": eol: lf") for line in attributes),
             "an Observe receipt path is not forced to LF text")
+    for name in paths:
+        baseline = subprocess.run(
+            ["git", "show", f"{PRE_ATTRIBUTE_COMMIT}:{name}"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        require(baseline.returncode == 0, f"cannot read pre-attribute blob for {name}")
+        require(
+            baseline.stdout != (ROOT / Path(name)).read_bytes(),
+            f"{name} did not change after the pre-attribute checkout",
+        )
 
     raw_receipt_checks(receipt, PLUGIN)
 

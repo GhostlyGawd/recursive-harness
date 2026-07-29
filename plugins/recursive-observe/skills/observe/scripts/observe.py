@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Provider-neutral prediction and calibration CLI with private sidecar state.
 
+The provider package binds this runtime as LF-encoded raw bytes under receipt contract 2.
+
 provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa;
 P-2026-044 Observe-first portable package.
 """

@@ -25,5 +25,8 @@ first or later with the same CLI if deletion is intended. Hosted environments ma
 their home/state volume according to the host lifecycle; Recursive does not claim persistence
 where the provider does not offer it.
 
+Package-integrity receipts contain SHA-256 hashes of raw distributed bytes. They contain no
+Observe records, prompts, state paths, credentials, or other private runtime data.
+
 <!-- provenance: 2026-07-19 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-044 Observe-first privacy boundary. -->

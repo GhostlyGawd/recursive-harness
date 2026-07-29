@@ -7,42 +7,42 @@
     ".codex-plugin/plugin.json",
     ".claude-plugin/plugin.json"
   ],
-  "source_tree_sha256": "137948b3ab1bfe03fc615f3a6e697bbf4f9fae5d813273094ec92e224d8ea311",
-  "package_tree_sha256": "2a3a37044fd4168281f0c3951047dff5eb75f3f5e683b2e6964611bfb7486005",
+  "source_tree_sha256": "8e19f9465f79225dfe6918a5b1fe4aee4a8a82816589ccca10da7ec261c4d96d",
+  "package_tree_sha256": "e9c2ef040f3afe4f2959366b8fc327e8d8415eeb2f8112c889cf71ca269e16a6",
   "package_files": {
-    ".claude-plugin/plugin.json": "cc524fce9ef82b20bc8aebf396e26e3bfca271f5924a4d95456d271efa850ac8",
-    ".codex-plugin/plugin.json": "9c6fd6e87f2b8cbe4749ff3976cd11d7e466d32bf14d05537eae0d0195baad9e",
-    "LICENSE": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f",
-    "skills/observe/SKILL.md": "ec455412834438b20c737b88b2fc37862a183d0aaa2687d83943f4d89e6592e6",
-    "skills/observe/agents/openai.yaml": "5bdb5659e6ee9752e2db5767016c766f80f2f668e6fe6d9c5152c766d40e6b22",
-    "skills/observe/references/privacy.md": "6915e96ed6622a6470153081dcdac8e6b4e6371138d6f11178dcadfcbf260ed0",
-    "skills/observe/scripts/observe.py": "f11c74a11aa2c050730b9096a49d9ecdcb39fe9b339101b31873a14935492099",
-    "skills/observe/scripts/observe_store.py": "e27923f1333fc7ef644a269cab8472d636f35548a8a81156b89b6b8935c16f32"
+    ".claude-plugin/plugin.json": "347bc21705a654f2d3b4f091286ef748d915645d49e83484b989b6bfcef986fd",
+    ".codex-plugin/plugin.json": "5683aeb3953d17d634521fa0607021bb5e957309cef10834ddc414caf8af7087",
+    "LICENSE": "d58b1609899ea8c7b892dab59d06bbeeaf921d1bb75d90535cb8feb2d4b19d60",
+    "skills/observe/SKILL.md": "c0e12dfd1e3418543abadff8a123ede45bc5ba4079c14dd0885a1cf54be24c1b",
+    "skills/observe/agents/openai.yaml": "30c38816edef9a85105acba5c2430b0cf24aca84555eddc151a937672209f589",
+    "skills/observe/references/privacy.md": "8959cab8c1cb3252711ef9527145aabc47be139c1a2553b7c3bccdb9c61c70c8",
+    "skills/observe/scripts/observe.py": "c41f6fa422254238c18215dab6dd1f3445f37d5ca99b4fefe194b1c98c8ed879",
+    "skills/observe/scripts/observe_store.py": "e2c65b8062b342e082f5142e2bfc078dd08085694755a71c14fc66f06dd226a9"
   },
   "sources": {
     "skills/observe/SKILL.md": {
       "packaged_path": "skills/observe/SKILL.md",
-      "sha256": "ec455412834438b20c737b88b2fc37862a183d0aaa2687d83943f4d89e6592e6"
+      "sha256": "c0e12dfd1e3418543abadff8a123ede45bc5ba4079c14dd0885a1cf54be24c1b"
     },
     "skills/observe/agents/openai.yaml": {
       "packaged_path": "skills/observe/agents/openai.yaml",
-      "sha256": "5bdb5659e6ee9752e2db5767016c766f80f2f668e6fe6d9c5152c766d40e6b22"
+      "sha256": "30c38816edef9a85105acba5c2430b0cf24aca84555eddc151a937672209f589"
     },
     "skills/observe/scripts/observe.py": {
       "packaged_path": "skills/observe/scripts/observe.py",
-      "sha256": "f11c74a11aa2c050730b9096a49d9ecdcb39fe9b339101b31873a14935492099"
+      "sha256": "c41f6fa422254238c18215dab6dd1f3445f37d5ca99b4fefe194b1c98c8ed879"
     },
     "skills/observe/scripts/observe_store.py": {
       "packaged_path": "skills/observe/scripts/observe_store.py",
-      "sha256": "e27923f1333fc7ef644a269cab8472d636f35548a8a81156b89b6b8935c16f32"
+      "sha256": "e2c65b8062b342e082f5142e2bfc078dd08085694755a71c14fc66f06dd226a9"
     },
     "skills/observe/references/privacy.md": {
       "packaged_path": "skills/observe/references/privacy.md",
-      "sha256": "6915e96ed6622a6470153081dcdac8e6b4e6371138d6f11178dcadfcbf260ed0"
+      "sha256": "8959cab8c1cb3252711ef9527145aabc47be139c1a2553b7c3bccdb9c61c70c8"
     },
     "LICENSE": {
       "packaged_path": "LICENSE",
-      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
+      "sha256": "d58b1609899ea8c7b892dab59d06bbeeaf921d1bb75d90535cb8feb2d4b19d60"
     }
   }
 }
