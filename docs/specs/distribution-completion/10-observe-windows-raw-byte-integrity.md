@@ -2,7 +2,7 @@
 
 Phase: 10
 
-Status: implementation in progress
+Status: worker and external acceptance verified on 2026-07-29; post-merge gate pending
 
 Supersede the line-ending-normalized package-hash assumption for Recursive Observe. A Git
 marketplace checkout on Windows with `core.autocrlf=true` must install the exact bytes named
@@ -15,6 +15,9 @@ by the package receipt.
 - Every receipt-bound blob differs from the pre-attribute base commit. This one-time transition
   makes Git rewrite files when Codex first clones default `main` and then checks out the
   immutable fix commit.
+- The Observe builder adds one formatting-only blank separator to the packaged MIT license.
+  The root license and its terms remain unchanged, other plugin receipts remain unchanged,
+  and the source and package hashes record the distinct bytes.
 - Observe receipt contract version 2 uses SHA-256 over raw bytes. Verification must not
   normalize line endings or other content before hashing.
 - The version 2 receipt declares `hash_semantics` as `sha256-raw-bytes`.
@@ -65,7 +68,8 @@ support, public marketplace state, version, release, tag, or portfolio-governanc
 
 ## Completion state
 
-The pull request must use `post-merge-pending` until protected `main` CI passes. The external
-evidence destination is
-`docs/evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json`. Human review and
-merge remain required.
+The worker and external gates passed at
+`ca5f79c69777ae72f2d70ea79332e3702734d457`. The sanitized evidence is
+[the 2026-07-29 raw-byte acceptance receipt](../../evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json).
+The pull request remains `post-merge-pending` until protected `main` CI passes. Human review
+and merge remain required.

@@ -1,0 +1,94 @@
+{
+  "accepted_date": "2026-07-29",
+  "consumer": {
+    "package": "@openai/codex",
+    "plugin_cli": "stable",
+    "version": "0.145.0",
+    "version_output": "codex-cli 0.145.0"
+  },
+  "foreign_repository": {
+    "after_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "before_sha256": "2844e74f078e46d86c2d2addef0557aabc1788f2a8b7f95133ec20022e655f79",
+    "existing_configuration_files": 7,
+    "git_status_after": "",
+    "git_status_before": "",
+    "repository_writes": 0
+  },
+  "host": {
+    "git_core_autocrlf": "true",
+    "platform": "Windows",
+    "python": "3.12.10"
+  },
+  "journeys": {
+    "predictions": [
+      {
+        "confidence": 0.9,
+        "result": "hit"
+      },
+      {
+        "confidence": 0.8,
+        "result": "miss"
+      },
+      {
+        "confidence": 0.6,
+        "result": "hit"
+      }
+    ],
+    "privacy": {
+      "contents_printed": false,
+      "records": 3,
+      "repository_writes": [],
+      "state": "isolated user profile"
+    },
+    "scorecard": {
+      "brier": 0.27,
+      "hits": 2,
+      "pending": 0,
+      "scored": 3,
+      "total": 3
+    }
+  },
+  "limitations": {
+    "global_install": "not performed",
+    "hosted_web": "not tested",
+    "model_skill_selection": "not tested",
+    "public_marketplace": "not tested",
+    "release": "not tested"
+  },
+  "marketplace": {
+    "name": "recursive-harness",
+    "public_listing": false,
+    "ref": "ca5f79c69777ae72f2d70ea79332e3702734d457",
+    "snapshot_commit": "ca5f79c69777ae72f2d70ea79332e3702734d457",
+    "source": "GhostlyGawd/recursive-harness"
+  },
+  "package": {
+    "contract_version": 2,
+    "files_verified": 8,
+    "hash_semantics": "sha256-raw-bytes",
+    "hooks": false,
+    "other_recursive_plugins_installed": false,
+    "package_tree_sha256": "e9c2ef040f3afe4f2959366b8fc327e8d8415eeb2f8112c889cf71ca269e16a6",
+    "plugin_id": "recursive-observe@recursive-harness"
+  },
+  "protected_user_state": {
+    "codex_config": {
+      "existence_unchanged": true,
+      "sha256_unchanged": true,
+      "size_unchanged": true
+    },
+    "observe_ledger": {
+      "existence_unchanged": true,
+      "sha256_unchanged": true,
+      "size_unchanged": true
+    }
+  },
+  "result": "accepted",
+  "rollback": {
+    "isolated_sidecar_preserved_until_temporary_cleanup": true,
+    "marketplace_removed": true,
+    "plugin_removed": true
+  },
+  "schema_version": 1,
+  "source_commit": "ca5f79c69777ae72f2d70ea79332e3702734d457"
+}

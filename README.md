@@ -184,8 +184,8 @@ reviewed integration.
 Observe is hook-free and keeps its private state outside the active repository.
 
 ```bash
-# Codex: repository catalog at the v0.1.2 release commit (not the public marketplace).
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref 5a524d199d6c061a30fa577fbfe6ed0cb7b9a0d4
+# Codex: repository catalog at the tested Observe integrity commit (not the public marketplace).
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref ca5f79c69777ae72f2d70ea79332e3702734d457
 codex plugin add recursive-observe@recursive-harness
 
 # Claude Code: personal/user scope; does not edit the project.
@@ -194,7 +194,10 @@ claude plugin install recursive-observe@recursive-harness --scope user
 ```
 
 The self-contained package is generated from one canonical skill plus the shared private-state
-helper and carries a SHA-256 source receipt.
+helper and carries a version 2 raw-byte SHA-256 receipt. The
+[Windows Codex 0.145.0 acceptance](docs/observe-codex-windows-raw-byte-acceptance-2026-07-29.md)
+proves the immutable install, three synthetic journeys, zero repository writes, protected
+user-state equality, and rollback.
 See [Recursive Observe](docs/observe-plugin.md) for generic-skill installation, privacy,
 uninstall, and the honest hosted-web compatibility limits.
 

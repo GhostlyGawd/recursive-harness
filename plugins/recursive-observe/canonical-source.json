@@ -7,7 +7,7 @@
     ".codex-plugin/plugin.json",
     ".claude-plugin/plugin.json"
   ],
-  "source_tree_sha256": "8e19f9465f79225dfe6918a5b1fe4aee4a8a82816589ccca10da7ec261c4d96d",
+  "source_tree_sha256": "726489fa7b2e9957e180567c9d25b282d1178245b42f8d93d0adebc2c323b377",
   "package_tree_sha256": "e9c2ef040f3afe4f2959366b8fc327e8d8415eeb2f8112c889cf71ca269e16a6",
   "package_files": {
     ".claude-plugin/plugin.json": "347bc21705a654f2d3b4f091286ef748d915645d49e83484b989b6bfcef986fd",
@@ -42,7 +42,7 @@
     },
     "LICENSE": {
       "packaged_path": "LICENSE",
-      "sha256": "d58b1609899ea8c7b892dab59d06bbeeaf921d1bb75d90535cb8feb2d4b19d60"
+      "sha256": "6e29b9573772a22f3f984418e1bdf39e2e721b4ea3a83bb67bf1c54520b7c86f"
     }
   }
 }

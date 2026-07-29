@@ -16,6 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "recursive-observe"
 RECEIPT = PLUGIN / "canonical-source.json"
 PRE_ATTRIBUTE_COMMIT = "5bed2286b5ecaaae25de98710f5a5dbc6e6dd7dc"
+LIVE_COMMIT = "ca5f79c69777ae72f2d70ea79332e3702734d457"
+LIVE_EVIDENCE = (
+    ROOT / "docs" / "evidence"
+    / "observe-codex-windows-raw-byte-acceptance-2026-07-29.json"
+)
+LIVE_NARRATIVE = ROOT / "docs" / "observe-codex-windows-raw-byte-acceptance-2026-07-29.md"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import record_codex_consumer_acceptance as recorder  # noqa: E402
@@ -103,7 +109,12 @@ def main() -> int:
     require(len(attributes) == len(paths) * 2, "Git did not report both attributes for every path")
     require(all(line.endswith(": text: set") or line.endswith(": eol: lf") for line in attributes),
             "an Observe receipt path is not forced to LF text")
-    for name in paths:
+    transition_paths = [
+        f"plugins/recursive-observe/{name}"
+        for name in receipt["package_files"]
+    ]
+    transition_paths.append("plugins/recursive-observe/canonical-source.json")
+    for name in transition_paths:
         baseline = subprocess.run(
             ["git", "show", f"{PRE_ATTRIBUTE_COMMIT}:{name}"],
             cwd=ROOT,
@@ -217,6 +228,79 @@ def main() -> int:
             pass
         else:
             require(False, "protected user-state mutation was accepted")
+
+    require(LIVE_EVIDENCE.is_file(), "Windows raw-byte acceptance evidence is missing")
+    evidence = json.loads(LIVE_EVIDENCE.read_text(encoding="utf-8"))
+    require(evidence.get("result") == "accepted", "Windows raw-byte acceptance did not pass")
+    require(evidence.get("source_commit") == LIVE_COMMIT,
+            "Windows raw-byte acceptance uses the wrong commit")
+    require(evidence.get("host") == {
+        "git_core_autocrlf": "true",
+        "platform": "Windows",
+        "python": "3.12.10",
+    }, "Windows raw-byte acceptance has the wrong host contract")
+    require(
+        evidence.get("consumer", {}).get("version") == "0.145.0",
+        "Windows raw-byte acceptance has the wrong Codex version",
+    )
+    package = evidence.get("package", {})
+    require(
+        package.get("contract_version") == 2
+        and package.get("hash_semantics") == "sha256-raw-bytes"
+        and package.get("package_tree_sha256") == receipt["package_tree_sha256"]
+        and package.get("files_verified") == len(receipt["package_files"])
+        and package.get("hooks") is False
+        and package.get("other_recursive_plugins_installed") is False,
+        "Windows installed-package evidence differs from the current receipt",
+    )
+    scorecard = evidence.get("journeys", {}).get("scorecard", {})
+    require(scorecard == {
+        "brier": 0.27,
+        "hits": 2,
+        "pending": 0,
+        "scored": 3,
+        "total": 3,
+    }, "Windows Observe journey evidence is incomplete")
+    repository = evidence.get("foreign_repository", {})
+    require(
+        repository.get("before_sha256") == repository.get("after_sha256")
+        and repository.get("git_status_before") == repository.get("git_status_after") == ""
+        and repository.get("repository_writes") == 0,
+        "Windows consumer repository evidence is not zero-write",
+    )
+    protected = evidence.get("protected_user_state", {})
+    require(
+        protected
+        and all(
+            set(result) == {
+                "existence_unchanged", "size_unchanged", "sha256_unchanged"
+            }
+            and all(result.values())
+            for result in protected.values()
+        ),
+        "protected user-state evidence is not equality-only and unchanged",
+    )
+    require(evidence.get("rollback") == {
+        "isolated_sidecar_preserved_until_temporary_cleanup": True,
+        "marketplace_removed": True,
+        "plugin_removed": True,
+    }, "Windows acceptance rollback is incomplete")
+    require(
+        evidence.get("limitations", {}).get("global_install") == "not performed"
+        and evidence.get("limitations", {}).get("public_marketplace") == "not tested"
+        and evidence.get("limitations", {}).get("release") == "not tested",
+        "Windows acceptance overstates its scope",
+    )
+    require(LIVE_NARRATIVE.is_file(), "Windows raw-byte acceptance narrative is missing")
+    narrative = LIVE_NARRATIVE.read_text(encoding="utf-8")
+    for phrase in (
+        "Codex CLI 0.145.0",
+        LIVE_COMMIT,
+        "repository writes: 0",
+        "No global plugin installation occurred",
+        "Human review, merge, and protected-main CI remain pending",
+    ):
+        require(phrase in narrative, f"Windows acceptance narrative is missing: {phrase}")
 
     print("Observe raw-byte distribution: contract and Windows checkout verified")
     return 0

@@ -15,7 +15,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import sys
 
 
@@ -105,6 +104,16 @@ def json_bytes(value: object) -> bytes:
 
 def expected_package_files() -> dict[Path, bytes]:
     files = {target: source.read_bytes() for source, target in MAPPINGS.items()}
+    # Keep the root license byte-identical for every other distribution while giving this
+    # first attributed Observe package a distinct, terms-equivalent blob that Git must
+    # rematerialize as LF.
+    license_target = PLUGIN / "LICENSE"
+    license_marker = b"MIT License\n\n"
+    if files[license_target].count(license_marker) != 1:
+        raise ValueError("unexpected MIT license format")
+    files[license_target] = files[license_target].replace(
+        license_marker, b"MIT License\n\n\n", 1
+    )
     files.update({target: json_bytes(value) for target, value in GENERATED_JSON.items()})
     return files
 
@@ -186,15 +195,12 @@ def check() -> int:
 
 
 def build() -> int:
-    expected = set(expected_package_files())
-    for obsolete in actual_package_files() - expected:
+    expected = expected_package_files()
+    for obsolete in actual_package_files() - set(expected):
         obsolete.unlink()
-    for source, target in MAPPINGS.items():
+    for target, data in expected.items():
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-    for target, value in GENERATED_JSON.items():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(json_bytes(value))
+        target.write_bytes(data)
     RECEIPT.write_bytes(render_receipt())
     print("Generated Recursive Observe provider package from canonical sources")
     return 0

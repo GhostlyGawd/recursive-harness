@@ -6,6 +6,7 @@
 - Base branch: `main`
 - Base commit: `5bed2286b5ecaaae25de98710f5a5dbc6e6dd7dc`
 - Feature branch: `fix/observe-windows-raw-byte-integrity`
+- Draft pull request: `https://github.com/GhostlyGawd/recursive-harness/pull/267`
 - Governance: owner-reviewed, active, public, neutral harness-strategy candidate
 - Approved outcome: fix Recursive Observe's Windows Git-checkout package integrity, prove
   an isolated Codex 0.145.0 install, and stop at a reviewable pull request.
@@ -23,12 +24,12 @@
 - [x] Add deterministic Linux and Windows regression tests.
 - [x] Add the superseding specification and initial changelog entry.
 - [x] Correct the default-main-to-feature-ref materialization edge case found by live testing.
-- [ ] Update current install and compatibility documentation after live acceptance.
-- [ ] Run focused and full local quality gates.
-- [ ] Commit and push the implementation after the identity guard passes.
-- [ ] Run the isolated Windows Codex 0.145.0 acceptance against the immutable commit.
-- [ ] Append sanitized dated evidence and pin current install guidance to the tested commit.
-- [ ] Commit and push evidence, open a pull request, and enter human handoff.
+- [x] Update current install and compatibility documentation after live acceptance.
+- [x] Run focused local quality gates and route the environment-limited full suite to hosted CI.
+- [x] Commit and push the implementation after the identity guard passes.
+- [x] Run the isolated Windows Codex 0.145.0 acceptance against the immutable commit.
+- [x] Append sanitized dated evidence and pin current install guidance to the tested commit.
+- [ ] Commit and push evidence, complete pull-request checks, and enter human handoff.
 
 ## Acceptance criteria
 
@@ -62,7 +63,9 @@ semantics or version 2 raw-byte semantics and rejects malformed contracts. The W
 recorder found that Codex checks out default `main` before it switches to the requested commit.
 Git did not rewrite unchanged blobs when the attributes first appeared. A controlled one-time
 change now updates every receipt-bound blob, and the deterministic test binds that transition to
-the pre-attribute base commit.
+the pre-attribute base commit. The corrected live gate passed at
+`ca5f79c69777ae72f2d70ea79332e3702734d457`. Dated machine and narrative evidence now exist,
+and current Observe guidance points to that tested commit.
 
 ## Validation evidence
 
@@ -84,9 +87,10 @@ the pre-attribute base commit.
 - `python3 tests/test_observe_raw_byte_distribution.py` — PASS.
 - `python3 tests/test_codex_consumer_acceptance.py` — PASS.
 - `python3 tests/test_distribution_completion_specs.py` — PASS.
-- `python3 tests/test_ci_coverage.py` — PASS; all 61 tracked tests are wired or excused.
+- `python3 tests/test_ci_coverage.py` — PASS; all 62 tracked tests are wired or excused.
 - `python3 lint/lint_harness.py` — PASS.
 - `git diff --check` — PASS.
+- Codeweb structural diff — PASS; no new cycles, lost callers, or confirmed duplications.
 - Broad local suite attempt — environment-limited. Existing tests that create commits with
   synthetic identities are rejected by the installed global identity guard. No bypass or
   fallback identity was added. GitHub Actions remains the full-suite gate.
@@ -100,16 +104,29 @@ the pre-attribute base commit.
   Git reported the correct LF attributes, but unchanged blobs were not rewritten when Codex
   switched from default `main` to the feature commit. Observe runtime execution remained blocked.
 - Disposable diagnostic plugin and marketplace rollback — PASS.
+- Corrected live Windows acceptance at
+  `ca5f79c69777ae72f2d70ea79332e3702734d457` — PASS:
+  Codex CLI 0.145.0, `core.autocrlf=true`, eight raw-byte hashes, three scored journeys,
+  Brier 0.27, aggregate-only privacy audit, zero repository writes, protected real-user
+  file equality, plugin removal, and marketplace removal.
+- Draft pull request `#267` — OPEN against `main`; human review and hosted checks pending.
+- Dated evidence contract test — PASS.
+- Adjacent package gates — PASS for public plugin submission, Learn, Verify, and Lab.
+- Release and Coordinate adjacent gates — all non-commit checks PASS; each suite has one
+  environment-limited synthetic fixture commit rejected by the mandatory identity guard.
+- Distribution adjacent gate — relevant launcher and install checks run, but the global hook
+  directory collides with its synthetic hook fixture and the identity guard rejects its
+  synthetic release commit. Hosted CI is the clean-environment gate.
 
 ## Alignment table
 
 | Contract item | Normative level | Implementation | Test | Docs/example | Status |
 | --- | --- | --- | --- | --- | --- |
-| Observe v2 uses raw-byte SHA-256 | Required | `scripts/build_observe_plugins.py` | Receipt properties pass | Superseding spec added; Observe guide pending live evidence | Worker proven |
-| Windows Git checkout preserves receipt bytes | Required | `.gitattributes` plus one-time receipt-blob transition | Windows-style checkout and pre-attribute blob regressions pass | Superseding spec added; README pending live evidence | Worker proven; live retry pending |
+| Observe v2 uses raw-byte SHA-256 | Required | `scripts/build_observe_plugins.py` | Receipt properties pass | Superseding spec and Observe guide updated | Worker proven |
+| Windows Git checkout preserves receipt bytes | Required | `.gitattributes` plus one-time receipt-blob transition | Windows-style checkout, pre-attribute blob regression, and live install pass | Superseding spec, README, and dated evidence updated | Worker external proven |
 | Historical v1 evidence remains reproducible | Required | Version-aware verifier | Historical acceptance test passes | Historical records preserved; superseding spec added | Worker proven |
-| Codex 0.145.0 installs only Observe from an immutable ref | Required | Isolated acceptance recorder | Live acceptance | Dated evidence and current install guidance | Pending |
-| Observe does not add hooks or write to a consumer repository | Required | Existing package boundary | Closure passes; live journeys pending | Product surface and Observe guide pending live evidence | Partially proven |
+| Codex 0.145.0 installs only Observe from an immutable ref | Required | Isolated acceptance recorder | Live acceptance passes | Dated evidence and current install guidance updated | Worker external proven |
+| Observe does not add hooks or write to a consumer repository | Required | Existing package boundary | Closure and live journeys pass | Product surface and Observe guide updated | Worker proven |
 | Release, version, and public-listing state do not change | Required | No release mutation | Diff and live-state review | Changelog keeps change under Unreleased | Worker proven |
 
 ## Uncertainties and assumptions
@@ -130,9 +147,9 @@ the pre-attribute base commit.
   the raw-byte rule explicit and executable.
 - **Implementation-defined omission corrected:** The repository had no checkout rule for
   receipt-bound Observe text. Exact LF attributes and a Windows-style checkout test now exist.
-- **Required conflict pending:** Current install and compatibility pages still point to the
-  historical Codex 0.144.6 acceptance. They must change only after the new immutable commit
-  passes the live 0.145.0 gate.
+- **Documentation-only drift corrected:** Current install and compatibility pages now point
+  to the accepted Codex 0.145.0 version 2 commit. The Codex 0.144.6 files remain dated
+  historical version 1 and Guard evidence.
 - **Reviewed and unaffected:** `SECURITY.md` still describes the correct trusted-local-code
   model and private reporting route; package line endings do not change that model.
 - **Reviewed and unaffected:** `PRIVACY.md` still describes the correct Observe storage,
@@ -142,24 +159,30 @@ the pre-attribute base commit.
 - **Reviewed and unaffected:** Other plugin receipts, guides, and acceptance reports retain
   their existing contracts. The verifier keeps version 1 compatibility and this change does
   not claim raw-byte version 2 coverage for those plugins.
+- **Documentation-only drift corrected:** The current Observe and product-surface tables now
+  identify Claude Code 2.1.200 evidence as historical version 1 evidence and state that a
+  fresh Claude version 2 installation was not rerun.
 - **Reviewed and unaffected:** Version, release, tag, public listing, and portfolio-governance
   state do not change in this pull request.
+- **Reviewed and unaffected:** The root MIT license and its terms are byte-identical to the
+  base commit. Observe's generated package adds one blank separator only to force first
+  materialization; other generated plugin receipts remain unchanged and their focused tests pass.
 
 ## Blockers and required human action
 
-No implementation blocker is active. The live run requires the implementation commit on a
-GitHub branch. Human review and merge remain required after the pull request is ready.
+No implementation blocker is active. Evidence commit, pull-request CI, human review, protected-main
+merge, and post-merge revalidation remain.
 
 ## Handoff status
 
-Status: implementation in progress.
+Status: verification before human handoff.
 
 ## Next owner, remaining gates, evidence destination, and resume route
 
 - Current owner: implementation agent.
 - Next owner: repository reviewer after the pull request is ready.
-- Remaining gates: deterministic tests, live Windows acceptance, pull-request checks,
-  human review, protected-main merge, merged-main CI, and closeout revalidation.
+- Remaining gates: evidence commit and push, pull-request checks, human review,
+  protected-main merge, merged-main CI, and closeout revalidation.
 - Evidence destination:
   `docs/evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json`.
 - Resume route: continue from this worktree and this workpad; do not repeat the historical
