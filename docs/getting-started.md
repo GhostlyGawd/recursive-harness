@@ -123,13 +123,14 @@ selects Recursive's dedicated `CLAUDE_CONFIG_DIR`. That is useful isolation, not
 with your normal Claude setup.
 
 Recursive Observe is the first namespaced provider package from the canonical
-[capability catalog](../capabilities/README.md). It has a raw-byte source receipt and a standalone
-coexistence fixture; follow the [Observe guide](observe-plugin.md) for user-scoped Claude,
+[capability catalog](../capabilities/README.md). It has a raw-byte package receipt and a
+standalone coexistence fixture; follow the [Observe guide](observe-plugin.md) for user-scoped Claude,
 Codex repository catalog, or generic Agent Skill installation. [Recursive Guard](guard-plugin.md)
 is a separate local Codex beta that stays inert until a repository explicitly adds a reviewed
-policy and the operator separately trusts its hook. The immutable-ref install and installed
-cache execution for Observe are recorded in the
+policy and the operator separately trusts its hook. The first immutable-ref install and
+installed-cache execution for Observe are recorded in the historical
 [2026-07-29 Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29.md).
+A superseding run for the review-corrected implementation is pending.
 The [2026-07-19 record](codex-consumer-acceptance.md) remains historical version 1 and Guard
 evidence.
 

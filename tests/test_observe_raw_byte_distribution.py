@@ -10,18 +10,21 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "recursive-observe"
 RECEIPT = PLUGIN / "canonical-source.json"
 PRE_ATTRIBUTE_COMMIT = "5bed2286b5ecaaae25de98710f5a5dbc6e6dd7dc"
-LIVE_COMMIT = "ca5f79c69777ae72f2d70ea79332e3702734d457"
-LIVE_EVIDENCE = (
+HISTORICAL_LIVE_COMMIT = "ca5f79c69777ae72f2d70ea79332e3702734d457"
+HISTORICAL_LIVE_EVIDENCE = (
     ROOT / "docs" / "evidence"
     / "observe-codex-windows-raw-byte-acceptance-2026-07-29.json"
 )
-LIVE_NARRATIVE = ROOT / "docs" / "observe-codex-windows-raw-byte-acceptance-2026-07-29.md"
+HISTORICAL_LIVE_NARRATIVE = (
+    ROOT / "docs" / "observe-codex-windows-raw-byte-acceptance-2026-07-29.md"
+)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import record_codex_consumer_acceptance as recorder  # noqa: E402
@@ -85,10 +88,52 @@ def checkout_with_autocrlf(paths: list[str], destination: Path) -> None:
     ], cwd=staging)
 
 
+def checkout_transition_with_autocrlf(destination: Path) -> None:
+    """Exercise the real base-to-head transition before running the builder."""
+    run([
+        "git",
+        "clone",
+        "--no-hardlinks",
+        "--no-checkout",
+        str(ROOT),
+        str(destination),
+    ], cwd=destination.parent)
+    run(["git", "config", "core.autocrlf", "true"], cwd=destination)
+    run(["git", "checkout", "--detach", PRE_ATTRIBUTE_COMMIT], cwd=destination)
+    require(
+        b"\r\n" in (destination / "LICENSE").read_bytes(),
+        "pre-attribute root license did not materialize as CRLF",
+    )
+    head_commit = run(["git", "rev-parse", "HEAD"], cwd=ROOT).stdout.strip()
+    run(["git", "checkout", "--detach", head_commit], cwd=destination)
+    require(
+        b"\r\n" in (destination / "LICENSE").read_bytes(),
+        "unchanged root license did not retain the reproduced CRLF condition",
+    )
+    shutil.copy2(
+        ROOT / "scripts" / "build_observe_plugins.py",
+        destination / "scripts" / "build_observe_plugins.py",
+    )
+    shutil.copytree(
+        PLUGIN,
+        destination / "plugins" / "recursive-observe",
+        dirs_exist_ok=True,
+    )
+    run([sys.executable, "scripts/build_observe_plugins.py", "--check"], cwd=destination)
+    run([sys.executable, "scripts/build_observe_plugins.py"], cwd=destination)
+    run([sys.executable, "scripts/build_observe_plugins.py", "--check"], cwd=destination)
+    require(
+        b"\r\n" in (destination / "LICENSE").read_bytes(),
+        "Observe builder changed the canonical root license",
+    )
+
+
 def raw_receipt_checks(receipt: dict[str, object], plugin_root: Path) -> None:
     require(receipt.get("contract_version") == 2, "Observe receipt is not contract version 2")
     require(receipt.get("hash_semantics") == "sha256-raw-bytes",
             "Observe receipt does not declare raw-byte SHA-256")
+    require(receipt.get("source_hash_semantics") == "sha256-lf-normalized",
+            "Observe receipt does not declare canonical LF source hashing")
     expected = receipt["package_files"]
     require(isinstance(expected, dict), "receipt package files are not an object")
     actual = {
@@ -101,6 +146,19 @@ def raw_receipt_checks(receipt: dict[str, object], plugin_root: Path) -> None:
 
 def main() -> int:
     receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+    sources = receipt.get("sources")
+    require(isinstance(sources, dict), "receipt sources are not an object")
+    for name, source_entry in sources.items():
+        require(isinstance(source_entry, dict), f"{name}: source entry is not an object")
+        canonical = (
+            (ROOT / Path(name)).read_bytes()
+            .replace(b"\r\n", b"\n")
+            .replace(b"\r", b"\n")
+        )
+        require(
+            source_entry.get("sha256") == hashlib.sha256(canonical).hexdigest(),
+            f"{name}: canonical source hash differs",
+        )
     paths = receipt_paths(receipt)
     attributes = run(
         ["git", "check-attr", "text", "eol", "--", *paths],
@@ -127,6 +185,14 @@ def main() -> int:
             baseline.stdout != (ROOT / Path(name)).read_bytes(),
             f"{name} did not change after the pre-attribute checkout",
         )
+    baseline_license = run(
+        ["git", "show", f"{PRE_ATTRIBUTE_COMMIT}:LICENSE"],
+        cwd=ROOT,
+    ).stdout.encode("utf-8")
+    require(
+        baseline_license == (ROOT / "LICENSE").read_bytes(),
+        "root license changed instead of using deterministic source normalization",
+    )
 
     raw_receipt_checks(receipt, PLUGIN)
     recorder_source = (
@@ -149,6 +215,113 @@ def main() -> int:
             (checkout / "plugins/recursive-observe/canonical-source.json").read_text(encoding="utf-8")
         )
         raw_receipt_checks(checkout_receipt, checkout / "plugins/recursive-observe")
+        checkout_transition_with_autocrlf(temp_root / "transition-checkout")
+
+        containment_root = temp_root / "containment"
+        containment_root.mkdir()
+        ordinary = containment_root / "ordinary.txt"
+        ordinary.write_bytes(b"ordinary\n")
+        require(
+            windows_recorder.contained_existing_path(
+                ordinary,
+                containment_root,
+                "ordinary fixture",
+                directory=False,
+            ) == ordinary.resolve(),
+            "ordinary contained file was rejected",
+        )
+        escaped = temp_root / "escaped.txt"
+        escaped.write_bytes(b"escaped\n")
+        try:
+            windows_recorder.contained_existing_path(
+                escaped,
+                containment_root,
+                "escaped fixture",
+                directory=False,
+            )
+        except recorder.AcceptanceError:
+            pass
+        else:
+            require(False, "installed path outside the isolated root was accepted")
+        linked = containment_root / "linked.txt"
+        try:
+            linked.symlink_to(ordinary)
+        except OSError:
+            pass
+        else:
+            try:
+                windows_recorder.contained_existing_path(
+                    linked,
+                    containment_root,
+                    "linked fixture",
+                    directory=False,
+                )
+            except recorder.AcceptanceError:
+                pass
+            else:
+                require(False, "linked installed file was accepted")
+        real_directory = containment_root / "real-directory"
+        real_directory.mkdir()
+        nested = real_directory / "nested.txt"
+        nested.write_bytes(b"nested\n")
+        linked_directory = containment_root / "linked-directory"
+        try:
+            linked_directory.symlink_to(real_directory, target_is_directory=True)
+        except OSError:
+            pass
+        else:
+            try:
+                windows_recorder.contained_existing_path(
+                    linked_directory / "nested.txt",
+                    containment_root,
+                    "linked ancestry fixture",
+                    directory=False,
+                )
+            except recorder.AcceptanceError:
+                pass
+            else:
+                require(False, "linked installed-file ancestry was accepted")
+
+        cleanup_outputs = [
+            recorder.AcceptanceError("plugin cleanup fixture"),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps({"marketplaceName": windows_recorder.MARKETPLACE}),
+                stderr="",
+            ),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps({"marketplaces": []}),
+                stderr="",
+            ),
+        ]
+
+        cleanup_run = mock.Mock(side_effect=cleanup_outputs)
+        with mock.patch.object(windows_recorder, "run", cleanup_run):
+            rollback, cleanup_errors = windows_recorder.cleanup_installation(
+                Path("codex"),
+                {},
+                plugin_added=True,
+                marketplace_added=True,
+                plugin_root=None,
+                isolated_ledger=None,
+                isolated_ledger_sha256=None,
+            )
+        require(
+            rollback["plugin_removed"] is False
+            and rollback["marketplace_removed"] is True
+            and len(cleanup_errors) == 1,
+            "cleanup did not preserve the first failure and continue rollback",
+        )
+        require(
+            any(
+                "marketplace" in call.args[0]
+                for call in cleanup_run.call_args_list
+            ),
+            "cleanup stopped before the marketplace rollback attempt",
+        )
 
         copied = temp_root / "mutated"
         shutil.copytree(PLUGIN, copied)
@@ -240,11 +413,19 @@ def main() -> int:
         else:
             require(False, "protected user-state mutation was accepted")
 
-    require(LIVE_EVIDENCE.is_file(), "Windows raw-byte acceptance evidence is missing")
-    evidence = json.loads(LIVE_EVIDENCE.read_text(encoding="utf-8"))
-    require(evidence.get("result") == "accepted", "Windows raw-byte acceptance did not pass")
-    require(evidence.get("source_commit") == LIVE_COMMIT,
-            "Windows raw-byte acceptance uses the wrong commit")
+    require(
+        HISTORICAL_LIVE_EVIDENCE.is_file(),
+        "historical Windows raw-byte acceptance evidence is missing",
+    )
+    evidence = json.loads(HISTORICAL_LIVE_EVIDENCE.read_text(encoding="utf-8"))
+    require(
+        evidence.get("result") == "accepted",
+        "historical Windows raw-byte acceptance did not pass",
+    )
+    require(
+        evidence.get("source_commit") == HISTORICAL_LIVE_COMMIT,
+        "historical Windows raw-byte acceptance uses the wrong commit",
+    )
     require(evidence.get("host") == {
         "git_core_autocrlf": "true",
         "platform": "Windows",
@@ -258,8 +439,9 @@ def main() -> int:
     require(
         package.get("contract_version") == 2
         and package.get("hash_semantics") == "sha256-raw-bytes"
-        and package.get("package_tree_sha256") == receipt["package_tree_sha256"]
-        and package.get("files_verified") == len(receipt["package_files"])
+        and package.get("package_tree_sha256")
+        == "e9c2ef040f3afe4f2959366b8fc327e8d8415eeb2f8112c889cf71ca269e16a6"
+        and package.get("files_verified") == 8
         and package.get("hooks") is False
         and package.get("other_recursive_plugins_installed") is False,
         "Windows installed-package evidence differs from the current receipt",
@@ -302,11 +484,14 @@ def main() -> int:
         and evidence.get("limitations", {}).get("release") == "not tested",
         "Windows acceptance overstates its scope",
     )
-    require(LIVE_NARRATIVE.is_file(), "Windows raw-byte acceptance narrative is missing")
-    narrative = LIVE_NARRATIVE.read_text(encoding="utf-8")
+    require(
+        HISTORICAL_LIVE_NARRATIVE.is_file(),
+        "historical Windows raw-byte acceptance narrative is missing",
+    )
+    narrative = HISTORICAL_LIVE_NARRATIVE.read_text(encoding="utf-8")
     for phrase in (
         "Codex CLI 0.145.0",
-        LIVE_COMMIT,
+        HISTORICAL_LIVE_COMMIT,
         "repository writes: 0",
         "No global plugin installation occurred",
         "Human review, merge, and protected-main CI remain pending",

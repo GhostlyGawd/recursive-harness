@@ -17,13 +17,17 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   public OpenAI Plugins Directory submission remains under review preparation.
 - Changed the Observe receipt version 2 to raw-byte SHA-256 and added exact LF checkout
   rules plus a one-time package-blob transition so Windows Git marketplaces cannot silently
-  retain CRLF receipt-bound bytes when they switch from default `main` to an immutable ref.
+  retain CRLF receipt-bound package bytes when they switch from default `main` to an immutable
+  ref. Canonical source hashes use a separate LF-normalized policy so unchanged Windows
+  worktree sources produce deterministic builds.
 - Kept the consumer verifier compatible with historical version 1 receipts, whose recorded
   contract normalized CRLF to LF before hashing.
 - Added a sanitized Windows Codex 0.145.0 acceptance for the immutable version 2 Observe
   package, including eight raw hashes, three synthetic journeys, protected-state equality,
-  zero repository writes, and isolated rollback. The recorder canonicalizes the immutable
-  commit before command use and uses the operating system's standard temporary directory.
+  persistent non-`.git` worktree-file equality, final Git-status equality, and isolated
+  rollback. The recorder canonicalizes the immutable commit before command use, contains
+  Codex-returned paths, rejects receipt-bound links and junctions, uses the operating system's
+  standard temporary directory, and attempts cleanup after success or failure.
 
 ## [0.1.2] - 2026-07-20
 

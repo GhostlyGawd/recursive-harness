@@ -35,7 +35,9 @@ MAPPINGS = {
 }
 CODEX_MANIFEST = {
     "name": "recursive-observe",
-    "description": "Score predictions with private sidecar state and zero repository writes.",
+    "description": (
+        "Score predictions with private sidecar state without changing consumer worktree files."
+    ),
     "version": "0.1.0",
     "author": {
         "name": "GhostlyGawd",
@@ -48,10 +50,11 @@ CODEX_MANIFEST = {
     "skills": "./skills/",
     "interface": {
         "displayName": "Recursive Observe",
-        "shortDescription": "Score outcomes without touching repositories.",
+        "shortDescription": "Score outcomes without changing worktree files.",
         "longDescription": (
             "Record falsifiable expectations, score real outcomes, inspect calibration, "
-            "and audit or delete sanitized private evidence without changing the active repository."
+            "and audit or delete sanitized private evidence without changing persistent "
+            "active-repository worktree files."
         ),
         "developerName": "GhostlyGawd",
         "category": "Developer Tools",
@@ -102,8 +105,16 @@ def json_bytes(value: object) -> bytes:
     return (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
+def canonical_source_bytes(source: Path) -> bytes:
+    """Return source bytes under the repository's LF text policy."""
+    return source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def expected_package_files() -> dict[Path, bytes]:
-    files = {target: source.read_bytes() for source, target in MAPPINGS.items()}
+    files = {
+        target: canonical_source_bytes(source)
+        for source, target in MAPPINGS.items()
+    }
     # Keep the root license byte-identical for every other distribution while giving this
     # first attributed Observe package a distinct, terms-equivalent blob that Git must
     # rematerialize as LF.
@@ -123,7 +134,7 @@ def receipt_value() -> dict[str, object]:
     for source, target in MAPPINGS.items():
         sources[source.relative_to(ROOT).as_posix()] = {
             "packaged_path": target.relative_to(PLUGIN).as_posix(),
-            "sha256": digest(source.read_bytes()),
+            "sha256": digest(canonical_source_bytes(source)),
         }
     combined = json.dumps(sources, sort_keys=True, separators=(",", ":")).encode("utf-8")
     package_files = {
@@ -140,6 +151,7 @@ def receipt_value() -> dict[str, object]:
         "canonical_repository": "GhostlyGawd/recursive-harness",
         "contract_version": 2,
         "hash_semantics": "sha256-raw-bytes",
+        "source_hash_semantics": "sha256-lf-normalized",
         "provider_manifests": [
             ".codex-plugin/plugin.json",
             ".claude-plugin/plugin.json",

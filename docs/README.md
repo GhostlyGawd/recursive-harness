@@ -5,8 +5,8 @@ Start with the page that matches the job you are doing.
 | Document | Use it when you need to… |
 | --- | --- |
 | [Getting started](getting-started.md) | Install an account silo, launch Claude Code with the correct brain, or connect another repository |
-| [Recursive Observe](observe-plugin.md) | Install the zero-repository-write Claude, Codex, or generic Agent Skill package and manage its private evidence |
-| [Observe Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29.md) | Inspect the current Codex 0.145.0 receipt version 2 install, execution, protected-state, and rollback evidence |
+| [Recursive Observe](observe-plugin.md) | Install the private-sidecar Claude, Codex, or generic Agent Skill package and manage its evidence |
+| [Observe Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29.md) | Inspect the historical first Codex 0.145.0 receipt version 2 run; superseding review-correction evidence is pending |
 | [Observe Claude acceptance](observe-claude-acceptance.md) | Inspect the historical receipt version 1 Claude Code 2.1.200 consumer evidence |
 | [Architecture](architecture.md) | Understand the runtime lifecycle, feedback loops, state flow, trust boundaries, and subsystem ownership |
 | [Operations](operations.md) | Run the daily workflow, diagnose an install, synchronize accounts, query structure, or recover safely |
