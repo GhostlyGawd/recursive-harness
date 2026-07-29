@@ -27,7 +27,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   persistent non-`.git` worktree-file equality, final Git-status equality, and isolated
   rollback. The recorder canonicalizes the immutable commit before command use, contains
   Codex-returned paths, rejects receipt-bound links and junctions, uses the operating system's
-  standard temporary directory, and attempts cleanup after success or failure.
+  standard temporary directory, and attempts cleanup after success or failure. The superseding
+  run passed against implementation commit
+  `c31db956eea519c77c4c516b095c8c70b9537a45`; the first same-date record remains historical.
 
 ## [0.1.2] - 2026-07-20
 

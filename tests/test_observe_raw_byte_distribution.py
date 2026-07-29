@@ -25,6 +25,16 @@ HISTORICAL_LIVE_EVIDENCE = (
 HISTORICAL_LIVE_NARRATIVE = (
     ROOT / "docs" / "observe-codex-windows-raw-byte-acceptance-2026-07-29.md"
 )
+SUPERSEDING_LIVE_COMMIT = "c31db956eea519c77c4c516b095c8c70b9537a45"
+SUPERSEDING_LIVE_EVIDENCE = (
+    ROOT / "docs" / "evidence"
+    / "observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.json"
+)
+SUPERSEDING_LIVE_NARRATIVE = (
+    ROOT
+    / "docs"
+    / "observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.md"
+)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import record_codex_consumer_acceptance as recorder  # noqa: E402
@@ -497,6 +507,90 @@ def main() -> int:
         "Human review, merge, and protected-main CI remain pending",
     ):
         require(phrase in narrative, f"Windows acceptance narrative is missing: {phrase}")
+
+    require(
+        SUPERSEDING_LIVE_EVIDENCE.is_file(),
+        "superseding Windows raw-byte acceptance evidence is missing",
+    )
+    superseding = json.loads(SUPERSEDING_LIVE_EVIDENCE.read_text(encoding="utf-8"))
+    require(
+        superseding.get("schema_version") == 2
+        and superseding.get("result") == "accepted"
+        and superseding.get("source_commit") == SUPERSEDING_LIVE_COMMIT,
+        "superseding Windows acceptance does not bind the implementation commit",
+    )
+    require(
+        superseding.get("host") == {
+            "git_core_autocrlf": "true",
+            "platform": "Windows",
+            "python": "3.12.10",
+        }
+        and superseding.get("consumer", {}).get("version") == "0.145.0",
+        "superseding Windows acceptance has the wrong host or consumer",
+    )
+    superseding_package = superseding.get("package", {})
+    require(
+        superseding_package.get("contract_version") == 2
+        and superseding_package.get("hash_semantics") == "sha256-raw-bytes"
+        and superseding_package.get("source_hash_semantics")
+        == "sha256-lf-normalized"
+        and superseding_package.get("package_tree_sha256")
+        == receipt["package_tree_sha256"]
+        and superseding_package.get("files_verified") == len(receipt["package_files"])
+        and superseding_package.get("links_or_junctions") is False
+        and superseding_package.get("hooks") is False
+        and superseding_package.get("other_recursive_plugins_installed") is False,
+        "superseding installed-package evidence differs from the current receipt",
+    )
+    superseding_repository = superseding.get("foreign_repository", {})
+    require(
+        superseding_repository.get("before_sha256")
+        == superseding_repository.get("after_sha256")
+        and superseding_repository.get("git_status_before")
+        == superseding_repository.get("git_status_after")
+        == ""
+        and superseding_repository.get("persistent_worktree_files_unchanged") is True
+        and superseding_repository.get("git_status_unchanged") is True
+        and superseding_repository.get("git_metadata_observed") is False
+        and superseding_repository.get("transient_write_tracing") is False
+        and "repository_writes" not in superseding_repository,
+        "superseding repository evidence exceeds or misses its measurement",
+    )
+    superseding_privacy = superseding.get("journeys", {}).get("privacy", {})
+    require(
+        superseding_privacy.get("runtime_reported_repository_writes") == []
+        and "repository_writes" not in superseding_privacy,
+        "runtime self-report is not distinguished from measured evidence",
+    )
+    require(
+        superseding.get("rollback") == {
+            "isolated_sidecar_preserved_until_temporary_cleanup": True,
+            "marketplace_removed": True,
+            "plugin_removed": True,
+        },
+        "superseding Windows acceptance rollback is incomplete",
+    )
+    require(
+        superseding.get("limitations", {}).get("repository_write_measurement")
+        == "persistent non-.git worktree files and final Git status only",
+        "superseding Windows acceptance omits its write-measurement limit",
+    )
+    require(
+        SUPERSEDING_LIVE_NARRATIVE.is_file(),
+        "superseding Windows raw-byte acceptance narrative is missing",
+    )
+    superseding_narrative = SUPERSEDING_LIVE_NARRATIVE.read_text(encoding="utf-8")
+    for phrase in (
+        SUPERSEDING_LIVE_COMMIT,
+        "supersedes the first 2026-07-29",
+        "did not inspect Git metadata",
+        "does not claim that all repository writes",
+        "No global plugin installation occurred",
+    ):
+        require(
+            phrase in superseding_narrative,
+            f"superseding Windows acceptance narrative is missing: {phrase}",
+        )
 
     print("Observe raw-byte distribution: contract and Windows checkout verified")
     return 0

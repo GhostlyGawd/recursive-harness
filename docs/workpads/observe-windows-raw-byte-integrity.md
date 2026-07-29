@@ -37,9 +37,9 @@
 - [x] Contain installed paths, reject link traversal, and attempt rollback in `finally`.
 - [x] Narrow the acceptance claim to the persistent worktree and final Git status that it
   measures.
-- [ ] Push the corrected implementation and run a superseding Windows acceptance.
-- [ ] Append superseding evidence, update the tested install ref, pass hosted checks, and
-  repeat independent review.
+- [x] Push the corrected implementation and run a superseding Windows acceptance.
+- [x] Append superseding evidence and update the tested install ref.
+- [ ] Pass hosted checks and repeat independent review.
 
 ## Acceptance criteria
 
@@ -83,8 +83,9 @@ non-`.git` files and final Git status but reported the broader claim `repository
 The local correction normalizes canonical text to the repository LF policy before source
 hashing, keeps package verification raw-byte exact, contains Codex-returned paths, rejects
 link traversal, and attempts rollback in `finally`. Focused local validation passes. The first
-dated evidence remains historical. Current install guidance is withheld until a superseding
-run passes.
+dated evidence remains historical. The superseding Windows run passes against implementation
+commit `c31db956eea519c77c4c516b095c8c70b9537a45`, and current install guidance points to
+that commit.
 
 ## Validation evidence
 
@@ -95,7 +96,7 @@ run passes.
 | Receipt closure | Add, remove, or mutate one package file | Verification fails closed | Test output | Receipt property test |
 | Codex install | Install from an immutable Git commit | Installed cache matches the version 2 raw-byte receipt | Sanitized dated JSON | Live Windows acceptance |
 | Observe execution | Run three synthetic prediction/outcome journeys | Isolated aggregate scorecard records all outcomes | Sanitized dated JSON | Live Windows acceptance |
-| Repository boundary | Execute from a configured foreign repository | Repository bytes and Git status remain unchanged | Before/after digests | Live Windows acceptance |
+| Repository boundary | Execute from a configured foreign repository | Persistent non-`.git` worktree files and final Git status remain unchanged | Before/after digests and status | Live Windows acceptance |
 | Rollback | Remove plugin and marketplace | Package is removed and real user state is unchanged | Sanitized dated JSON | Live Windows acceptance |
 
 - `python3 tests/test_observe_raw_byte_distribution.py` — expected RED:
@@ -165,16 +166,26 @@ run passes.
 - Broad local correction attempt — environment-limited in synthetic fixture commits by the
   mandatory identity guard. The distribution fixture also encounters the existing global-hook
   collision. No guard or hook bypass was used. Hosted CI remains the clean-environment gate.
+- Corrected implementation commit `c31db956eea519c77c4c516b095c8c70b9537a45` — identity
+  guard PASS for role `GhostlyGawd`; pushed to the existing draft pull-request branch.
+- Superseding live Windows acceptance at
+  `c31db956eea519c77c4c516b095c8c70b9537a45` — PASS: Codex CLI 0.145.0,
+  `core.autocrlf=true`, eight raw package hashes, LF-normalized canonical source semantics,
+  contained ordinary installed paths, three scored journeys, Brier 0.27, persistent
+  non-`.git` worktree equality, clean final Git status, protected real-user equality,
+  plugin removal, marketplace removal, and isolated sidecar preservation.
+- Superseding machine and narrative evidence — appended. The first same-date files remain
+  unchanged as historical evidence.
 
 ## Alignment table
 
 | Contract item | Normative level | Implementation | Test | Docs/example | Status |
 | --- | --- | --- | --- | --- | --- |
 | Observe v2 uses raw-byte SHA-256 | Required | `scripts/build_observe_plugins.py` | Receipt properties pass | Superseding spec and Observe guide updated | Worker proven |
-| Windows Git checkout preserves receipt bytes | Required | `.gitattributes`, package-blob transition, and canonical LF source acquisition | Windows-style checkout and real base-to-head builder regression | Superseding spec updated; new live evidence pending | Correction in progress |
+| Windows Git checkout preserves receipt bytes | Required | `.gitattributes`, package-blob transition, and canonical LF source acquisition | Windows-style checkout, real base-to-head builder regression, and live install pass | Superseding spec and dated evidence updated | Worker external proven |
 | Historical v1 evidence remains reproducible | Required | Version-aware verifier | Historical acceptance test passes | Historical records preserved; superseding spec added | Worker proven |
-| Codex 0.145.0 installs only Observe from an immutable ref | Required | Isolated acceptance recorder with contained paths and `finally` cleanup | Historical run passes; superseding run pending | Historical evidence preserved; current ref withheld | Correction in progress |
-| Observe leaves persistent consumer worktree files unchanged | Required | Existing package boundary | Closure, file digest, and final Git-status checks | Product surface and Observe guide narrowed | Worker proven; external rerun pending |
+| Codex 0.145.0 installs only Observe from an immutable ref | Required | Isolated acceptance recorder with contained paths and `finally` cleanup | Superseding live acceptance passes | Historical evidence preserved; current ref pinned | Worker external proven |
+| Observe leaves persistent consumer worktree files unchanged | Required | Existing package boundary | Closure, file digest, final Git-status, and live journey checks | Product surface, Observe guide, and evidence narrowed | Worker external proven |
 | Release, version, and public-listing state do not change | Required | No release mutation | Diff and live-state review | Changelog keeps change under Unreleased | Worker proven |
 
 ## Uncertainties and assumptions
@@ -205,8 +216,8 @@ run passes.
   argument. It now uses the operating system's standard temporary directory and a canonical
   integer-to-hex commit value. Deterministic assertions and CodeQL enforce these boundaries.
 - **Documentation-only drift corrected:** Current install and compatibility pages now point
-  to no current commit until the superseding Codex 0.145.0 version 2 run passes. The first
-  version 2 run and the Codex 0.144.6 version 1 and Guard files remain dated historical
+  to the implementation commit accepted by the superseding Codex 0.145.0 version 2 run. The
+  first version 2 run and the Codex 0.144.6 version 1 and Guard files remain dated historical
   evidence.
 - **Required evidence conflict corrected:** The recorder and current prose now distinguish
   persistent non-`.git` worktree-file equality and final Git-status equality from unmeasured
@@ -231,23 +242,21 @@ run passes.
 
 ## Blockers and required human action
 
-The accepted review corrections are the active worker gate. A superseding immutable Windows
-acceptance, updated install ref, hosted checks, and repeat independent review are required
-before human merge review resumes.
+Hosted checks and repeat independent review are the active gates before human merge review
+resumes.
 
 ## Handoff status
 
-Status: `worker-correction-in-progress`; the draft pull request is not ready for merge review.
+Status: `worker-review-pending`; the draft pull request is not ready for merge review.
 
 ## Next owner, remaining gates, evidence destination, and resume route
 
-- Current owner: implementation worker.
-- Next owner: independent reviewers after the superseding evidence commit.
-- Remaining gates: corrected implementation, immutable Windows acceptance, superseding
-  evidence, hosted checks, repeat independent review, human review, protected-main merge,
-  merged-main CI, and closeout revalidation.
+- Current owner: implementation worker for the evidence commit and hosted checks.
+- Next owner: independent reviewers.
+- Remaining gates: evidence commit, hosted checks, repeat independent review, human review,
+  protected-main merge, merged-main CI, and closeout revalidation.
 - Evidence destination:
-  a new superseding file under `docs/evidence/`; the existing 2026-07-29 receipt remains
-  historical.
+  `docs/evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.json`;
+  the first 2026-07-29 receipt remains historical.
 - Resume route: continue from this worktree and this workpad; do not repeat the historical
   0.144.6 evidence run.

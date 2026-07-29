@@ -2,7 +2,7 @@
 
 Phase: 10
 
-Status: review corrections in progress; superseding external acceptance pending
+Status: worker and superseding external acceptance verified; repeat review pending
 
 Supersede the line-ending-normalized package-hash assumption for Recursive Observe. A Git
 marketplace checkout on Windows with `core.autocrlf=true` must install the exact bytes named
@@ -83,5 +83,8 @@ The first external run passed at
 `ca5f79c69777ae72f2d70ea79332e3702734d457`. Its
 [2026-07-29 raw-byte acceptance receipt](../../evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json)
 is historical because later review found a canonical-source checkout gap and an overbroad
-repository-write claim. A superseding run against the corrected implementation commit is
+repository-write claim. The
+[superseding receipt](../../evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.json)
+passes against corrected implementation commit
+`c31db956eea519c77c4c516b095c8c70b9537a45`. Hosted checks and repeat independent review are
 required before this phase returns to human handoff. Human review and merge remain required.

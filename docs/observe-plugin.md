@@ -10,7 +10,7 @@ servers, or repository settings.
 | Surface | Status | Evidence |
 | --- | --- | --- |
 | Generic Agent Skill | Generated beta | The generated, self-contained `plugins/recursive-observe/skills/observe` package validates and passes copied-package execution |
-| Codex plugin | Generated beta | The first [Codex CLI 0.145.0 Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29.md) is historical; a superseding run for the review corrections is pending |
+| Codex plugin | Generated beta | The [superseding Codex CLI 0.145.0 Windows raw-byte acceptance](observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.md) passes installed-cache execution, contained-path checks, protected-state equality, measured worktree coexistence, and rollback |
 | Claude Code plugin | Generated beta | [Claude Code 2.1.200 version 1 acceptance](observe-claude-acceptance.md) remains historical runtime/coexistence evidence; receipt version 2 changes packaging bytes and comments, but a fresh Claude version 2 install was not rerun |
 | ChatGPT Work web / hosted Codex | Experimental | Plugin discovery is supported by the product, but state persistence and bundled Python execution still need live consumer evidence |
 | Claude Code web | Unverified | Do not assume local plugin state persists in a hosted session until a real acceptance run proves it |
@@ -32,14 +32,13 @@ Add this Git repository as a catalog at the tested immutable revision, then inst
 Recursive Observe with the stable plugin CLI:
 
 ```bash
-codex plugin marketplace add GhostlyGawd/recursive-harness --ref <accepted-implementation-commit>
+codex plugin marketplace add GhostlyGawd/recursive-harness --ref c31db956eea519c77c4c516b095c8c70b9537a45
 codex plugin add recursive-observe@recursive-harness
 codex plugin list
 ```
 
-Replace the placeholder only with the commit named by the superseding acceptance report.
 The earlier `ca5f79c69777ae72f2d70ea79332e3702734d457` report is preserved as historical
-evidence and is not the final review-corrected install target.
+evidence. The command above uses the implementation commit that passed the superseding run.
 
 In ChatGPT desktop, open **Plugins** in Work mode or Codex after the marketplace is
 available. ChatGPT Work web can use workspace-shared plugins, but this package's deterministic
