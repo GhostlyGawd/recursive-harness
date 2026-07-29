@@ -29,7 +29,7 @@
 - [x] Commit and push the implementation after the identity guard passes.
 - [x] Run the isolated Windows Codex 0.145.0 acceptance against the immutable commit.
 - [x] Append sanitized dated evidence and pin current install guidance to the tested commit.
-- [ ] Commit and push evidence, complete pull-request checks, and enter human handoff.
+- [x] Commit and push evidence, complete pull-request checks, and enter human handoff.
 
 ## Acceptance criteria
 
@@ -114,7 +114,9 @@ and current Observe guidance points to that tested commit.
 - CodeQL at `c6c4fbe` — analysis jobs PASS, but the aggregate gate found a critical taint
   trace from the CLI commit argument and a high taint trace from the arbitrary scratch parent.
   The focused correction canonicalizes the commit through integer-to-hex conversion and
-  delegates temporary-root selection to the operating system; hosted rerun pending.
+  delegates temporary-root selection to the operating system.
+- Pull-request head `f5952ef` — all five `harness-ci` jobs PASS. CodeQL Actions and Python
+  analyses PASS, and the aggregate CodeQL gate reports no new alerts.
 - Dated evidence contract test — PASS.
 - Adjacent package gates — PASS for public plugin submission, Learn, Verify, and Lab.
 - Release and Coordinate adjacent gates — all non-commit checks PASS; each suite has one
@@ -179,19 +181,20 @@ and current Observe guidance points to that tested commit.
 
 ## Blockers and required human action
 
-No implementation blocker is active. Evidence commit, pull-request CI, human review, protected-main
-merge, and post-merge revalidation remain.
+No implementation blocker is active. Human review, protected-main merge, and post-merge
+revalidation remain.
 
 ## Handoff status
 
-Status: verification before human handoff.
+Status: `post-merge-pending`; worker and external gates are complete, and the draft pull
+request is ready for human review.
 
 ## Next owner, remaining gates, evidence destination, and resume route
 
-- Current owner: implementation agent.
-- Next owner: repository reviewer after the pull request is ready.
-- Remaining gates: evidence commit and push, pull-request checks, human review,
-  protected-main merge, merged-main CI, and closeout revalidation.
+- Current owner: repository reviewer.
+- Next owner: repository reviewer for approval or requested changes.
+- Remaining gates: human review, protected-main merge, merged-main CI, and closeout
+  revalidation.
 - Evidence destination:
   `docs/evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json`.
 - Resume route: continue from this worktree and this workpad; do not repeat the historical
