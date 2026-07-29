@@ -88,7 +88,8 @@ tag or commit in the marketplace; it never rewrites the consumer repository or d
 private state.
 
 The exact Observe-only Codex commands and installed-cache behavior above are replayed by
-`scripts/record_observe_codex_windows_acceptance.py`. The
+`scripts/record_observe_codex_windows_acceptance.py`. The recorder canonicalizes the immutable
+commit before command use and uses the operating system's standard temporary directory. The
 [historical Codex 0.144.6 record](codex-consumer-acceptance.md) remains the version 1 and
 Guard evidence. Public marketplace discovery remains a separate Phase 8 claim; this
 Git-backed catalog is deliberately not presented as that listing.

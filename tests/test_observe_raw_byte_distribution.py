@@ -129,6 +129,17 @@ def main() -> int:
         )
 
     raw_receipt_checks(receipt, PLUGIN)
+    recorder_source = (
+        ROOT / "scripts" / "record_observe_codex_windows_acceptance.py"
+    ).read_text(encoding="utf-8")
+    require(
+        'source_ref = f"{int(source_ref, 16):040x}"' in recorder_source,
+        "Windows acceptance does not canonicalize the commit ref before command use",
+    )
+    require(
+        "--scratch-root" not in recorder_source and "dir=scratch_root" not in recorder_source,
+        "Windows acceptance still accepts an arbitrary temporary-directory parent",
+    )
 
     with tempfile.TemporaryDirectory(prefix="observe-raw-byte-") as raw_tmp:
         temp_root = Path(raw_tmp)

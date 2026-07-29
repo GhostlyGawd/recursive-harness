@@ -26,6 +26,8 @@ by the package receipt.
   original LF-normalized semantics. It rejects unknown versions and contradictory semantics.
 - Live acceptance uses Windows, Codex CLI 0.145.0, `core.autocrlf=true`, an isolated
   `CODEX_HOME`, an isolated `USERPROFILE`, and one immutable Git commit.
+- The acceptance recorder canonicalizes the immutable commit before command use and creates
+  its isolated workspace under the operating system's standard temporary directory.
 - Live acceptance installs only Recursive Observe, verifies the installed cache before
   execution, runs three synthetic scored journeys, emits aggregate-only privacy evidence,
   preserves a clean foreign repository, removes the plugin and marketplace, and reports only

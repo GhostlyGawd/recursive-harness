@@ -145,15 +145,12 @@ def _recursive_plugin_ids(data: dict[str, object]) -> set[str]:
 def acceptance(
     codex_cli: Path,
     source_ref: str,
-    scratch_root: Path | None,
 ) -> dict[str, object]:
     require(platform.system() == "Windows", "this acceptance must run on Windows")
     require(IMMUTABLE_REF.fullmatch(source_ref) is not None,
             "source ref must be a 40-character lowercase Git commit")
+    source_ref = f"{int(source_ref, 16):040x}"
     codex_cli = codex_cli.resolve(strict=True)
-    if scratch_root is not None:
-        scratch_root = scratch_root.resolve(strict=True)
-        require(scratch_root.is_dir(), "scratch root is not a directory")
 
     version_output = run([str(codex_cli), "--version"]).stdout.strip()
     require(version_output == f"codex-cli {CODEX_VERSION}",
@@ -162,10 +159,7 @@ def acceptance(
     real_home = Path.home().resolve(strict=True)
     protected_before = protected_snapshot(real_home)
 
-    with tempfile.TemporaryDirectory(
-        prefix="recursive-observe-codex-0145-",
-        dir=scratch_root,
-    ) as raw_tmp:
+    with tempfile.TemporaryDirectory(prefix="recursive-observe-codex-0145-") as raw_tmp:
         work_root = Path(raw_tmp).resolve()
         codex_home = work_root / "codex-home"
         consumer_profile = work_root / "consumer-profile"
@@ -442,10 +436,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--codex-cli", required=True, type=Path)
     parser.add_argument("--source-ref", required=True)
-    parser.add_argument("--scratch-root", type=Path)
     args = parser.parse_args()
     try:
-        result = acceptance(args.codex_cli, args.source_ref, args.scratch_root)
+        result = acceptance(args.codex_cli, args.source_ref)
     except (AcceptanceError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"acceptance failed: {exc}", file=sys.stderr)
         return 1

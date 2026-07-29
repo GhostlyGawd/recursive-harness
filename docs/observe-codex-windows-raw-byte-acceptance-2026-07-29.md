@@ -59,6 +59,8 @@ No global plugin installation occurred.
 The sanitized machine record is
 [the 2026-07-29 raw-byte acceptance receipt](evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29.json).
 Replay with `scripts/record_observe_codex_windows_acceptance.py` and the immutable commit.
+The recorder canonicalizes that commit before command use and creates its isolated workspace
+under the operating system's standard temporary directory.
 
 ## Boundary
 

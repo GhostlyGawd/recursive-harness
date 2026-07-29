@@ -110,6 +110,11 @@ and current Observe guidance points to that tested commit.
   Brier 0.27, aggregate-only privacy audit, zero repository writes, protected real-user
   file equality, plugin removal, and marketplace removal.
 - Draft pull request `#267` — OPEN against `main`; human review and hosted checks pending.
+- Pull-request head `c6c4fbe` — all five `harness-ci` jobs PASS, including Windows.
+- CodeQL at `c6c4fbe` — analysis jobs PASS, but the aggregate gate found a critical taint
+  trace from the CLI commit argument and a high taint trace from the arbitrary scratch parent.
+  The focused correction canonicalizes the commit through integer-to-hex conversion and
+  delegates temporary-root selection to the operating system; hosted rerun pending.
 - Dated evidence contract test — PASS.
 - Adjacent package gates — PASS for public plugin submission, Learn, Verify, and Lab.
 - Release and Coordinate adjacent gates — all non-commit checks PASS; each suite has one
@@ -147,6 +152,10 @@ and current Observe guidance points to that tested commit.
   the raw-byte rule explicit and executable.
 - **Implementation-defined omission corrected:** The repository had no checkout rule for
   receipt-bound Observe text. Exact LF attributes and a Windows-style checkout test now exist.
+- **Required security conflict corrected:** The first live recorder accepted an arbitrary
+  temporary-directory parent and passed a regex-validated commit string directly to a command
+  argument. It now uses the operating system's standard temporary directory and a canonical
+  integer-to-hex commit value. Deterministic assertions and CodeQL enforce these boundaries.
 - **Documentation-only drift corrected:** Current install and compatibility pages now point
   to the accepted Codex 0.145.0 version 2 commit. The Codex 0.144.6 files remain dated
   historical version 1 and Guard evidence.

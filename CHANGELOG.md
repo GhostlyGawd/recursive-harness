@@ -22,7 +22,8 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   contract normalized CRLF to LF before hashing.
 - Added a sanitized Windows Codex 0.145.0 acceptance for the immutable version 2 Observe
   package, including eight raw hashes, three synthetic journeys, protected-state equality,
-  zero repository writes, and isolated rollback.
+  zero repository writes, and isolated rollback. The recorder canonicalizes the immutable
+  commit before command use and uses the operating system's standard temporary directory.
 
 ## [0.1.2] - 2026-07-20
 
