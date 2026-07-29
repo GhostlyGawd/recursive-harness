@@ -2,7 +2,8 @@
 
 Phase: 10
 
-Status: worker and superseding external acceptance verified; repeat review pending
+Status: worker, superseding external acceptance, hosted checks, and repeat review verified;
+post-merge gate pending
 
 Supersede the line-ending-normalized package-hash assumption for Recursive Observe. A Git
 marketplace checkout on Windows with `core.autocrlf=true` must install the exact bytes named
@@ -86,5 +87,6 @@ is historical because later review found a canonical-source checkout gap and an 
 repository-write claim. The
 [superseding receipt](../../evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.json)
 passes against corrected implementation commit
-`c31db956eea519c77c4c516b095c8c70b9537a45`. Hosted checks and repeat independent review are
-required before this phase returns to human handoff. Human review and merge remain required.
+`c31db956eea519c77c4c516b095c8c70b9537a45`. All eight hosted checks pass, and repeat
+correctness, evidence, and security reviews found no implementation or evidence blocker. The
+phase is in human handoff. Human review and merge remain required.

@@ -39,7 +39,7 @@
   measures.
 - [x] Push the corrected implementation and run a superseding Windows acceptance.
 - [x] Append superseding evidence and update the tested install ref.
-- [ ] Pass hosted checks and repeat independent review.
+- [x] Pass hosted checks and repeat independent review.
 
 ## Acceptance criteria
 
@@ -176,6 +176,19 @@ that commit.
   plugin removal, marketplace removal, and isolated sidecar preservation.
 - Superseding machine and narrative evidence — appended. The first same-date files remain
   unchanged as historical evidence.
+- Pull-request head `298ba092b4e7f3b2bed9f3c415134a888cdbc82d` — all eight hosted
+  checks PASS: Linux full suite, Windows distribution, macOS distribution, minimum Git 2.39.0,
+  optional surfaces, CodeQL Actions, CodeQL Python, and the aggregate CodeQL gate.
+- Repeat independent correctness review — no blockers. The root-license transition,
+  builder determinism, receipt compatibility, superseding evidence binding, and
+  implementation-to-evidence ancestry are correct.
+- Repeat independent evidence review — no implementation or evidence blockers. Historical
+  records, current install guidance, the single alignment table, drift classifications, and
+  unaffected surfaces are aligned. It required the final gate-state and pull-request-body
+  corrections recorded here.
+- Repeat independent security review — no blockers. Write-measurement limits, path
+  containment, receipt validation, cleanup convergence, primary-failure preservation,
+  protected-state privacy, and command boundaries are correct.
 
 ## Alignment table
 
@@ -208,7 +221,7 @@ that commit.
   the raw-byte rule explicit and executable.
 - **Implementation-defined omission corrected:** The repository had no checkout rule for
   receipt-bound Observe text. Exact LF attributes and a Windows-style checkout test now exist.
-- **Required build conflict under correction:** The root license is intentionally unchanged,
+- **Required build conflict corrected:** The root license is intentionally unchanged,
   but an existing Windows checkout can retain CRLF bytes. Canonical source acquisition now
   applies the repository LF text policy before source hashing and package generation.
 - **Required security conflict corrected:** The first live recorder accepted an arbitrary
@@ -242,19 +255,20 @@ that commit.
 
 ## Blockers and required human action
 
-Hosted checks and repeat independent review are the active gates before human merge review
-resumes.
+No implementation, evidence, or hosted-check blocker is active. Human review, protected-main
+merge, merged-main CI, and closeout revalidation remain.
 
 ## Handoff status
 
-Status: `worker-review-pending`; the draft pull request is not ready for merge review.
+Status: `post-merge-pending`; the draft pull request is ready for human review but remains
+draft until the owner explicitly changes that state.
 
 ## Next owner, remaining gates, evidence destination, and resume route
 
-- Current owner: implementation worker for the evidence commit and hosted checks.
-- Next owner: independent reviewers.
-- Remaining gates: evidence commit, hosted checks, repeat independent review, human review,
-  protected-main merge, merged-main CI, and closeout revalidation.
+- Current owner: repository reviewer.
+- Next owner: repository reviewer for approval or requested changes.
+- Remaining gates: human review, protected-main merge, merged-main CI, and closeout
+  revalidation.
 - Evidence destination:
   `docs/evidence/observe-codex-windows-raw-byte-acceptance-2026-07-29-superseding.json`;
   the first 2026-07-29 receipt remains historical.
