@@ -1,10 +1,10 @@
 {
   "_doc": "Graduated autonomy ledger. A category may flip auto_merge to true only when proposed >= 20 and accepted/proposed >= 0.95, via /meta-retro, via PR. 'enforcement' (hooks, lint, evals, autonomy.json, settings.json, .github) is graduable: false FOREVER — the lint rejects any change to that.",
-  "_counting": "Counts are post-v0.1.0 artifacts that reached main via PR; lint SEED_ARTIFACTS are excluded and edits to seeds do not count. Reconcile against tracked trunk inventory, never gitignored live directories. Historical reconciles: 2026-06-14 skills 1->5, commands 1->4, memory 2->3; 2026-06-21 skills 5->11, commands 4->6; 2026-06-24 skills 11->12; 2026-06-28 skills 12->14, commands 6->8, agents 0->1; 2026-07-05 memory 3->9 under the recorded decision-artifact rule. 2026-07-17 removal reconcile (grant 'Implement the proposed plan.' logged in state/approvals.jsonl): skills 14->16 to match 22 tracked skill directories minus 6 seeds after retiring Huashu Design; later accepted skills account for the net increase. No category graduates.",
+  "_counting": "Counts are post-v0.1.0 artifacts that reached main via PR; lint SEED_ARTIFACTS are excluded and edits to seeds do not count. Reconcile against tracked trunk inventory, never gitignored live directories. Historical reconciles: 2026-06-14 skills 1->5, commands 1->4, memory 2->3; 2026-06-21 skills 5->11, commands 4->6; 2026-06-24 skills 11->12; 2026-06-28 skills 12->14, commands 6->8, agents 0->1; 2026-07-05 memory 3->9 under the recorded decision-artifact rule. 2026-07-17 removal reconcile (grant 'Implement the proposed plan.' logged in state/approvals.jsonl): skills 14->16 to match 22 tracked skill directories minus 6 seeds after retiring Huashu Design; later accepted skills account for the net increase. 2026-07-30 extraction reconcile: skills 16->15 after the owner moved Brainstorm to the standalone codex-brainstorm plugin. No category graduates.",
   "categories": {
     "skills": {
-      "proposed": 16,
-      "accepted": 16,
+      "proposed": 15,
+      "accepted": 15,
       "auto_merge": false,
       "graduable": true
     },

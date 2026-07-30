@@ -31,7 +31,9 @@ it produces a `ROADMAP.md` and the discipline to follow it, then hands features 
 ## Notes
 
 - For a **single feature**, decline and point to `build-loop` — a roadmap there is overhead.
-- If the approach itself is unclear, run `brainstorm` first, then roadmap the chosen one.
+- If the approach itself is unclear and the optional `codex-brainstorm` plugin
+  is installed, run its `brainstorm` skill first. Otherwise, compare approaches
+  with the user before roadmapping the chosen one.
 - Keep milestones **time-boxed (2–4 weeks)** and sequence **risk-first**.
 
 <!-- provenance: 2026-06-27, session 01Ua4x8egBkaVbB9K35epBxv — /roadmap command for the

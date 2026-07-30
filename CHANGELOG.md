@@ -15,6 +15,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 - Updated Git-backed Codex install examples to the immutable v0.1.2 release commit while the
   public OpenAI Plugins Directory submission remains under review preparation.
+- Extracted the internal Brainstorm skill into the standalone private
+  `codex-brainstorm` plugin, kept its three Solution Arena diversity engines,
+  and removed the speculative Invention Forge workflow from this repository.
 
 ## [0.1.2] - 2026-07-20
 
