@@ -25,8 +25,9 @@ library by design. Optional surfaces have separate dependencies:
 
 - Mission Control: the reviewed `textual==8.2.8` snapshot from
   `mission_control/requirements.txt`.
-- Fleet MCP adapter: the stable v1 line (`mcp>=1.28,<2`) with the reviewed
-  `mcp==1.28.1` CI snapshot; Fleet's engine and CLI remain stdlib-only.
+- Fleet MCP adapter: both SDK major lines (`mcp>=1.28,<3`) with the reviewed
+  `mcp==2.0.0` CI snapshot; the v1 line (last spot-verified at `mcp==1.28.1`)
+  stays import-compatible via a fallback. Fleet's engine and CLI remain stdlib-only.
 - Brand assets: committed SVG, PNG, JSON, CSS, and TypeScript files require no runtime
   dependency or build tool.
 
