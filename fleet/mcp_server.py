@@ -7,9 +7,9 @@ the package still lifts to its own repo. Storage is injected via $FLEET_STATE_DI
 
 Layering:
   h_*      pure tool HANDLERS over the engine/views — fully testable without the MCP runtime.
-  _*       thin MCP-facing wrappers (clean signatures FastMCP turns into tool schemas).
+  _*       thin MCP-facing wrappers (clean signatures the SDK turns into tool schemas).
   TOOLS    name -> wrapper registry (the single source of truth for what's exposed).
-  build_server() / main()   wire TOOLS into a FastMCP stdio server.
+  build_server() / main()   wire TOOLS into an MCP stdio server (SDK v1 or v2).
 """
 import os
 import time
@@ -123,10 +123,15 @@ TOOLS = {
 
 
 def build_server():
-    """Construct a FastMCP server with every TOOL registered. The MCP SDK is imported HERE
-    only — keeping the engine/views stdlib-only and extractable."""
-    from mcp.server.fastmcp import FastMCP
-    srv = FastMCP("agent-mail")
+    """Construct an MCP server with every TOOL registered. The MCP SDK is imported HERE
+    only — keeping the engine/views stdlib-only and extractable. Both supported SDK major
+    lines expose the same construct/tool()/run() surface; mcp 2.0 renamed FastMCP to
+    MCPServer and dropped the mcp.server.fastmcp module, hence the fallback."""
+    try:
+        from mcp.server.fastmcp import FastMCP as _ServerClass  # mcp v1 line
+    except ImportError:  # mcp>=2.0
+        from mcp.server import MCPServer as _ServerClass
+    srv = _ServerClass("agent-mail")
     for name, fn in TOOLS.items():
         srv.tool(name=name)(fn)
     return srv

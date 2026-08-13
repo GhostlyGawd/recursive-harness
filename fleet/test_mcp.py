@@ -123,7 +123,7 @@ def test_tools_registry_complete():
 
 
 def test_build_server_constructs_and_registers():
-    srv = ms.build_server()           # constructs a FastMCP and registers every TOOL
+    srv = ms.build_server()           # constructs the SDK server (v1 FastMCP / v2 MCPServer) and registers every TOOL
     assert srv is not None
     assert getattr(srv, "name", None) == "agent-mail"
 
