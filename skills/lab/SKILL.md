@@ -1,6 +1,6 @@
 ---
 name: lab
-description: EXPERIMENTAL. Explore alternative solutions or draft a measurable roadmap as a preview, while preserving existing project instructions and requiring an exact-target approval record before any tracked-file or external action. Use when the user asks to brainstorm, incubate an idea, or preview a roadmap. Do not use it as autonomous build or mutation authority.
+description: EXPERIMENTAL. Preview 2–4 alternatives or a measurable roadmap without changing the project. Use for low-cost incubation, preview-only brainstorming, or roadmap drafting with exact-target approval before any later action. Do not use when the user explicitly invokes the standalone brainstorm skill or requests independent parallel candidates; do not use as build or mutation authority.
 ---
 
 # Recursive Lab — experimental previews, contained
@@ -80,3 +80,6 @@ package directory.
 
 <!-- provenance: 2026-07-20 session 019f6e76-5f8b-7633-8b19-d7cd457847fa —
 P-2026-045 Phase 6 experimental portable Lab boundary. -->
+<!-- provenance: 2026-07-30 owner-directed Brainstorm extraction — narrowed Lab's
+trigger so its low-cost preview does not compete with the standalone
+codex-brainstorm Solution Arena. -->

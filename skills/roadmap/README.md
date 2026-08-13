@@ -30,7 +30,7 @@ The stages and the pieces that serve them:
 
 | Stage | Brick |
 |---|---|
-| brainstorm / invent | `brainstorm` |
+| brainstorm / compare approaches | external `codex-brainstorm` plugin (optional) |
 | research / validate | competitive-research, `prospector` |
 | **scope / plan / commit** | **`roadmap` (this)** |
 | build | `build-loop` |
@@ -45,5 +45,6 @@ on **Codeweb** (see `proposals/active/P-2026-019-*` and `P-2026-020-*`).
 
 ## Composes (never reimplements)
 
-`brainstorm` (diverge on approach) · cartograph + a `general-purpose`/built-in `Plan` agent (blast radius + architecture)
+`codex-brainstorm` when installed (diverge on approach) · cartograph + a
+`general-purpose`/built-in `Plan` agent (blast radius + architecture)
 · `build-loop` (per-feature execution). No Linear, no external dependencies.

@@ -4,8 +4,8 @@
 
 Trigger-loaded procedures: the harness's how-to knowledge, one directory per
 skill (`<name>/SKILL.md` with `name` + `description` frontmatter, plus an
-optional `references/` for overflow). 22 tracked skills as of 2026-07-17 — 6
-seeds from v0.1.0 plus 16 non-seed skills — and any gitignored vendored-live
+optional `references/` for overflow). 21 tracked skills as of 2026-07-30 — 6
+seeds from v0.1.0 plus 15 non-seed skills — and any gitignored vendored-live
 repos living alongside (e.g. `brand-foundry/`, its own git repo, not a trunk
 artifact). Descriptions are ALWAYS loaded (they are the trigger surface);
 bodies load only when the skill fires (kernel: "procedures, loaded on trigger
@@ -55,7 +55,7 @@ carries a `provenance:` line naming the session and trigger that birthed it
   the standard budget, explicitly B3-waived through the currently empty allowlist, or
   gitignored vendored-live with its own remote (brand-foundry).
 - New skills land via branch + PR like everything else; autonomy.json counts
-  the category (skills 16/16 accepted as of the 2026-07-17 reconcile; counted
+  the category (skills 15/15 accepted as of the 2026-07-30 reconcile; counted
   by `git ls-files` tracked dirs minus the 6 seeds).
 - Verify a change: `python3 lint/lint_harness.py` (budgets + provenance), and
   the duplication grep coming back clean.

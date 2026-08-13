@@ -19,6 +19,9 @@ This project follows [Semantic Versioning](https://semver.org/). Dates use UTC.
   v1 `FastMCP` to the v2 `MCPServer` rename, the optional extra widens to `mcp>=1.28,<3`,
   and the reviewed CI snapshot moves to `mcp==2.0.0` (supersedes Dependabot #270, which
   broke the extraction contract and could not fix the removed `mcp.server.fastmcp` import).
+- Extracted the internal Brainstorm skill into the standalone private
+  `codex-brainstorm` plugin, kept its three Solution Arena diversity engines,
+  and removed the speculative Invention Forge workflow from this repository.
 
 ## [0.1.2] - 2026-07-20
 
