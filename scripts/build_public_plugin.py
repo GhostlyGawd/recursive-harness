@@ -242,6 +242,11 @@ def manifest_from(listing: dict) -> dict:
 
 
 def bundle_files(listing: dict) -> tuple[dict[str, bytes], dict[str, object]]:
+    if not run_git("tag", "--list", RELEASE_REF).strip():
+        raise SubmissionError(
+            f"release tag {RELEASE_REF} is not in this clone (fresh clones can omit tags) "
+            "— fix: git fetch origin --tags"
+        )
     commit = run_git("rev-parse", f"{RELEASE_REF}^{{commit}}").decode("ascii").strip()
     require(commit == RELEASE_COMMIT, "release tag does not resolve to the approved release commit")
     files: dict[str, bytes] = {

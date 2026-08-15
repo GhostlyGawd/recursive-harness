@@ -369,6 +369,10 @@ def test_interrupted_upgrade_preserves_prior_executable_and_data() -> None:
 
 
 def main() -> int:
+    if not run(["git", "tag", "--list", "v0.1.0"], check=False).stdout.strip():
+        print("Release acceptance: release tag v0.1.0 is not in this clone (fresh clones "
+              "can omit tags) — fix: git fetch origin --tags", file=sys.stderr)
+        return 1
     tests = [value for name, value in sorted(globals().items()) if name.startswith("test_")]
     failures = []
     for test in tests:

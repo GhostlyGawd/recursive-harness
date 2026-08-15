@@ -164,6 +164,7 @@ with _tf.TemporaryDirectory(prefix="doctor-silo-") as _doctor_tmp:
     with _mock.patch.object(
         _H.os.path,
         "isjunction",
+        create=True,  # absent before Python 3.12; harness falls back via getattr
         side_effect=lambda path: os.path.normcase(path) == os.path.normcase(_account),
     ):
         check("Doctor rejects a junctioned account directory",

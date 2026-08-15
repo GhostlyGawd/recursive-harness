@@ -9,6 +9,7 @@ import importlib.util
 import json
 from pathlib import Path
 import random
+import subprocess
 import tempfile
 import zipfile
 
@@ -89,6 +90,13 @@ def property_checks(builder, listing: dict, cases: dict) -> None:
 
 
 def main() -> int:
+    tag_probe = subprocess.run(
+        ["git", "-C", str(ROOT), "tag", "--list", "v0.1.2"],
+        capture_output=True, text=True, check=False,
+    )
+    require(bool(tag_probe.stdout.strip()),
+            "release tag v0.1.2 is not in this clone (fresh clones can omit tags) "
+            "— fix: git fetch origin --tags")
     builder = load_builder()
     listing = json.loads((METADATA / "listing.json").read_text(encoding="utf-8"))
     cases = json.loads((METADATA / "evaluator-cases.json").read_text(encoding="utf-8"))
