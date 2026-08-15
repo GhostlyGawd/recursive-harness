@@ -184,10 +184,11 @@ def _silo_account_settings(config_dir: str, silo: str):
     accounts = os.path.join(silo, "accounts")
     accounts_root = os.path.normcase(os.path.realpath(accounts))
     requested = os.path.normcase(os.path.realpath(config_dir))
+    is_junction = getattr(os.path, "isjunction", lambda unused: False)
     try:
         with os.scandir(accounts) as entries:
             for entry in entries:
-                if os.path.islink(entry.path) or os.path.isjunction(entry.path):
+                if os.path.islink(entry.path) or is_junction(entry.path):
                     continue
                 if not entry.is_dir(follow_symlinks=False):
                     continue
