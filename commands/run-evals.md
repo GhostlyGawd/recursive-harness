@@ -2,7 +2,7 @@
 description: Replay the regression corpus inside THIS interactive session — no headless, no API key (ADR 0003). Required before merging enforcement-layer changes; part of /meta-retro.
 ---
 
-provenance: 2026-06-12, user correction "there should be no headless" (ADR 0003); 2026-06-13 retro (session 56295237 → 61f58113) added the MSYS /tmp caution after a verified bash↔Windows-python path split; 2026-06-19 (followups 1639c1/dff31d, session 85bf58c5) extended the cygpath -w sandbox path to step 3's SUBAGENT — its Windows-native Write/Edit resolved bare /tmp to the cwd-drive, landing artifacts where the grader couldn't see them; 2026-06-28 (session c6521109, /retro) split step 3 by case type — most corpus cases are live-mechanism checks (task.md: "no agent deliverable required") where a doer subagent is a no-op, so only agent-deliverable cases spawn one
+provenance: 2026-06-12, user correction "there should be no headless" (ADR 0003); 2026-06-13 retro (session 56295237 → 61f58113) added the MSYS /tmp caution after a verified bash↔Windows-python path split; 2026-06-19 (followups 1639c1/dff31d, session 85bf58c5) extended the cygpath -w sandbox path to step 3's SUBAGENT — its Windows-native Write/Edit resolved bare /tmp to the cwd-drive, landing artifacts where the grader couldn't see them; 2026-06-28 (session c6521109, /retro) split step 3 by case type — most corpus cases are live-mechanism checks (task.md: "no agent deliverable required") where a doer subagent is a no-op, so only agent-deliverable cases spawn one; 2026-08-15 (session 74cd7304, /retro) scoped the cygpath sandbox recipe to Windows/MSYS — on Linux `cygpath` is absent so the recipe fails at command substitution, and bare `/tmp` sandboxes grade correctly (12/12 replay)
 
 For each case in evals/corpus/ (or only those named in $ARGUMENTS):
 
@@ -13,15 +13,18 @@ For each case in evals/corpus/ (or only those named in $ARGUMENTS):
    output, masking a regression (2026-06-28, session a4a7fb9d: a jsonl-rotate sandbox
    retained Jun-23 artifacts and the doer verified rather than rewrote). Then copy in
    the case's fixture files (everything EXCEPT task.md, check.py, rubric.md, meta.json).
-   Then set
-   `SANDBOX=$(cygpath -w /tmp/evalrun-<slug>)` (the Windows-resolved path) and
-   pass `"$SANDBOX"` to every grader call that takes the sandbox path (step 4's
-   `--grade` and the critic) — never a bare `/tmp/...`.
-   Windows/MSYS caution (why): the subagent (MSYS bash) sees `/tmp` fine, but the
-   grader's `python3` is Windows-native and resolves a bare `/tmp/evalrun-<slug>`
-   to `<cwd-drive>:\tmp\...` — a different, empty dir, so grading silently passes/
-   fails against nothing. Verified 2026-06-13: a file `mkdir`'d in bash under
-   `/tmp/evalrun-x` is invisible to `python3` at the same path. (ADR 0004 = topology.)
+   Then set the sandbox path BY PLATFORM, and pass `"$SANDBOX"` to every grader
+   call that takes the sandbox path (step 4's `--grade` and the critic):
+   - **Windows/MSYS**: `SANDBOX=$(cygpath -w /tmp/evalrun-<slug>)` (the
+     Windows-resolved path) — never a bare `/tmp/...`. Why: the subagent (MSYS
+     bash) sees `/tmp` fine, but the grader's `python3` is Windows-native and
+     resolves a bare `/tmp/evalrun-<slug>` to `<cwd-drive>:\tmp\...` — a
+     different, empty dir, so grading silently passes/fails against nothing.
+     Verified 2026-06-13: a file `mkdir`'d in bash under `/tmp/evalrun-x` is
+     invisible to `python3` at the same path. (ADR 0004 = topology.)
+   - **POSIX/Linux**: `SANDBOX=/tmp/evalrun-<slug>` as-is — `cygpath` does not
+     exist here, so the Windows recipe fails at command substitution; bare paths
+     grade correctly (verified 2026-08-15, session 74cd7304: full 12/12 replay).
 3. **task.md self-declares the case type — it decides whether to spawn a subagent.**
    - **Mechanism-check case** — no agent deliverable. The durable tell is the GRADER,
      not a task.md phrase: its check.py drives the LIVE harness against its OWN isolated
@@ -33,7 +36,8 @@ For each case in evals/corpus/ (or only those named in $ARGUMENTS):
    - **Agent-deliverable case** (task.md asks the agent to PRODUCE a file, e.g.
      jsonl-rotate, commit-message). Spawn a FRESH subagent (Task tool) whose prompt is
      the verbatim contents of task.md plus `work in "$SANDBOX"` — pass the SAME
-     Windows-resolved path from step 2, NEVER a bare `/tmp/evalrun-<slug>`. The
+     `"$SANDBOX"` from step 2 (on Windows the cygpath-resolved path, NEVER a bare
+     `/tmp/evalrun-<slug>`; on POSIX the bare path IS `$SANDBOX`). On Windows the
      subagent's Write/Edit tools are Windows-native and resolve bare `/tmp` to
      `<cwd-drive>:\tmp\…`, so its artifacts would land in a different, empty dir than
      the grader reads → false FAIL (both eval subagents hit this 2026-06-19). It must
