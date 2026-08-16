@@ -50,6 +50,15 @@ consult skill `routing-learnings` and file it properly.
 - state/     machine-local hot logs (gitignored): predictions, corrections, skill usage
 - evals/     regression corpus — the only proof that harness vN+1 beats vN
 
+## Environment facts — fresh/cloud clones (2026-08-15, session 74cd7304)
+
+- Supported baseline is Python 3.12+, but cloud sandboxes may default `python3` to 3.11
+  (no `os.path.isjunction`). Invoke `python3.12` explicitly.
+- Fresh clones can omit release tags: run `git fetch origin --tags` before the release/
+  plugin tests or `scripts/build_public_plugin.py`. The tag preflights added in PR #272
+  print this same fix, but only after a failure (the Python fix in #272 is silent
+  graceful degradation — nothing prompts you to use 3.12).
+
 Honesty note: this system compounds by eliminating repeated mistakes and accumulating
 procedure + taste. Gains are real and durable, not magic. Protect the eval corpus and the
 calibration log above all; they are the only ground truth you have.
