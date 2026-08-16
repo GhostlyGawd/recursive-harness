@@ -38,13 +38,14 @@ container is reclaimed within hours of going idle, so **every prediction,
 outcome, correction, skill-fire, and heal record logged there is destroyed long
 before any gc window can promote it**.
 
-Observed concretely in session `74cd7304`: four predictions logged and scored
-(hit-rate 100%, Brier 0.031), one heal bug+fix record (`5a7b4836`), all in the
-container's `state/` — none will survive container reclamation. The scorecard's
-"history: no monthly summaries yet" on trunk shows the loss is systemic, not
-hypothetical: remote dogfooding sessions have been running since at least
-2026-07 (branch names `claude/recursive-harness-dogfooding-*`) and none of
-their calibration evidence has reached `memory/calibration/`.
+Observed concretely in session `74cd7304`: four predictions logged, three
+scored (hit-rate 100%, Brier 0.042) with one pending, plus one heal bug+fix
+record (`5a7b4836`), all in the container's `state/` — none will survive
+container reclamation. The scorecard's "history: no monthly summaries yet" on
+trunk shows the loss is systemic, not hypothetical: at least one prior remote
+dogfooding session exists (`claude/recursive-harness-dogfooding-ux0cm4`,
+merged via PR #271) and `git ls-files memory/calibration/` shows no session's
+calibration evidence has ever reached the versioned rollups.
 
 This silently starves the three surfaces the kernel calls the only ground
 truth: calibration rollups, the heal ledger's cross-session recall, and
